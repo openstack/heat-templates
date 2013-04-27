@@ -1,0 +1,336 @@
+HeatTemplateFormatVersion: '2012-12-12'
+Description: 'AWS CloudFormation Sample Template WordPress_Multi_Instance:
+  WordPress is web software you can use to create a beautiful website or blog. This
+  template installs two instances: one running a WordPress deployment and the other
+  using a local MySQL database to store the data.'
+Parameters:
+  KeyName: {Description: Name of an existing EC2 KeyPair
+      to enable SSH access to the instances, Type: String}
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: m1.large
+    AllowedValues: [t1.micro, m1.small, m1.large, m1.xlarge, m2.xlarge,
+      m2.2xlarge, m2.4xlarge, c1.medium, c1.xlarge, cc1.4xlarge]
+    ConstraintDescription: must be a valid EC2 instance type.
+  DBName: {Default: wordpress, Description: The
+      WordPress database name, Type: String, MinLength: '1',
+    MaxLength: '64', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+    ConstraintDescription: must begin with a letter and contain only
+      alphanumeric characters.}
+  DBUsername: {Default: admin, NoEcho: 'true',
+    Description: The WordPress database admin account username, Type: String,
+    MinLength: '1', MaxLength: '16', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+    ConstraintDescription: must begin with a letter and contain only
+      alphanumeric characters.}
+  DBPassword: {Default: admin, NoEcho: 'true',
+    Description: The WordPress database admin account password, Type: String,
+    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
+    ConstraintDescription: must contain only alphanumeric characters.}
+  DBRootPassword: {Default: admin, NoEcho: 'true',
+    Description: Root password for MySQL, Type: String,
+    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
+    ConstraintDescription: must contain only alphanumeric characters.}
+  LinuxDistribution:
+    Default: F17
+    Description: Distribution of choice
+    Type: String
+    AllowedValues: [F18, F17, U10, RHEL-6.1, RHEL-6.2, RHEL-6.3]
+  HupPollInterval: {Default: '1', Description: Interval
+      for cfn-hup, Type: String}
+Mappings:
+  AWSInstanceType2Arch:
+    t1.micro: {Arch: '32'}
+    m1.small: {Arch: '32'}
+    m1.large: {Arch: '64'}
+    m1.xlarge: {Arch: '64'}
+    m2.xlarge: {Arch: '64'}
+    m2.2xlarge: {Arch: '64'}
+    m2.4xlarge: {Arch: '64'}
+    c1.medium: {Arch: '32'}
+    c1.xlarge: {Arch: '64'}
+    cc1.4xlarge: {Arch: '64'}
+  DistroArch2AMI:
+    F18: {'32': F18-i386-cfntools, '64': F18-x86_64-cfntools}
+    F17: {'32': F17-i386-cfntools, '64': F17-x86_64-cfntools}
+    U10: {'32': U10-i386-cfntools, '64': U10-x86_64-cfntools}
+    RHEL-6.1: {'32': rhel61-i386-cfntools, '64': rhel61-x86_64-cfntools}
+    RHEL-6.2: {'32': rhel62-i386-cfntools, '64': rhel62-x86_64-cfntools}
+    RHEL-6.3: {'32': rhel63-i386-cfntools, '64': rhel63-x86_64-cfntools}
+Resources:
+  CfnUser: {Type: 'AWS::IAM::User'}
+  WebServerKeys:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: {Ref: CfnUser}
+  WebServerRestartPolicy:
+    Type: OS::Heat::HARestarter
+    Properties:
+      InstanceId: {Ref: WikiDatabase}
+  HttpFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Restart the WikiDatabase if httpd fails >
+        3 times in 10 minutes
+      MetricName: ServiceFailure
+      Namespace: system/linux
+      Statistic: SampleCount
+      Period: '300'
+      EvaluationPeriods: '1'
+      Threshold: '2'
+      AlarmActions:
+      - {Ref: WebServerRestartPolicy}
+      ComparisonOperator: GreaterThanThreshold
+  WikiDatabase:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            /etc/cfn/cfn-credentials:
+              content:
+                Fn::Join:
+                - ''
+                - - AWSAccessKeyId=
+                  - {Ref: WebServerKeys}
+                  - '
+
+                    '
+                  - AWSSecretKey=
+                  - Fn::GetAtt: [WebServerKeys, SecretAccessKey]
+                  - '
+
+                    '
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/cfn-hup.conf:
+              content:
+                Fn::Join:
+                - ''
+                - - '[main]
+
+                    '
+                  - stack=
+                  - {Ref: 'AWS::StackName'}
+                  - '
+
+                    '
+                  - 'credential-file=/etc/cfn/cfn-credentials
+
+                    '
+                  - region=
+                  - {Ref: 'AWS::Region'}
+                  - '
+
+                    '
+                  - interval=
+                  - {Ref: HupPollInterval}
+                  - '
+
+                    '
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/notify-on-httpd-restarted:
+              content:
+                Fn::Join:
+                - ''
+                - - '#!/bin/sh
+
+                    '
+                  - '/opt/aws/bin/cfn-push-stats --watch '
+                  - {Ref: HttpFailureAlarm}
+                  - ' --service-failure
+
+                    '
+              mode: '000700'
+              owner: root
+              group: root
+            /tmp/cfn-hup-crontab.txt:
+              content:
+                Fn::Join:
+                - ''
+                - ['MAIL=""
+
+                    ', '
+
+                    ', '* * * * * /opt/aws/bin/cfn-hup -f
+
+                    ']
+              mode: '000600'
+              owner: root
+              group: root
+            /tmp/setup.mysql:
+              content:
+                Fn::Join:
+                - ''
+                - - 'CREATE DATABASE '
+                  - {Ref: DBName}
+                  - ';
+
+                    '
+                  - 'GRANT ALL PRIVILEGES ON '
+                  - {Ref: DBName}
+                  - .* TO '
+                  - {Ref: DBUsername}
+                  - '''@''localhost''
+
+                    '
+                  - IDENTIFIED BY '
+                  - {Ref: DBPassword}
+                  - ''';
+
+                    '
+                  - 'FLUSH PRIVILEGES;
+
+                    '
+                  - 'EXIT
+
+                    '
+              mode: '000644'
+              owner: root
+              group: root
+            /etc/cfn/hooks.conf:
+              content:
+                Fn::Join:
+                - ''
+                - ['[cfn-http-restarted]
+
+                    ', 'triggers=service.restarted
+
+                    ', 'path=Resources.WikiDatabase.Metadata
+
+                    ', 'action=/etc/cfn/notify-on-httpd-restarted
+
+                    ', 'runas=root
+
+                    ']
+              mode: '000400'
+              owner: root
+              group: root
+          packages:
+            yum:
+              cronie: []
+              mysql: []
+              mysql-server: []
+              httpd: []
+              wordpress: []
+          services:
+            systemd:
+              mysqld: {enabled: 'true', ensureRunning: 'true'}
+              httpd: {enabled: 'true', ensureRunning: 'true'}
+              crond: {enabled: 'true', ensureRunning: 'true'}
+    Properties:
+      ImageId:
+        Fn::FindInMap:
+        - DistroArch2AMI
+        - {Ref: LinuxDistribution}
+        - Fn::FindInMap:
+          - AWSInstanceType2Arch
+          - {Ref: InstanceType}
+          - Arch
+      InstanceType: {Ref: InstanceType}
+      KeyName: {Ref: KeyName}
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - ''
+          - - '#!/bin/bash -v
+
+              '
+            - '# Helper function
+
+              '
+            - 'function error_exit
+
+              '
+            - '{
+
+              '
+            - '  /opt/aws/bin/cfn-signal -e 1 -r "$1" '''
+            - {Ref: WaitHandle}
+            - '''
+
+              '
+            - '  exit 1
+
+              '
+            - '}
+
+              '
+            - '/opt/aws/bin/cfn-init -s '
+            - {Ref: 'AWS::StackName'}
+            - ' -r WikiDatabase '
+            - ' --access-key '
+            - {Ref: WebServerKeys}
+            - ' --secret-key '
+            - Fn::GetAtt: [WebServerKeys, SecretAccessKey]
+            - ' --region '
+            - {Ref: 'AWS::Region'}
+            - ' || error_exit ''Failed to run cfn-init''
+
+              '
+            - '# Setup MySQL root password and create a user
+
+              '
+            - mysqladmin -u root password '
+            - {Ref: DBRootPassword}
+            - ''' || error_exit ''Failed to initialize root password''
+
+              '
+            - mysql -u root --password='
+            - {Ref: DBRootPassword}
+            - ''' < /tmp/setup.mysql || error_exit ''Failed to create database.''
+
+              '
+            - 'sed -i "/Deny from All/d" /etc/httpd/conf.d/wordpress.conf
+
+              '
+            - 'sed -i "s/Require local/Require all granted/" /etc/httpd/conf.d/wordpress.conf
+
+              '
+            - sed --in-place --e s/database_name_here/
+            - {Ref: DBName}
+            - / --e s/username_here/
+            - {Ref: DBUsername}
+            - / --e s/password_here/
+            - {Ref: DBPassword}
+            - '/ /usr/share/wordpress/wp-config.php
+
+              '
+            - 'systemctl restart httpd.service
+
+              '
+            - '# install cfn-hup crontab
+
+              '
+            - 'crontab /tmp/cfn-hup-crontab.txt
+
+              '
+            - '# All is well so signal success
+
+              '
+            - /opt/aws/bin/cfn-signal -e 0 -r "Wiki server setup complete" '
+            - {Ref: WaitHandle}
+            - '''
+
+              '
+  WaitHandle: {Type: 'AWS::CloudFormation::WaitConditionHandle'}
+  WaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: WikiDatabase
+    Properties:
+      Handle: {Ref: WaitHandle}
+      Count: '1'
+      Timeout: '600'
+Outputs:
+  WebsiteURL:
+    Value:
+      Fn::Join:
+      - ''
+      - - http://
+        - Fn::GetAtt: [WikiDatabase, PublicIp]
+        - /wordpress
+    Description: URL for Wordpress wiki
+

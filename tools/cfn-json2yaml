@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import sys
+import os
+import yaml
+import json
+import re
+from heat.common import template_format
+
+def main():
+    path = sys.argv[1]
+    if os.path.isdir(path):
+        convert_directory(path)
+    elif os.path.isfile(path):
+        convert_file(path)
+    else:
+        print 'File or directory not valid: %s' % path
+
+def convert_file(path):
+    f = open(path, 'r')
+    print template_format.convert_json_to_yaml(f.read())
+
+def convert_directory(dirpath):
+    for path in os.listdir(dirpath):
+        if not path.endswith('.template') and not path.endswith('.json'):
+            continue
+        yamlpath = re.sub('\..*$', '.yaml', path)
+        print 'Writing to %s' % yamlpath
+        f = open(os.path.join(dirpath, path), 'r')
+        out = open(os.path.join(dirpath, yamlpath), 'w')
+        yml = template_format.convert_json_to_yaml(f.read())
+        out.write(yml)
+        out.close()
+
+if __name__ == '__main__':
+    main()
