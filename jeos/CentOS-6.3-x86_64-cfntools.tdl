@@ -18,8 +18,6 @@ NM_CONTROLLED="yes"
 ONBOOT="yes"
 EOF
     </command>
-chmod +x /etc/rc.d/rc.local
-    </command>
     <command name='packages'>
 yum -y update
 curl -O http://ftp.ps.pl/pub/Linux/fedora-epel/6/i386/epel-release-6-7.noarch.rpm
@@ -30,6 +28,7 @@ cfn-create-aws-symlinks --source /usr/bin
 rm -f epel-release-6-7.noarch.rpm
     </command>
     <command name='post-configuration'>
+chmod +x /etc/rc.d/rc.local
 chkconfig --level 345 sshd on
 rm -rf /etc/udev/rules.d/70-persistent-net.rules
     </command>
