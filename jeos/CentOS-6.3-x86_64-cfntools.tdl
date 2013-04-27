@@ -1,0 +1,37 @@
+<template>
+  <name>CentOS-6.3-x86_64-cfntools</name>
+  <os>
+    <name>CentOS-6</name>
+    <version>3</version>
+    <arch>x86_64</arch>
+    <install type='iso'>
+      <iso>file:/var/lib/libvirt/images/CentOS-6.3-x86_64-bin-DVD1.iso</iso>
+    </install>
+  </os>
+  <description>CentOS 6.3</description>
+  <commands>
+    <command name='network-config'>
+cat > /etc/sysconfig/network-scripts/ifcfg-eth0 &lt;&lt; EOF
+DEVICE="eth0"
+BOOTPROTO=dhcp
+NM_CONTROLLED="yes"
+ONBOOT="yes"
+EOF
+    </command>
+chmod +x /etc/rc.d/rc.local
+    </command>
+    <command name='packages'>
+yum -y update
+curl -O http://ftp.ps.pl/pub/Linux/fedora-epel/6/i386/epel-release-6-7.noarch.rpm
+rpm -Uvh epel-release-6-7.noarch.rpm
+yum -y install perl python python-setuptools cloud-init python-pip
+pip-python install argparse 'boto==2.5.2' heat-cfntools
+cfn-create-aws-symlinks --source /usr/bin
+rm -f epel-release-6-7.noarch.rpm
+    </command>
+    <command name='post-configuration'>
+chkconfig --level 345 sshd on
+rm -rf /etc/udev/rules.d/70-persistent-net.rules
+    </command>
+  </commands>
+</template>

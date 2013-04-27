@@ -1,0 +1,45 @@
+<template>
+  <name>F16-x86_64-cfntools-openshift</name>
+  <os>
+    <name>Fedora</name>
+    <version>16</version>
+    <arch>x86_64</arch>
+    <install type='iso'>
+      <iso>file:/var/lib/libvirt/images/Fedora-16-x86_64-DVD.iso</iso>
+    </install>
+  </os>
+  <description>Fedora 16 base OpenShift Install</description>
+  <commands>
+    <command name='packages'>
+yum -y update fedora-release
+yum -y install yum-plugin-fastestmirror cloud-init python-psutil python-boto
+yum -y update
+sed --in-place -e s/Type=oneshot/"Type=oneshot\nTimeoutSec=0"/ /lib/systemd/system/cloud-final.service
+    </command>
+    <command name='cfn-perms'>
+chmod +x /opt/aws/bin/cfn-*
+    </command>
+    <command name='openshift_prereqs'>
+sed -i "s/SELINUX=enforcing/SELINUX=permissive/" /etc/selinux/config
+setenforce 0
+yum -y install ntp git vim emacs wget tig mock createrepo tito fedora-kickstarts livecd-tools ruby rubygems rubygem-rake java-1.6.0-openjdk jpackage-utils java-1.6.0-openjdk-devel
+    </command>
+    <command name='openshift_build'>
+useradd builder
+usermod -a -G mock builder
+su builder -c 'cd /home/builder ; git clone git://github.com/openshift/crankcase.git /home/builder/crankcase'
+echo 'Hacking Rakefile to work with notty'
+sed -i '/.*usermod.*/d' /home/builder/crankcase/build/Rakefile
+cd /home/builder/crankcase/build; rake build_setup
+cd /home/builder/crankcase/build ; rake build
+    </command>
+  </commands>
+  <files>
+    <file name='/opt/aws/bin/cfn-init'  type='base64'></file>
+    <file name='/opt/aws/bin/cfn-hup'  type='base64'></file>
+    <file name='/opt/aws/bin/cfn-signal'  type='base64'></file>
+    <file name='/opt/aws/bin/cfn_helper.py'  type='base64'></file>
+    <file name='/opt/aws/bin/cfn-get-metadata'  type='base64'></file>
+    <file name='/opt/aws/bin/cfn-push-stats'  type='base64'></file>
+  </files>
+</template>

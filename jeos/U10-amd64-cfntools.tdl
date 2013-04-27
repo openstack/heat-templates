@@ -1,0 +1,23 @@
+<template>
+  <name>U10-x86_64-cfntools</name>
+  <os>
+    <name>Ubuntu</name>
+    <version>10.04</version>
+    <arch>x86_64</arch>
+    <install type='iso'>
+      <iso>file:/var/lib/libvirt/images/ubuntu-10.04.4-server-amd64.iso</iso>
+    </install>
+  </os>
+  <description>Ubuntu 10.04</description>
+  <commands>
+    <command name='commands'>
+apt-get -y update
+apt-get -y upgrade
+apt-get -y install python-argparse chkconfig cloud-init python-psutil python-pip
+apt-get -y remove python-boto
+
+pip install 'boto==2.5.2' heat-cfntools
+cfn-create-aws-symlinks --source /usr/local/bin
+    </command>
+  </commands>
+</template>

@@ -1,0 +1,23 @@
+<template>
+  <name>F17-i386-cfntools</name>
+  <os>
+    <name>Fedora</name>
+    <version>17</version>
+    <arch>i386</arch>
+    <install type='iso'>
+      <iso>file:/var/lib/libvirt/images/Fedora-17-i386-DVD.iso</iso>
+    </install>
+  </os>
+  <description>Fedora 17</description>
+  <commands>
+    <command name='packages'>
+yum -y update fedora-release
+yum -y install yum-plugin-fastestmirror cloud-init python-psutil python-pip
+yum -y update
+sed --in-place -e s/Type=oneshot/"Type=oneshot\nTimeoutSec=0"/ /lib/systemd/system/cloud-final.service
+pip-python install 'boto==2.5.2' heat-cfntools
+cfn-create-aws-symlinks --source /usr/bin
+
+    </command>
+  </commands>
+</template>

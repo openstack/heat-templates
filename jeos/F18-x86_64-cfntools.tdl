@@ -1,0 +1,23 @@
+<template>
+  <name>F18-x86_64-cfntools</name>
+  <os>
+    <name>Fedora</name>
+    <version>18</version>
+    <arch>x86_64</arch>
+    <install type='iso'>
+      <iso>file:/var/lib/libvirt/images/Fedora-18-x86_64-DVD.iso</iso>
+    </install>
+  </os>
+  <description>Fedora 18</description>
+  <commands>
+    <command name='packages'>
+yum -y update fedora-release
+yum -y install yum-plugin-fastestmirror cloud-init python-psutil python-pip python-boto
+yum -y update
+sed --in-place -e s/Type=oneshot/"Type=oneshot\nTimeoutSec=0"/ /lib/systemd/system/cloud-final.service
+pip-python install heat-cfntools
+cfn-create-aws-symlinks --source /usr/bin
+
+    </command>
+  </commands>
+</template>
