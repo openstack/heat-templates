@@ -13,7 +13,7 @@
       "Properties" : {
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : "F17-x86_64-cfntools",
-        "InstanceType": "m1.large",
+        "InstanceType": "m1.small",
         "UserData" : { "Fn::Base64" : "80" }
       }
     }
