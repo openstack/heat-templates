@@ -9,7 +9,7 @@ import xml.etree.ElementTree as xml
 basepath = os.path.abspath(os.path.join(sys.argv[0],
     os.path.pardir,
     os.path.pardir,
-    'templates',
+    'cfn',
     'cloudformation-examples'))
 
 bucket = 'cloudformation-templates-us-east-1'
