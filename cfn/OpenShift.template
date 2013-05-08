@@ -105,7 +105,7 @@
                 "ImageId": {
                     "Fn::FindInMap": [ "JeosImages", "Broker", "Image" ]
                 },
-                "InstanceType": "m1.medium",
+                "InstanceType": "m1.small",
                 "KeyName": {
                     "Ref": "KeyName"
                 },
@@ -207,7 +207,7 @@
                 "ImageId": {
                     "Fn::FindInMap": [ "JeosImages", "Node", "Image" ]
                 },
-                "InstanceType": "m1.medium",
+                "InstanceType": "m1.small",
                 "KeyName": { "Ref": "KeyName" },
                 "SecurityGroups": [ { "Ref": "OpenShiftOriginSecurityGroup" } ],
                 "Tags": [ { "Key": "Name", "Value": { "Fn::Join": [ "-", [ "openshift", { "Ref": "Prefix" }, "node" ] ] } } ],
