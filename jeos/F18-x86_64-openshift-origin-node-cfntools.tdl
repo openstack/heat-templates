@@ -1,0 +1,64 @@
+<template>
+  <name>F18-x86_64-openshift-origin-node-cfntools</name>
+  <os>
+    <name>Fedora</name>
+    <version>18</version>
+    <arch>x86_64</arch>
+    <install type='iso'>
+      <iso>file:/var/lib/libvirt/images/Fedora-18-x86_64-DVD.iso</iso>
+    </install>
+  </os>
+  <description>OpenShift Origin Node</description>
+  <files>
+    <file name='/etc/yum.repos.d/puppetlabs-products.repo'>
+[puppetlabs-products]
+name=Puppet Labs Products Fedora 17 - $basearch
+baseurl=http://yum.puppetlabs.com/fedora/f17/products/$basearch
+gpgkey=http://yum.puppetlabs.com/RPM-GPG-KEY-puppetlabs
+enabled=0
+gpgcheck=1
+    </file>
+    <file name='/etc/yum.repos.d/openshift-origin.repo'>
+[openshift-origin]
+name=openshift-origin
+baseurl="https://mirror.openshift.com/pub/openshift-origin/nightly/fedora-18/latest/x86_64/"
+enabled=1
+gpgcheck=0
+    </file>
+    <file name='/etc/yum.repos.d/openshift-origin-deps.repo'>
+[openshift-origin-deps]
+name=openshift-origin-deps
+baseurl="https://mirror.openshift.com/pub/openshift-origin/fedora-18/x86_64/"
+enabled=1
+gpgcheck=0
+    </file>
+  </files> 
+  <commands>
+    <command name='user'>
+/usr/sbin/useradd ec2-user
+echo -e 'ec2-user\tALL=(ALL)\tNOPASSWD: ALL' >> /etc/sudoers
+    </command>
+    <command name='packages'>
+yum -y update fedora-release;
+yum -y install yum-plugin-fastestmirror cloud-init python-psutil python-pip;
+yum -y update;
+yum install -y --enablerepo puppetlabs-products facter;
+yum install -y policycoreutils mcollective httpd openssh-server rhc ntpdate rubygem-openshift-origin-node;
+yum install -y openshift-origin-node-util pam_openshift openshift-origin-node-proxy openshift-origin-port-proxy;
+yum install -y openshift-origin-msg-node-mcollective git make cronie openshift-origin-cartridge-abstract;
+yum install -y openshift-origin-cartridge-10gen-mms-agent-0.1 openshift-origin-cartridge-cron-1.4;
+yum install -y openshift-origin-cartridge-diy-0.1 openshift-origin-cartridge-haproxy-1.4;
+yum install -y openshift-origin-cartridge-mongodb-2.2 openshift-origin-cartridge-mysql-5.1;
+yum install -y openshift-origin-cartridge-nodejs-0.6 openshift-origin-cartridge-jenkins-1.4;
+yum install -y openshift-origin-cartridge-jenkins-client-1.4 openshift-origin-cartridge-community-python-2.7;
+yum install -y openshift-origin-cartridge-community-python-3.3 openshift-origin-cartridge-postgresql-9.2;
+yum install -y openshift-origin-cartridge-ruby-1.9 openshift-origin-cartridge-php-5.4;
+yum install -y openshift-origin-cartridge-perl-5.16 openshift-origin-cartridge-phpmyadmin-3.5;
+
+sed --in-place -e s/Type=oneshot/"Type=oneshot\nTimeoutSec=0"/ /lib/systemd/system/cloud-final.service;
+pip-python install 'boto==2.5.2' heat-cfntools;
+cfn-create-aws-symlinks --source /usr/bin;
+
+    </command>
+  </commands>
+</template>

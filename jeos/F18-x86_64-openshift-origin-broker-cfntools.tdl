@@ -1,0 +1,57 @@
+<template>
+  <name>F18-x86_64-openshift-origin-broker-cfntools</name>
+  <os>
+    <name>Fedora</name>
+    <version>18</version>
+    <arch>x86_64</arch>
+    <install type='iso'>
+      <iso>file:/var/lib/libvirt/images/Fedora-18-x86_64-DVD.iso</iso>
+    </install>
+  </os>
+  <description>OpenShift Origin Broker</description>
+  <files>
+    <file name='/etc/yum.repos.d/puppetlabs-products.repo'>
+[puppetlabs-products]
+name=Puppet Labs Products Fedora 17 - $basearch
+baseurl=http://yum.puppetlabs.com/fedora/f17/products/$basearch
+gpgkey=http://yum.puppetlabs.com/RPM-GPG-KEY-puppetlabs
+enabled=0
+gpgcheck=1
+    </file>
+    <file name='/etc/yum.repos.d/openshift-origin.repo'>
+[openshift-origin]
+name=openshift-origin
+baseurl="https://mirror.openshift.com/pub/openshift-origin/nightly/fedora-18/latest/x86_64/"
+enabled=1
+gpgcheck=0
+    </file>
+    <file name='/etc/yum.repos.d/openshift-origin-deps.repo'>
+[openshift-origin]
+name=openshift-origin-deps
+baseurl="https://mirror.openshift.com/pub/openshift-origin/fedora-18/x86_64/"
+enabled=1
+gpgcheck=0
+    </file>
+  </files> 
+  <commands>
+    <command name='user'>
+/usr/sbin/useradd ec2-user
+echo -e 'ec2-user\tALL=(ALL)\tNOPASSWD: ALL' >> /etc/sudoers
+    </command>
+    <command name='packages'>
+yum -y update fedora-release;
+yum -y install yum-plugin-fastestmirror cloud-init python-psutil python-pip;
+yum install -y --enablerepo puppetlabs-products facter;
+yum install -y  openshift-origin-broker rubygem-openshift-origin-msg-broker-mcollective rubygem-openshift-origin-dns-nsupdate;
+yum install -y  rubygem-openshift-origin-dns-bind rubygem-openshift-origin-controller openshift-origin-broker-util; 
+yum install -y  rubygem-passenger mod_passenger openssh rubygem-openshift-origin-auth-mongo rubygem-openshift-origin-remote-user ;
+yum install -y  rubygem-openshift-origin-console openshift-origin-console mongodb mongodb-server bind bind-utils ntpdate ;
+yum install -y  policycoreutils mcollective httpd openssh-server rhc activemq activemq-client git puppet ruby ruby-devel ;
+yum install -y  ruby-irb ruby-libs tar bind yum-plugin-priorities mysql-devel mongodb-devel;
+yum -y update;
+sed --in-place -e s/Type=oneshot/"Type=oneshot\nTimeoutSec=0"/ /lib/systemd/system/cloud-final.service;
+pip-python install 'boto==2.5.2' heat-cfntools;
+cfn-create-aws-symlinks --source /usr/bin;
+    </command>
+  </commands>
+</template>
