@@ -34,6 +34,9 @@ gpgcheck=0
     </file>
   </files> 
   <commands>
+    <command name='lockroot'> 
+passwd -l root
+    </command>
     <command name='user'>
 /usr/sbin/useradd ec2-user
 echo -e 'ec2-user\tALL=(ALL)\tNOPASSWD: ALL' >> /etc/sudoers

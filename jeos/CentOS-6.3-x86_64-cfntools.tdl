@@ -10,6 +10,9 @@
   </os>
   <description>CentOS 6.3</description>
   <commands>
+    <command name='lockroot'> 
+passwd -l root
+    </command>
     <command name='network-config'>
 cat > /etc/sysconfig/network-scripts/ifcfg-eth0 &lt;&lt; EOF
 DEVICE="eth0"

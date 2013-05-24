@@ -10,6 +10,9 @@
   </os>
   <description>Fedora 16</description>
   <commands>
+    <command name='lockroot'> 
+passwd -l root
+    </command>
     <command name='packages'>
 yum -y update fedora-release
 yum -y install yum-plugin-fastestmirror cloud-init python-psutil python-pip
