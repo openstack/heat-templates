@@ -50,7 +50,7 @@ yum install -y  policycoreutils mcollective httpd openssh-server rhc activemq ac
 yum install -y  ruby-irb ruby-libs tar bind yum-plugin-priorities mysql-devel mongodb-devel;
 yum -y update;
 sed --in-place -e s/Type=oneshot/"Type=oneshot\nTimeoutSec=0"/ /lib/systemd/system/cloud-final.service;
-pip-python install 'boto==2.5.2' heat-cfntools;
+pip-python install heat-cfntools;
 cfn-create-aws-symlinks --source /usr/bin;
     </command>
   </commands>
