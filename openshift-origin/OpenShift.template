@@ -14,11 +14,6 @@
             "Type": "String",
             "Default": "example.com"
         },
-        "DnsSecKey": {
-            "Description": "Bind DNS-Sec TSIG key",
-            "Type": "String",
-            "NoEcho": "TRUE"
-        },
         "UpstreamDNS": {
             "Description": "Upstream DNS server",
             "Type": "String",
@@ -128,6 +123,8 @@
                             "",
                             [
                                 "#!/bin/bash -x", "\n",
+                                "/usr/sbin/dnssec-keygen -a HMAC-MD5 -b 512 -n USER -r /dev/urandom -K /var/named ", { "Ref": "Prefix" }, "\n",
+                                "export DNS_SEC_KEY=\"`cat /var/named/K", { "Ref": "Prefix" }, ".*.key  | awk '{print $8}'`\"\n",
                                 "cat << EOF > /root/configure.pp\n",
                                     "\\$my_hostname=\"\\${ec2_instance_id}.", { "Ref": "Prefix" }, "\"\n",
                                     "file { \"update network settings - hostname\":", "\n",
@@ -153,7 +150,7 @@
                                     "class { \"openshift_origin\" :\n",
                                     "  node_fqdn                  => \\$my_hostname,\n",
                                     "  cloud_domain               => \"", { "Ref": "Prefix" }, "\",", "\n",
-                                    "  named_tsig_priv_key        => \"", { "Ref": "DnsSecKey" }, "\",", "\n",
+                                    "  named_tsig_priv_key        => \"${DNS_SEC_KEY}\",\n",
                                     "  dns_servers                => [\"", { "Ref": "UpstreamDNS" }, "\"],\n",
                                     "  os_unmanaged_users         => [\"ec2-user\"],\n",
                                     "  enable_network_services    => true,\n",
@@ -186,7 +183,7 @@
                                 "export EC2_INSTANCE_ID=\"`facter ec2_instance_id`\"\n",
                                 "export IP_ADDRESS=\"`facter ipaddress`\"\n",
                                 "cat << _EOF > /root/nsupdate.cmd\n",
-                                "key ", { "Ref": "Prefix" }," ",{ "Ref": "DnsSecKey" },"\n",
+                                "key ", { "Ref": "Prefix" }," ${DNS_SEC_KEY}\n",
                                 "server ${IP_ADDRESS} 53\n",
                                 "update delete ${EC2_INSTANCE_ID}.",{ "Ref": "Prefix" }," A\n",
                                 "update add    ${EC2_INSTANCE_ID}.",{ "Ref": "Prefix" }," 180 A ${IP_ADDRESS}\n",
@@ -194,7 +191,7 @@
                                 "_EOF\n",
                                 "cat /root/nsupdate.cmd | nsupdate\n",
                                 "# All is well so signal success\n",
-                                "/opt/aws/bin/cfn-signal -e 0 -r \"Broker setup complete\" \"", { "Ref": "brokerWaitHandle" }, "\"\n"
+                                "/opt/aws/bin/cfn-signal -e 0 --data \"${DNS_SEC_KEY}\" -r \"Broker setup complete\" \"", { "Ref": "brokerWaitHandle" }, "\"\n"
                             ]
                         ]
                     }
@@ -218,6 +215,7 @@
                             "",
                             [
                                 "#!/bin/bash -x", "\n",
+                                "export DNS_SEC_KEY=\"`python -c 'print ",{ "Fn::GetAtt": [ "brokerWaitCondition", "Data" ] },"[\"00000\"]'`\"\n",
                                 "cat << EOF > /root/configure.pp\n",
                                     "\\$my_hostname=\"\\${ec2_instance_id}.", { "Ref": "Prefix" }, "\"\n",
                                     "file { \"update network settings - hostname\":", "\n",
@@ -243,7 +241,7 @@
                                     "class { \"openshift_origin\" :\n",
                                     "  node_fqdn                  => \\$my_hostname,\n",
                                     "  cloud_domain               => \"", { "Ref": "Prefix" }, "\",", "\n",
-                                    "  named_tsig_priv_key        => \"", { "Ref": "DnsSecKey" }, "\",", "\n",
+                                    "  named_tsig_priv_key        => \"${DNS_SEC_KEY}\",\n",
                                     "  dns_servers                => [\"", { "Fn::GetAtt": [ "BrokerInstance", "PublicIp" ] }, "\"],\n",
                                     "  os_unmanaged_users         => [\"ec2-user\"],\n",
                                     "  enable_network_services    => true,\n",
@@ -277,7 +275,7 @@
                                 "export EC2_INSTANCE_ID=\"`facter ec2_instance_id`\"\n",
                                 "export IP_ADDRESS=\"`facter ipaddress`\"\n",
                                 "cat << _EOF > /root/nsupdate.cmd\n",
-                                "key ", { "Ref": "Prefix" }," ",{ "Ref": "DnsSecKey" },"\n",
+                                "key ", { "Ref": "Prefix" }," ${DNS_SEC_KEY}\n",
                                 "server ",{ "Fn::GetAtt": [ "BrokerInstance", "PublicIp" ] }," 53\n",
                                 "update delete ${EC2_INSTANCE_ID}.",{ "Ref": "Prefix" }," A\n",
                                 "update add    ${EC2_INSTANCE_ID}.",{ "Ref": "Prefix" }," 180 A ${IP_ADDRESS}\n",
