@@ -1,0 +1,70 @@
+#!/bin/bash
+
+set -uex
+
+install-packages \
+    openshift-origin-broker \
+    rubygem-openshift-origin-msg-broker-mcollective \
+    rubygem-openshift-origin-dns-nsupdate \
+    rubygem-openshift-origin-dns-bind \
+    rubygem-openshift-origin-controller \
+    openshift-origin-broker-util \
+    rubygem-passenger \
+    mod_passenger \
+    openssh \
+    rubygem-openshift-origin-auth-mongo \
+    rubygem-openshift-origin-remote-user \
+    rubygem-openshift-origin-console \
+    openshift-origin-console \
+    mongodb \
+    mongodb-server \
+    bind \
+    bind-utils \
+    ntpdate \
+    policycoreutils \
+    mcollective \
+    httpd \
+    openssh-server \
+    rhc \
+    activemq \
+    activemq-client \
+    git \
+    puppet \
+    ruby \
+    ruby-devel \
+    ruby-irb \
+    ruby-libs \
+    tar \
+    yum-plugin-priorities \
+    mysql-devel \
+    mongodb-devel \
+    system-config-firewall-base \
+    rubygem-execjs \
+    rubygem-uglifier \
+    rubygem-listen \
+    rubygem-sass \
+    rubygem-sass-rails \
+    autogen-libopts \
+    ntp \
+    rubygem-coffee-script-source \
+    rubygem-coffee-script \
+    rubygem-coffee-rails \
+    rubygem-idn \
+    rubygem-addressable \
+    rubygem-crack \
+    rubygem-webmock \
+    rubygem-fakefs \
+    rubygem-chunky_png \
+    rubygem-hpricot \
+    rubygem-haml \
+    rubygem-fssm \
+    rubygem-compass \
+    rubygem-compass-rails \
+    rubygem-mongo \
+    rubygem-jquery-rails \
+    rubygem-openshift-origin-dns-avahi \
+    rubygem-ref \
+    rubygem-therubyracer
+
+sed --in-place -e s/Type=oneshot/"Type=oneshot\nTimeoutSec=0"/ /lib/systemd/system/cloud-final.service
+

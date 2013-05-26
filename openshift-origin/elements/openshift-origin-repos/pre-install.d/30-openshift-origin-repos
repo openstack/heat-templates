@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -uex
+
+cat << EOF > /etc/yum.repos.d/openshift-origin.repo
+[openshift-origin]
+name=openshift-origin
+baseurl="https://mirror.openshift.com/pub/openshift-origin/release/1/fedora-18/packages/x86_64/"
+enabled=1
+gpgcheck=0
+EOF
+
+cat << EOF > /etc/yum.repos.d/openshift-origin-deps.repo
+[openshift-origin-deps]
+name=openshift-origin-deps
+baseurl="https://mirror.openshift.com/pub/openshift-origin/fedora-18/x86_64/"
+enabled=1
+gpgcheck=0
+EOF
+
+cat << EOF > /etc/yum.repos.d/jenkins.repo
+[jenkins]
+name=jenkins
+baseurl=http://pkg.jenkins-ci.org/redhat
+enabled=1
+gpgcheck=1
+EOF
+
+rpm --import http://pkg.jenkins-ci.org/redhat/jenkins-ci.org.key
