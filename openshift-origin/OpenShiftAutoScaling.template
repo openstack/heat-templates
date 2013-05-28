@@ -3,7 +3,7 @@
     "Description": "Template for setting up an AutoScaled OpenShift Origin environment",
     "Parameters": {
         "KeyName": {
-            "Description": "Name of an existing eyPair to enable SSH access to the instances",
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
             "Type": "String",
             "MinLength": "1",
             "MaxLength": "64",
@@ -13,11 +13,6 @@
             "Description": "Your DNS Prefix",
             "Type": "String",
             "Default": "example.com"
-        },
-        "DnsSecKey": {
-            "Description": "Bind DNS-Sec TSIG key",
-            "Type": "String",
-            "NoEcho": "TRUE"
         },
         "UpstreamDNS": {
             "Description": "Upstream DNS server",
@@ -205,9 +200,16 @@
                         "Fn::Join": [
                             "",
                             [
-                                "#!/bin/bash -x", "\n",
+                                "#!/bin/bash -x\n",
+                                "export PREFIX=", { "Ref": "Prefix" }, "\n",
+                                "export UPSTREAM_DNS=", { "Ref": "UpstreamDNS" }, "\n",
+                                "export BROKER_WAIT_HANDLE=\"", { "Ref": "brokerWaitHandle" }, "\"\n",
+                                "/usr/sbin/dnssec-keygen -a HMAC-MD5 -b 512 -n USER -r /dev/urandom -K /var/named ${PREFIX}\n",
+                                "export DNS_SEC_KEY=\"`cat /var/named/K${PREFIX}.*.key  | awk '{print $8}'`\"\n",
+                                "export EC2_INSTANCE_ID=\"`facter ec2_instance_id`\"\n",
+                                "export IP_ADDRESS=\"`facter ipaddress`\"\n",
                                 "cat << EOF > /root/configure.pp\n",
-                                    "\\$my_hostname=\"\\${ec2_instance_id}.", { "Ref": "Prefix" }, "\"\n",
+                                    "\\$my_hostname=\"\\${ec2_instance_id}.${PREFIX}\"\n",
                                     "file { \"update network settings - hostname\":", "\n",
                                     "  path    => \"/etc/sysconfig/network\",\n",
                                     "  content => \"NETWORKING=yes\\nNETWORKING_IPV6=no\\nHOSTNAME=\\${my_hostname}\"\n",
@@ -228,14 +230,14 @@
                                     "    \"set PEERDNS no\",\n",
                                     "  ],\n",
                                     "}\n",
-                                    "class { \"openshift_origin\" :\n",
+                                    "class { 'openshift_origin' :\n",
                                     "  node_fqdn                  => \\$my_hostname,\n",
-                                    "  cloud_domain               => \"", { "Ref": "Prefix" }, "\",", "\n",
-                                    "  named_tsig_priv_key        => \"", { "Ref": "DnsSecKey" }, "\",", "\n",
-                                    "  dns_servers                => [\"", { "Ref": "UpstreamDNS" }, "\"],\n",
-                                    "  os_unmanaged_users         => [\"ec2-user\"],\n",
+                                    "  cloud_domain               => '${PREFIX}',\n",
+                                    "  named_tsig_priv_key        => '${DNS_SEC_KEY}',\n",
+                                    "  dns_servers                => ['${UPSTREAM_DNS}'],\n",
+                                    "  os_unmanaged_users         => ['ec2-user'],\n",
                                     "  enable_network_services    => true,\n",
-                                    "  configure_firewall         => false,\n",
+                                    "  configure_firewall         => true,\n",
                                     "  configure_ntp              => true,\n",
                                     "  configure_activemq         => true,\n",
                                     "  configure_qpid             => false,\n",
@@ -251,8 +253,10 @@
                                     "  broker_fqdn                => \\$my_hostname,\n",
                                     "}\n",
                                 "EOF\n",
+                                "mkdir -p /etc/puppet/modules\n",
                                 "puppet module install openshift/openshift_origin", "\n",
                                 "puppet apply --verbose /root/configure.pp | tee /var/log/configure_openshift.log", "\n",
+                                "setsebool -P httpd_unified=on\n",
                                 "service network restart | tee /var/log/configure_openshift.log;\n",
                                 "service mongod restart | tee /var/log/configure_openshift.log;\n",
                                 "service activemq restart | tee /var/log/configure_openshift.log;\n",
@@ -260,18 +264,22 @@
                                 "service openshift-broker restart | tee /var/log/configure_openshift.log;\n",
                                 "service openshift-console restart | tee /var/log/configure_openshift.log;\n",
                                 "service named restart | tee /var/log/configure_openshift.log;\n",
-                                "export EC2_INSTANCE_ID=\"`facter ec2_instance_id`\"\n",
-                                "export IP_ADDRESS=\"`facter ipaddress`\"\n",
+                                "cat << EOF > /etc/resolv.conf\n",
+                                "; generated by heat\n",
+                                "search ${PREFIX}\n",
+                                "nameserver 127.0.0.1\n",
+                                "EOF\n",
                                 "cat << _EOF > /root/nsupdate.cmd\n",
-                                "key ", { "Ref": "Prefix" }," ",{ "Ref": "DnsSecKey" },"\n",
+                                "key ${PREFIX} ${DNS_SEC_KEY}\n",
                                 "server ${IP_ADDRESS} 53\n",
-                                "update delete ${EC2_INSTANCE_ID}.",{ "Ref": "Prefix" }," A\n",
-                                "update add    ${EC2_INSTANCE_ID}.",{ "Ref": "Prefix" }," 180 A ${IP_ADDRESS}\n",
+                                "update delete ${EC2_INSTANCE_ID}.${PREFIX} A\n",
+                                "update add    ${EC2_INSTANCE_ID}.${PREFIX} 180 A ${IP_ADDRESS}\n",
                                 "send\n",
                                 "_EOF\n",
                                 "cat /root/nsupdate.cmd | nsupdate\n",
+                                "setenforce 1\n",
                                 "# All is well so signal success\n",
-                                "/opt/aws/bin/cfn-signal -e 0 -r \"Broker setup complete\" \"", { "Ref": "brokerWaitHandle" }, "\"\n"
+                                "/opt/aws/bin/cfn-signal -e 0 --data \"${DNS_SEC_KEY}\" -r \"Broker setup complete\" \"${BROKER_WAIT_HANDLE}\"\n"
                             ]
                         ]
                     }
@@ -293,6 +301,11 @@
                             "",
                             [
                                 "#!/bin/bash -x", "\n",
+                                "export DNS_SEC_KEY=\"`python -c 'print ",{ "Fn::GetAtt": [ "brokerWaitCondition", "Data" ] },"[\"00000\"]'`\"\n",
+                                "export BROKER_IP=", { "Fn::GetAtt": [ "BrokerInstance", "PublicIp" ] }, "\n",
+                                "export PREFIX=", { "Ref": "Prefix" }, "\n",
+                                "export EC2_INSTANCE_ID=\"`facter ec2_instance_id`\"\n",
+                                "export IP_ADDRESS=\"`facter ipaddress`\"\n",
                                 "mkdir -p /etc/cfn\n",
                                 "cat << EOF > /etc/cfn/cfn-credentials\n",
                                 "AWSAccessKeyId=", {"Ref" : "OpenshiftOriginKeys"}, "\n",
@@ -322,7 +335,7 @@
                                 "crontab /tmp/stats-crontab.txt\n",
 
                                 "cat << EOF > /root/configure.pp\n",
-                                    "\\$my_hostname=\"\\${ec2_instance_id}.", { "Ref": "Prefix" }, "\"\n",
+                                    "\\$my_hostname=\"\\${ec2_instance_id}.${PREFIX}\"\n",
                                     "file { \"update network settings - hostname\":", "\n",
                                     "  path    => \"/etc/sysconfig/network\",\n",
                                     "  content => \"NETWORKING=yes\\nNETWORKING_IPV6=no\\nHOSTNAME=\\${my_hostname}\"\n",
@@ -345,12 +358,12 @@
                                     "}\n",
                                     "class { \"openshift_origin\" :\n",
                                     "  node_fqdn                  => \\$my_hostname,\n",
-                                    "  cloud_domain               => \"", { "Ref": "Prefix" }, "\",", "\n",
-                                    "  named_tsig_priv_key        => \"", { "Ref": "DnsSecKey" }, "\",", "\n",
-                                    "  dns_servers                => [\"", { "Fn::GetAtt": [ "BrokerInstance", "PublicIp" ] }, "\"],\n",
-                                    "  os_unmanaged_users         => [\"ec2-user\"],\n",
+                                    "  cloud_domain               => '${PREFIX}',\n",
+                                    "  named_tsig_priv_key        => '${DNS_SEC_KEY}',\n",
+                                    "  dns_servers                => ['${BROKER_IP}'],\n",
+                                    "  os_unmanaged_users         => ['ec2-user'],\n",
                                     "  enable_network_services    => true,\n",
-                                    "  configure_firewall         => false,\n",
+                                    "  configure_firewall         => true,\n",
                                     "  configure_ntp              => true,\n",
                                     "  configure_activemq         => false,\n",
                                     "  configure_qpid             => false,\n",
@@ -360,36 +373,55 @@
                                     "  configure_console          => false,\n",
                                     "  configure_node             => true,\n",
                                     "  development_mode           => true,\n",
-                                    "  named_ipaddress            => \"", { "Fn::GetAtt": [ "BrokerInstance", "PublicIp" ] }, "\",\n",
-                                    "  mongodb_fqdn               => \"", { "Fn::GetAtt": [ "BrokerInstance", "PublicIp" ] }, "\",\n",
-                                    "  mq_fqdn                    => \"", { "Fn::GetAtt": [ "BrokerInstance", "PublicIp" ] }, "\",\n",
-                                    "  broker_fqdn                => \"", { "Fn::GetAtt": [ "BrokerInstance", "PublicIp" ] }, "\",\n",
+                                    "  named_ipaddress            => '${BROKER_IP}',\n",
+                                    "  mongodb_fqdn               => '${BROKER_IP}',\n",
+                                    "  mq_fqdn                    => '${BROKER_IP}',\n",
+                                    "  broker_fqdn                => '${BROKER_IP}',\n",
                                     "}\n",
                                 "EOF\n",
+                                "mkdir -p /etc/puppet/modules\n",
+                                "puppet module install openshift/openshift_origin", "\n",
                                 "puppet apply --verbose /root/configure.pp | tee /var/log/configure_openshift.log;", "\n",
                                 "service network restart | tee /var/log/configure_openshift.log;\n",
                                 "service cgconfig restart | tee /var/log/configure_openshift.log;\n",
                                 "service cgred restart | tee /var/log/configure_openshift.log;\n",
                                 "service openshift-cgroups restart | tee /var/log/configure_openshift.log;\n",
                                 "service openshift-node-web-proxy restart | tee /var/log/configure_openshift.log;\n",
+                                "service openshift-gears restart | tee /var/log/configure_openshift.log;\n",
+                                "service openshift-port-proxy restart | tee /var/log/configure_openshift.log;\n",
                                 "service mcollective restart | tee /var/log/configure_openshift.log;\n",
                                 "service httpd restart | tee /var/log/configure_openshift.log;\n",
                                 "service sshd restart | tee /var/log/configure_openshift.log;\n",
-                                "export EC2_INSTANCE_ID=\"`facter ec2_instance_id`\"\n",
-                                "export IP_ADDRESS=\"`facter ipaddress`\"\n",
+                                "cat << EOF > /etc/resolv.conf\n",
+                                "; generated by heat\n",
+                                "search ${PREFIX}\n",
+                                "nameserver ${BROKER_IP}\n",
+                                "EOF\n",
                                 "cat << _EOF > /root/nsupdate.cmd\n",
-                                "key ", { "Ref": "Prefix" }," ",{ "Ref": "DnsSecKey" },"\n",
-                                "server ",{ "Fn::GetAtt": [ "BrokerInstance", "PublicIp" ] }," 53\n",
-                                "update delete ${EC2_INSTANCE_ID}.",{ "Ref": "Prefix" }," A\n",
-                                "update add    ${EC2_INSTANCE_ID}.",{ "Ref": "Prefix" }," 180 A ${IP_ADDRESS}\n",
+                                "key ${PREFIX} ${DNS_SEC_KEY}\n",
+                                "server ${BROKER_IP} 53\n",
+                                "update delete ${EC2_INSTANCE_ID}.${PREFIX} A\n",
+                                "update add    ${EC2_INSTANCE_ID}.${PREFIX} 180 A ${IP_ADDRESS}\n",
                                 "send\n",
                                 "_EOF\n",
-                                "cat /root/nsupdate.cmd | nsupdate\n"
+                                "cat /root/nsupdate.cmd | nsupdate\n",
+                                "setenforce 1\n"
                             ]
                         ]
                     }
                 }
             }
         }
+    },
+
+  "Outputs" : {
+    "OpenShiftConsole" : {
+      "Value" : { "Fn::Join" : ["", ["https://", { "Fn::GetAtt" : [ "BrokerInstance", "PublicIp" ]}, "/console"]] },
+      "Description" : "URL for OpenShift Origins console"
+    },
+    "NameServerEntry" : {
+      "Value" : { "Fn::Join" : ["", ["nameserver ", { "Fn::GetAtt" : [ "BrokerInstance", "PublicIp" ]}]] },
+      "Description" : "Entry to insert into /etc/resolv.conf for application host names to resolve"
     }
+  }
 }
