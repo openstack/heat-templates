@@ -5,6 +5,12 @@
 
   "Parameters" : {
 
+    "AvailabilityZone" : {
+      "Description" : "The Availability Zone in which to launch the instance.",
+      "Type" : "String",
+      "Default" : "nova"
+    },
+
     "KeyName" : {
       "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
       "Type" : "String"
@@ -57,6 +63,7 @@
     "Ec2Instance" : {
       "Type" : "AWS::EC2::Instance",
       "Properties" : {
+        "AvailabilityZone" : { "Ref" : "AvailabilityZone" },
         "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
         "ImageId" : { "Fn::FindInMap" : [ "DistroArch2AMI", { "Ref" : "LinuxDistribution" },
                           { "Fn::FindInMap" : [ "AWSInstanceType2Arch", { "Ref" : "InstanceType" }, "Arch" ] } ] },
@@ -87,7 +94,7 @@
       "Type" : "AWS::EC2::Volume",
       "Properties" : {
         "Size" : { "Ref" : "VolumeSize" },
-        "AvailabilityZone" : { "Fn::GetAtt" : [ "Ec2Instance", "AvailabilityZone" ]}
+        "AvailabilityZone" : { "Ref" : "AvailabilityZone" }
       }
     }
   },
