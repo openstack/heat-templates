@@ -18,6 +18,32 @@
             "Description": "Upstream DNS server",
             "Type": "String",
             "Default": "8.8.8.8"
+        },
+        "BrokerServerFlavor" : {
+          "Description" : "Flavor of broker server",
+          "Type" : "String",
+          "Default" : "m1.small",
+          "AllowedValues" : [ "m1.small", "m1.medium", "m1.large", "m1.xlarge" ],
+          "ConstraintDescription" : "Must be a valid server flavor"
+        },
+        "NodeServerFlavor" : {
+          "Description" : "Flavor of node servers",
+          "Type" : "String",
+          "Default" : "m1.small",
+          "AllowedValues" : [ "m1.small", "m1.medium", "m1.large", "m1.xlarge" ],
+          "ConstraintDescription" : "Must be a valid server flavor"
+        },
+        "NodeCountMinimum": {
+            "Description": "Minimum number of nodes to scale down to",
+            "Type" : "String",
+            "Default" : "1",
+            "AllowedPattern": "[0-9]*"
+        },
+        "NodeCountMaximum": {
+            "Description": "Maximum number of nodes to scale up to",
+            "Type" : "String",
+            "Default" : "3",
+            "AllowedPattern": "[0-9]*"
         }
     },
     "Mappings": {
@@ -46,8 +72,8 @@
           "Properties" : {
             "AvailabilityZones" : { "Fn::GetAZs" : ""},
             "LaunchConfigurationName" : { "Ref" : "NodeLaunchConfig" },
-            "MinSize" : "1",
-            "MaxSize" : "3",
+            "MinSize" : { "Ref" : "NodeCountMinimum" },
+            "MaxSize" : { "Ref" : "NodeCountMaximum" },
             "LoadBalancerNames" : []
           }
         },
@@ -178,7 +204,7 @@
                 "ImageId": {
                     "Fn::FindInMap": [ "JeosImages", "Broker", "Image" ]
                 },
-                "InstanceType": "m1.small",
+                "InstanceType": {"Ref": "BrokerServerFlavor"},
                 "KeyName": {
                     "Ref": "KeyName"
                 },
@@ -292,7 +318,7 @@
                 "ImageId": {
                     "Fn::FindInMap": [ "JeosImages", "Node", "Image" ]
                 },
-                "InstanceType": "m1.small",
+                "InstanceType": {"Ref": "BrokerServerFlavor"},
                 "KeyName": { "Ref": "KeyName" },
                 "SecurityGroups": [ { "Ref": "OpenShiftOriginSecurityGroup" } ],
                 "UserData": {
