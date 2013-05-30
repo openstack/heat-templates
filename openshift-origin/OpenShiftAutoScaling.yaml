@@ -2,7 +2,7 @@ HeatTemplateFormatVersion: '2012-12-12'
 Description: Template for setting up an AutoScaled OpenShift Origin environment
 Parameters:
   KeyName:
-    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Description: Name of an existing keypair to enable SSH access to the instances
     Type: String
     MinLength: '1'
     MaxLength: '64'
@@ -12,7 +12,7 @@ Parameters:
     Type: String
     Default: example.com
   UpstreamDNS:
-    Description: Upstream DNS server,
+    Description: Upstream DNS server
     Type: String
     Default: 8.8.8.8
   BrokerServerFlavor:
@@ -45,7 +45,7 @@ Mappings:
       Image: F18-x86_64-openshift-origin-node-cfntools
 Resources:
   OpenshiftUser:
-    Type: 'AWS::IAM::User'
+    Type: AWS::IAM::User
   OpenshiftOriginKeys:
     Type: AWS::IAM::AccessKey
     Properties:
@@ -53,10 +53,9 @@ Resources:
         Ref: OpenshiftUser
   OpenshiftOriginNodeGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
-    DependsOn: brokerWaitCondition
+    DependsOn: BrokerWaitCondition
     Properties:
-      AvailabilityZones: 
-        Fn::GetAZs: ''
+      AvailabilityZones: []
       LaunchConfigurationName:
         Ref: NodeLaunchConfig
       MinSize:
@@ -70,7 +69,7 @@ Resources:
       AdjustmentType: ChangeInCapacity
       AutoScalingGroupName:
         Ref: OpenshiftOriginNodeGroup
-      Cooldown: '60'
+      Cooldown: '120'
       ScalingAdjustment: '1'
   OpenshiftOriginScaleDownPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
@@ -80,38 +79,38 @@ Resources:
         Ref: OpenshiftOriginNodeGroup
       Cooldown: '60'
       ScalingAdjustment: '-1'
-  NodeAlarmHigh:
+  NodeScaleUp:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: Scale-up if Nodes > 50% for 1 minute
-      MetricName: NodeUtilization
+      AlarmDescription: Scale-up if event received from broker
+      MetricName: Heartbeat
       Namespace: system/linux
-      Statistic: Average
+      Statistic: SampleCount
       Period: '60'
       EvaluationPeriods: '1'
-      Threshold: '50'
+      Threshold: '0'
       AlarmActions: [{Ref: OpenshiftOriginScaleUpPolicy}]
       Dimensions:
       - Name: AutoScalingGroupName
         Value:
           Ref: OpenshiftOriginNodeGroup
       ComparisonOperator: GreaterThanThreshold
-  NodeAlarmLow:
+  NodeScaleDown:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: Scale-down if Nodes < 15% for 1 minute
-      MetricName: NodeUtilization
+      AlarmDescription: Scale-down if event received from broker
+      MetricName: Heartbeat
       Namespace: system/linux
-      Statistic: Average
+      Statistic: SampleCount
       Period: '60'
       EvaluationPeriods: '1'
-      Threshold: '15'
+      Threshold: '0'
       AlarmActions: [{Ref: OpenshiftOriginScaleDownPolicy}]
       Dimensions:
       - Name: AutoScalingGroupName
         Value:
           Ref: OpenshiftOriginNodeGroup
-      ComparisonOperator: LessThanThreshold
+      ComparisonOperator: GreaterThanThreshold
   OpenShiftOriginSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -124,14 +123,14 @@ Resources:
       - {IpProtocol: tcp, FromPort: '443', ToPort: '443', CidrIp: 0.0.0.0/0}
       - {IpProtocol: tcp, FromPort: '8000', ToPort: '8000', CidrIp: 0.0.0.0/0}
       - {IpProtocol: tcp, FromPort: '8443', ToPort: '8443', CidrIp: 0.0.0.0/0}
-  brokerWaitHandle:
+  BrokerWaitHandle:
     Type: AWS::CloudFormation::WaitConditionHandle
-  brokerWaitCondition:
+  BrokerWaitCondition:
     Type: AWS::CloudFormation::WaitCondition
     DependsOn: BrokerInstance
     Properties:
       Handle:
-        Ref: brokerWaitHandle
+        Ref: BrokerWaitHandle
       Timeout: '6000'
   BrokerInstance:
     Type: AWS::EC2::Instance
@@ -148,9 +147,7 @@ Resources:
         Value:
           Fn::Join:
           - '-'
-          - - openshift
-            - {Ref: Prefix}
-            - broker
+          - ['openshift', {Ref: Prefix}, 'broker']
       UserData:
         Fn::Base64:
           Fn::Join:
@@ -166,13 +163,44 @@ Resources:
             - |-
                 
                 export BROKER_WAIT_HANDLE="
-            - {Ref: brokerWaitHandle}
+            - {Ref: BrokerWaitHandle}
             - |-
                 "
                 /usr/sbin/dnssec-keygen -a HMAC-MD5 -b 512 -n USER -r /dev/urandom -K /var/named ${PREFIX}
                 export DNS_SEC_KEY="`cat /var/named/K${PREFIX}.*.key  | awk '{print $8}'`"
                 export EC2_INSTANCE_ID="`facter ec2_instance_id`"
                 export IP_ADDRESS="`facter ipaddress`"
+                mkdir -p /etc/heat
+                cat << EOF > /etc/heat/heat-credentials
+                AWSAccessKeyId=
+            - {Ref: OpenshiftOriginKeys}
+            - |-
+                
+                AWSSecretKey=
+            - Fn::GetAtt: [OpenshiftOriginKeys, SecretAccessKey]
+            - |-
+                
+                EOF
+                chmod 0400 /etc/heat/heat-credentials
+                
+                cat << EOF > /etc/heat/notify-scale-up
+                #!/bin/bash
+                /opt/aws/bin/cfn-push-stats --credential-file /etc/heat/heat-credentials --heartbeat --watch 
+            - {Ref: NodeScaleUp}
+            - |-
+                
+                EOF
+                chmod 0700 /etc/heat/notify-scale-up
+                
+                cat << EOF > /etc/heat/notify-scale-down
+                #!/bin/bash
+                /opt/aws/bin/cfn-push-stats --credential-file /etc/heat/heat-credentials --heartbeat --watch 
+            - {Ref: NodeScaleDown}
+            - |-
+                
+                EOF
+                chmod 0700 /etc/heat/notify-scale-down
+                
                 cat << EOF > /root/configure.pp
                 \$my_hostname="\${ec2_instance_id}.${PREFIX}"
                 file { "update network settings - hostname":
@@ -251,7 +279,7 @@ Resources:
       ImageId:
         Fn::FindInMap: [JeosImages, Node, Image]
       InstanceType:
-        Ref: BrokerServerFlavor
+        Ref: NodeServerFlavor
       KeyName:
         Ref: KeyName
       SecurityGroups: [{Ref: OpenShiftOriginSecurityGroup}]
@@ -262,7 +290,7 @@ Resources:
           - - |-
                 #!/bin/bash -x
                 export DNS_SEC_KEY="`python -c 'print 
-            - Fn::GetAtt: [brokerWaitCondition, Data]
+            - Fn::GetAtt: [BrokerWaitCondition, Data]
             - |-
                 ["00000"]'`"
                 export BROKER_IP=
@@ -275,34 +303,6 @@ Resources:
                 
                 export EC2_INSTANCE_ID="`facter ec2_instance_id`"
                 export IP_ADDRESS="`facter ipaddress`"
-                mkdir -p /etc/cfn
-                cat << EOF > /etc/cfn/cfn-credentials
-                AWSAccessKeyId=
-            - {Ref: OpenshiftOriginKeys}
-            - |-
-                
-                AWSSecretKey=
-            - Fn::GetAtt: [OpenshiftOriginKeys, SecretAccessKey]
-            - |-
-                
-                EOF
-                chown root:root /etc/cfn/cfn-credentials
-                chmod 0400 /etc/cfn/cfn-credentials
-                cat << EOF > /tmp/stats-crontab.txt
-                MAIL=""
-                * * * * * /opt/aws/bin/cfn-push-stats --metric NodeUtilization --units Percent --value 90 --watch 
-            - {Ref: NodeAlarmHigh}
-            - |-
-                
-                 * * * * * /opt/aws/bin/cfn-push-stats --metric NodeUtilization --units Percent --value 90 --watch 
-            - {Ref: NodeAlarmLow}
-            - |-
-                
-                EOF
-                chown root:root /tmp/stats-crontab.txt
-                chmod 600 /tmp/stats-crontab.txt
-                # install crontab
-                crontab /tmp/stats-crontab.txt
                 cat << EOF > /root/configure.pp
                 \$my_hostname="\${ec2_instance_id}.${PREFIX}"
                 file { "update network settings - hostname":
@@ -388,4 +388,3 @@ Outputs:
       - ''
       - ['nameserver ', 'Fn::GetAtt': [BrokerInstance, PublicIp]]
     Description: Entry to insert into /etc/resolv.conf for application host names to resolve
-
