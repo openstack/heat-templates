@@ -5,7 +5,7 @@
     <version>18</version>
     <arch>i386</arch>
     <install type='iso'>
-      <iso>file:/var/lib/libvirt/images/Fedora-18-i386-DVD.iso</iso>
+      <iso>file:/var/lib/libvirt/images/Fedora-18-i386-netinst.iso</iso>
     </install>
   </os>
   <description>Fedora 18</description>
