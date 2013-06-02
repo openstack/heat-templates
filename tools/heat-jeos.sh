@@ -41,8 +41,9 @@ FMTFILE="${LIBVIRT_IMGDIR}/${TDLNAME}.${DISK_FORMAT}"
 qemu-img convert -c -O ${DISK_FORMAT} ${DSKFILE} ${FMTFILE}
 
 if [ -f ${FMTFILE} ]; then
-    echo "Image ${FMTFILE} complete, now add image to glance, e.g:"
-    GLANCECMD="glance add name=${TDLNAME} is_public=true disk_format=${DISK_FORMAT} container_format=bare"
+    echo "Image ${FMTFILE} creation complete."
+    echo "Add the image to glance with the command:"
+    GLANCECMD="sudo -E glance add name=${TDLNAME} is_public=true disk_format=${DISK_FORMAT} container_format=bare"
     echo "${GLANCECMD} < ${FMTFILE}"
 else
     echo "Error creating image file ${FMTFILE}"
