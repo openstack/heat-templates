@@ -5,7 +5,7 @@
     <version>17</version>
     <arch>x86_64</arch>
     <install type='iso'>
-      <iso>file:/var/lib/libvirt/images/Fedora-17-x86_64-DVD.iso</iso>
+      <iso>file:/var/lib/libvirt/images/Fedora-17-x86_64-netinst.iso</iso>
     </install>
   </os>
   <description>Fedora 17</description>
