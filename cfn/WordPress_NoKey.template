@@ -72,12 +72,12 @@
       "m1.xlarge"   : { "Arch" : "64" }
     },
     "DistroArch2AMI": {
-      "F18"      : { "32" : "F18-i386-gold", "64" : "F18-x86_64-gold" },
-      "F17"      : { "32" : "F17-i386-gold", "64" : "F17-x86_64-gold" },
-      "U10"      : { "32" : "U10-i386-gold", "64" : "U10-x86_64-gold" },
-      "RHEL-6.1" : { "32" : "rhel61-i386-gold", "64" : "rhel61-x86_64-gold" },
-      "RHEL-6.2" : { "32" : "rhel62-i386-gold", "64" : "rhel62-x86_64-gold" },
-      "RHEL-6.3" : { "32" : "rhel63-i386-gold", "64" : "rhel63-x86_64-gold" }
+      "F18"      : { "32" : "F18-i386-cfntools", "64" : "F18-x86_64-cfntools" },
+      "F17"      : { "32" : "F17-i386-cfntools", "64" : "F17-x86_64-cfntools" },
+      "U10"      : { "32" : "U10-i386-cfntools", "64" : "U10-x86_64-cfntools" },
+      "RHEL-6.1" : { "32" : "rhel61-i386-cfntools", "64" : "rhel61-x86_64-cfntools" },
+      "RHEL-6.2" : { "32" : "rhel62-i386-cfntools", "64" : "rhel62-x86_64-cfntools" },
+      "RHEL-6.3" : { "32" : "rhel63-i386-cfntools", "64" : "rhel63-x86_64-cfntools" }
     }
   },
 
@@ -111,6 +111,7 @@
         "InstanceType"   : { "Ref" : "InstanceType" },
         "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
           "#!/bin/bash -v\n",
+          "/opt/aws/bin/cfn-init\n",
           "# Setup MySQL root password and create a user\n",
           "mysqladmin -u root password '", { "Ref" : "DBRootPassword" }, "'\n",
           "cat >> /tmp/mysql-wordpress-config << EOF\n",
