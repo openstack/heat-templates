@@ -6,7 +6,7 @@ It includes the following files
 * OpenShift.template - heat template for launching OpenShift Origin with a single broker server and a single node server
 * openshift-origin - diskimage-builder elements to build images, as an alternative to oz
 
-To build with diskimage-builder, do the following in the parent directory of heat-templates:
+To build with diskimage-builder, do the following in the parent directory of heat-templates::
 
   git clone https://github.com/stackforge/diskimage-builder.git
   git clone https://github.com/stackforge/tripleo-image-elements.git
