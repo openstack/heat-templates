@@ -1,0 +1,31 @@
+# This is a hello world HOT template just defining a single compute instance
+heat_template_version: 2013-05-23
+
+description: >
+  Hello world HOT template that just defines a single compute instance.
+  Contains just base features to verify base HOT support.
+
+parameters:
+  KeyName:
+    type: string
+    description: Name of an existing key pair to use for the instance
+  InstanceType:
+    type: string
+    description: Instance type for the instance to be created
+  ImageId:
+    type: string
+    description: ID of the image to use for the instance
+
+resources:
+  my_instance:
+    # Use an AWS resource type since this exists; so why use other name here?
+    type: AWS::EC2::Instance
+    properties:
+      KeyName: { get_param: KeyName }
+      ImageId: { get_param: ImageId }
+      InstanceType: { get_param: InstanceType }
+
+outputs:
+  instance_ip:
+    description: The IP address of the deployed instance
+    value: { get_attr: [my_instance, PublicIp] }
