@@ -12,9 +12,33 @@ parameters:
   InstanceType:
     type: string
     description: Instance type for the instance to be created
+    default: m1.small
+    constraints:
+      - allowed_values: [m1.tiny, m1.small, m1.large]
+        description: Value must be one of 'm1.tiny', 'm1.small' or 'm1.large'
   ImageId:
     type: string
     description: ID of the image to use for the instance
+  # parameters below are not used in template, but are for verifying parameter
+  # validation support in HOT
+  db_password:
+    type: string
+    description: Database password
+    hidden: true
+    constraints:
+      - length: { min: 6, max: 8 }
+        description: Password length must be between 6 and 8 characters
+      - allowed_pattern: "[a-zA-Z0-9]+"
+        description: Password must consist of characters and numbers only
+      - allowed_pattern: "[A-Z]+[a-zA-Z0-9]*"
+        description: Password must start with an uppercase character
+  db_port:
+    type: number
+    description: Database port number
+    default: 50000
+    constraints:
+      - range: { min: 40000, max: 60000 }
+        description: Port number must be between 40000 and 60000
 
 resources:
   my_instance:
