@@ -1,0 +1,164 @@
+HeatTemplateFormatVersion: '2012-12-12'
+Description: Creates an autoscaling wordpress application using Ceilometer.
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Type: String
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: m1.small
+    AllowedValues: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
+    ConstraintDescription: must be a valid EC2 instance type.
+  ImageId:
+    Description: the name or uuid of the image in glance
+    Type: String
+    Default: F17-x86_64-cfntools
+  DBUsername: {Default: admin, NoEcho: 'true',
+    Description: The WordPress database admin account username, Type: String,
+    MinLength: '1', MaxLength: '16', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+    ConstraintDescription: must begin with a letter and contain only
+      alphanumeric characters.}
+  DBPassword: {Default: admin, NoEcho: 'true',
+    Description: The WordPress database admin account password, Type: String,
+    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
+    ConstraintDescription: must contain only alphanumeric characters.}
+  DBRootPassword: {Default: admin, NoEcho: 'true',
+    Description: Root password for MySQL, Type: String,
+    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
+    ConstraintDescription: must contain only alphanumeric characters.}
+Resources:
+  CfnUser: {Type: 'AWS::IAM::User'}
+  WebServerKeys:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: {Ref: CfnUser}
+  WebServerGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones: {'Fn::GetAZs': ''}
+      LaunchConfigurationName: {Ref: LaunchConfig}
+      MinSize: '1'
+      MaxSize: '3'
+      LoadBalancerNames:
+      - {Ref: ElasticLoadBalancer}
+      Tags:
+      - {Key: metering.server_group, Value: WebServerGroup}
+  WebServerScaleUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: {Ref: WebServerGroup}
+      Cooldown: '60'
+      ScalingAdjustment: '1'
+  WebServerScaleDownPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: {Ref: WebServerGroup}
+      Cooldown: '60'
+      ScalingAdjustment: '-1'
+  CPUAlarmHigh:
+    Type: OS::Metering::Alarm
+    Properties:
+      description: Scale-up if the average CPU > 50% for 1 minute
+      counter_name: cpu_util
+      statistic: avg
+      period: '60'
+      evaluation_periods: '1'
+      threshold: '50'
+      alarm_actions:
+      - {"Fn::GetAtt": [WebServerScaleUpPolicy, AlarmUrl]}
+      matching_metadata: {'metadata.user_metadata.server_group': 'WebServerGroup'}
+      comparison_operator: gt
+  CPUAlarmLow:
+    Type: OS::Metering::Alarm
+    Properties:
+      description: Scale-down if the average CPU < 15% for 1 minute
+      counter_name: cpu_util
+      statistic: avg
+      period: '60'
+      evaluation_periods: '1'
+      threshold: '15'
+      alarm_actions:
+      - {"Fn::GetAtt": [WebServerScaleDownPolicy, AlarmUrl]}
+      matching_metadata: {'metadata.user_metadata.server_group': 'WebServerGroup'}
+      comparison_operator: lt
+  ElasticLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      AvailabilityZones: {'Fn::GetAZs': ''}
+      Listeners:
+      - {LoadBalancerPort: '80', InstancePort: '80',
+        Protocol: HTTP}
+      HealthCheck: {Target: 'HTTP:80/', HealthyThreshold: '3',
+        UnhealthyThreshold: '5', Interval: '30', Timeout: '5'}
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          files:
+            /etc/cfn/cfn-credentials:
+              content:
+                'Fn::Replace':
+                - WebServerKeys: {Ref: WebServerKeys}
+                  WebSecretKey: {'Fn::GetAtt': [WebServerKeys, SecretAccessKey]}
+                - |
+                  AWSAccessKeyId=WebServerKeys
+                  AWSSecretKey=WebSecretKey
+              mode: '000400'
+              owner: root
+              group: root
+            /tmp/setup.mysql:
+              content:
+                'Fn::Replace':
+                - DBPassword: {Ref: DBPassword}
+                  DBUsername: {Ref: DBUsername}
+                - |
+                  CREATE DATABASE wordpress;
+                  GRANT ALL PRIVILEGES ON wordpress .* TO 'DBUsername'@'localhost' IDENTIFIED BY 'DBPassword';
+                  FLUSH PRIVILEGES;
+                  EXIT
+              mode: '000644'
+              owner: root
+              group: root
+          packages:
+            yum:
+              mysql: []
+              mysql-server: []
+              httpd: []
+              wordpress: []
+          services:
+            systemd:
+              mysqld: {enabled: 'true', ensureRunning: 'true'}
+              httpd: {enabled: 'true', ensureRunning: 'true'}
+    Properties:
+      ImageId: {Ref: ImageId}
+      InstanceType: {Ref: InstanceType}
+      KeyName: {Ref: KeyName}
+      UserData:
+        Fn::Base64:
+          Fn::Replace:
+          - 'AWS::StackName': {Ref: 'AWS::StackName'}
+            'AWS::Region': {Ref: 'AWS::Region'}
+            DBRootPassword: {Ref: DBRootPassword}
+            DBPassword: {Ref: DBPassword}
+            DBUsername: {Ref: DBUsername}
+          - |
+            #!/bin/bash -v
+            /opt/aws/bin/cfn-init -s AWS::StackName -r LaunchConfig --region AWS::Region
+            # Setup MySQL root password and create a user
+            mysqladmin -u root password DBRootPassword
+            mysql -u root --password=DBRootPassword < /tmp/setup.mysql
+            sed -i "/Deny from All/d" /etc/httpd/conf.d/wordpress.conf
+            sed -i "/Deny from all/d" /etc/httpd/conf.d/wordpress.conf
+            sed --in-place --e s/database_name_here/wordpress/ --e s/username_here/DBUsername/ --e s/password_here/DBPassword/ /usr/share/wordpress/wp-config.php
+            systemctl restart httpd.service
+Outputs:
+  URL:
+    Description: The URL of the website
+    Value:
+      Fn::Replace:
+      - IpAddress: {'Fn::GetAtt': [ElasticLoadBalancer, DNSName]}
+      - http://IpAddress/wordpress
