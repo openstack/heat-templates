@@ -1,0 +1,158 @@
+HeatTemplateFormatVersion: '2012-12-12'
+Description: 'Heat WordPress template to support F19 with no SSH key requirements:
+  WordPress is web software you can use to create a beautiful website or blog. This
+  template installs a single-instance WordPress deployment using a local MySQL database
+  to store the data.'
+Parameters:
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: m1.small
+    AllowedValues: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
+    ConstraintDescription: must be a valid EC2 instance type.
+  DBName: {Default: wordpress, Description: The
+      WordPress database name, Type: String, MinLength: '1',
+    MaxLength: '64', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+    ConstraintDescription: must begin with a letter and contain only
+      alphanumeric characters.}
+  DBUsername: {Default: admin, NoEcho: 'true',
+    Description: The WordPress database admin account username, Type: String,
+    MinLength: '1', MaxLength: '16', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
+    ConstraintDescription: must begin with a letter and contain only
+      alphanumeric characters.}
+  DBPassword: {Default: admin, NoEcho: 'true',
+    Description: The WordPress database admin account password, Type: String,
+    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
+    ConstraintDescription: must contain only alphanumeric characters.}
+  DBRootPassword: {Default: admin, NoEcho: 'true',
+    Description: Root password for MySQL, Type: String,
+    MinLength: '1', MaxLength: '41', AllowedPattern: '[a-zA-Z0-9]*',
+    ConstraintDescription: must contain only alphanumeric characters.}
+Mappings:
+  InstanceTypeToImage:
+    m1.tiny: {Image: 'F19-i386-cfntools'}
+    m1.small: {Image: 'F19-x86_64-cfntools'}
+    m1.medium: {Image: 'F19-x86_64-cfntools'}
+    m1.large: {Image: 'F19-x86_64-cfntools'}
+    m1.xlarge: {Image: 'F19-x86_64-cfntools'}
+Resources:
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Enable HTTP access via port 80 plus SSH access'
+      SecurityGroupIngress:
+      - IpProtocol: icmp
+        FromPort: -1
+        ToPort: -1
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort : 22
+        CidrIp : 0.0.0.0/0
+  WikiDatabase:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              mariadb: []
+              mariadb-server: []
+              httpd: []
+              wordpress: []
+          services:
+            systemd:
+              mysqld: {enabled: 'true', ensureRunning: 'true'}
+              httpd: {enabled: 'true', ensureRunning: 'true'}
+    Properties:
+      ImageId:
+        Fn::FindInMap:
+        - InstanceTypeToImage
+        - {Ref: InstanceType}
+        - Image
+      InstanceType: {Ref: InstanceType}
+      SecurityGroups: [{"Ref" : "WebServerSecurityGroup"}]
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - ''
+          - - '#!/bin/bash -v
+
+              '
+            - '/opt/aws/bin/cfn-init
+
+              '
+            - 'iptables -F
+
+              '
+            - '# Setup MySQL root password and create a user
+
+              '
+            - mysqladmin -u root password '
+            - {Ref: DBRootPassword}
+            - '''
+
+              '
+            - cat << EOF | mysql -u root --password='
+            - {Ref: DBRootPassword}
+            - '''
+
+              '
+            - 'CREATE DATABASE '
+            - {Ref: DBName}
+            - ';
+
+              '
+            - 'GRANT ALL PRIVILEGES ON '
+            - {Ref: DBName}
+            - .* TO "
+            - {Ref: DBUsername}
+            - '"@"localhost"
+
+              '
+            - IDENTIFIED BY "
+            - {Ref: DBPassword}
+            - '";
+
+              '
+            - 'FLUSH PRIVILEGES;
+
+              '
+            - 'EXIT
+
+              '
+            - 'EOF
+
+              '
+            - 'sed -i "/Deny from All/d" /etc/httpd/conf.d/wordpress.conf
+
+              '
+            - 'sed -i "s/Require local/Require all granted/" /etc/httpd/conf.d/wordpress.conf
+
+              '
+            - sed --in-place --e s/database_name_here/
+            - {Ref: DBName}
+            - / --e s/username_here/
+            - {Ref: DBUsername}
+            - / --e s/password_here/
+            - {Ref: DBPassword}
+            - '/ /etc/wordpress/wp-config.php
+
+              '
+            - 'systemctl restart httpd.service
+
+              '
+Outputs:
+  WebsiteURL:
+    Value:
+      Fn::Join:
+      - ''
+      - - http://
+        - Fn::GetAtt: [WikiDatabase, PublicIp]
+        - /wordpress
+    Description: URL for Wordpress wiki
+
