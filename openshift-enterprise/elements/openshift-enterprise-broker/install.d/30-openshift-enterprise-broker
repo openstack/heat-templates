@@ -1,0 +1,44 @@
+#!/bin/bash
+
+set -e
+
+if [ -z "${DIB_RHSM_OSE_POOL:-}" ]; then
+	cat > /etc/yum.repos.d/openshift-client.repo <<YUM
+[openshift_client]
+name=OpenShift Client
+baseurl=${DIB_CONF_REPO_BASE}/Client/x86_64/os/
+enabled=1
+gpgcheck=0
+priority=1
+sslverify=false
+
+YUM
+
+	cat > /etc/yum.repos.d/openshift-infrastructure.repo <<YUM
+[openshift_infrastructure]
+name=OpenShift Infrastructure
+baseurl=${DIB_CONF_REPO_BASE}/Infrastructure/x86_64/os/
+enabled=1
+gpgcheck=0
+priority=1
+sslverify=false
+
+YUM
+fi
+
+install-packages \
+yum-plugin-priorities \
+openshift-origin-broker \
+openshift-origin-broker-util \
+rubygem-openshift-origin-msg-broker-mcollective \
+rubygem-openshift-origin-auth-remote-user \
+rubygem-openshift-origin-dns-nsupdate \
+openshift-origin-console \
+rhc \
+mcollective-client \
+activemq \
+mongodb-server \
+bind \
+bind-utils \
+mod_auth_kerb \
+--skip-broken
