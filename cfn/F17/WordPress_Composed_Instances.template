@@ -90,7 +90,7 @@
     "DatabaseTemplate": {
       "Type": "AWS::CloudFormation::Stack",
       "Properties": {
-        "TemplateURL": "https://raw.github.com/openstack/heat-templates/master/cfn/MySQL_Single_Instance.template",
+        "TemplateURL": "https://raw.github.com/openstack/heat-templates/master/cfn/F17/MySQL_Single_Instance.template",
         "Parameters": {
           "KeyName"           : { "Ref" : "KeyName" },
           "InstanceType"      : { "Ref" : "InstanceType" },
