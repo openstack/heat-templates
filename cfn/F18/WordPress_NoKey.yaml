@@ -41,18 +41,18 @@ Resources:
     Properties:
       GroupDescription: 'Enable HTTP access via port 80 plus SSH access'
       SecurityGroupIngress:
-      - IpProtocol: icmp
-        FromPort: -1
-        ToPort: -1
-        CidrIp: 0.0.0.0/0
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
-      - IpProtocol: tcp
-        FromPort: 22
-        ToPort : 22
-        CidrIp : 0.0.0.0/0
+      - IpProtocol: 'icmp'
+        FromPort: '-1'
+        ToPort: '-1'
+        CidrIp: '0.0.0.0/0'
+      - IpProtocol: 'tcp'
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: '0.0.0.0/0'
+      - IpProtocol: 'tcp'
+        FromPort: '22'
+        ToPort : '22'
+        CidrIp : '0.0.0.0/0'
   WikiDatabase:
     Type: AWS::EC2::Instance
     Metadata:
@@ -87,6 +87,9 @@ Resources:
 
               '
             - 'firewall-cmd --add-service=http
+
+              '
+            - 'firewall-cmd --permanent --add-service=http
 
               '
             - '# Setup MySQL root password and create a user

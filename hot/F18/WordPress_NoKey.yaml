@@ -21,7 +21,7 @@ parameters:
     constraints:
       - allowed_values: [ F18-i386-cfntools, F18-x86_64-cfntools ]
         description: >
-          Image ID bust be either F18-i386-cfntools or F18-x86_64-cfntools
+          Image ID must be either F18-i386-cfntools or F18-x86_64-cfntools
   DBName:
     type: string
     description: WordPress database name
@@ -72,18 +72,18 @@ resources:
     properties:
       GroupDescription: 'Enable HTTP access via port 80 plus SSH access'
       SecurityGroupIngress:
-        - IpProtocol: icmp
-          FromPort: -1
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort : 22
-          CidrIp : 0.0.0.0/0
+        - IpProtocol: 'icmp'
+          FromPort: '-1'
+          ToPort: '-1'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: 'tcp'
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: 'tcp'
+          FromPort: '22'
+          ToPort : '22'
+          CidrIp : '0.0.0.0/0'
 
   wordpress_instance:
     # Use an AWS resource type and switch to native compute instance as
@@ -115,6 +115,7 @@ resources:
 
             /opt/aws/bin/cfn-init
             firewall-cmd --add-service=http
+            firewall-cmd --permanent --add-service=http
 
             # Setup MySQL root password and create a user
             mysqladmin -u root password $db_rootpassword
