@@ -135,10 +135,10 @@ resources:
 
             systemctl restart httpd.service
           params:
-            db_rootpassword: { get_param: DBRootPassword }
-            db_name: { get_param: DBName }
-            db_user: { get_param: DBUsername }
-            db_password: { get_param: DBPassword }
+            $db_rootpassword: { get_param: DBRootPassword }
+            $db_name: { get_param: DBName }
+            $db_user: { get_param: DBUsername }
+            $db_password: { get_param: DBPassword }
 
 outputs:
   WebsiteURL:
@@ -147,4 +147,4 @@ outputs:
       str_replace:
         template: http://$host/wordpress
         params:
-          host: { get_attr: [wordpress_instance, PublicIp] }
+          $host: { get_attr: [wordpress_instance, PublicIp] }
