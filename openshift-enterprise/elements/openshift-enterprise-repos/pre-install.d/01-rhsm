@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+if [ -n "$DIB_RHSM_USER" ] && [ -n "$DIB_RHSM_PASSWORD" ]
+  then
+    # assume since the DIB_RHSM_USER and DIB_RHSM_PASSWORD are defined the system has already been registered
+    if [ -z "${DIB_RHSM_OSE_POOL:-}" ]; then
+       echo "DIB_RHSM_OSE_POOL environment variable is not set, OpenShift Enterprise subscription will not be applied"
+    else
+        subscription-manager attach --pool $DIB_RHSM_OSE_POOL
+    fi
+fi
