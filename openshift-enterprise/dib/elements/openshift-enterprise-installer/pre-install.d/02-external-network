@@ -1,0 +1,62 @@
+#!/bin/bash
+
+set -e
+
+# This script is used to prime the installer script with a function to wait for external network connectivity
+
+cat > /openshift-wait4extnet.sh << 'CONNECT'
+#!/bin/bash
+
+parse_args()
+{
+  for word in "$@"
+  do
+    key="${word%%\=*}"
+    case "$word" in
+      (*=*) val="${word#*\=}" ;;
+      (*) val=true ;;
+    esac
+    eval "CONF_${key^^}"'="$val"'
+    echo "CONF_${key^^}"'="$val"'
+  done
+}
+
+# Parse command-line arguments using parse_args.
+parse_cmdline()
+{
+  parse_args "$@"
+}
+
+parse_cmdline "$@"
+
+wait_for_external_network()
+{
+  IP="${CONF_EIP:-www.google.com}"
+  MAX_STEPS=${CONF_MAX_RETRY:-60}
+  COUNTER=0
+  CODE="0"
+  while [ $COUNTER -lt $MAX_STEPS ]; do
+    echo "trying to reach $IP"
+    CODE=$(ping -c1 $IP 2> /dev/null | grep -c "Unreachable");
+    if [ $CODE -gt 0 ]; then
+      if [ $COUNTER -lt $MAX_STEPS ]; then
+        COUNTER=$[COUNTER+1]
+      fi
+      echo "waiting 5 seconds to check again for external connectivity"
+      sleep 5
+    else
+      echo "external connectivity has been established, waiting 10 seconds"
+      sleep 10
+      break
+    fi
+  done
+}
+
+#wait for external connectivity
+wait_for_external_network
+
+#ensure yum cache is clean
+yum clean all
+CONNECT
+
+chmod +x /openshift-wait4extnet.sh

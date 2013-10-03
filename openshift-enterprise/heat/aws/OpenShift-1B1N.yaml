@@ -208,19 +208,15 @@ Resources:
             - '
 
               '
-            - yum clean all
+            - rm -f /root/openshift.sh;wget https://raw.github.com/openshift/openshift-extras/enterprise-1.2/enterprise/install-scripts/generic/openshift.sh
             - '
 
               '
-            - wget https://raw.github.com/openshift/openshift-extras/enterprise-1.2.z/enterprise/install-scripts/generic/openshift.sh
+            - chmod +x ./openshift.sh
             - '
 
               '
-            - chmod +x openshift.sh
-            - '
-
-              '
-            - ./openshift.sh 2>&1 | tee /tmp/openshift.out
+            - ./openshift.sh 2>&1 | tee /tmp/openshift.out 
             - '
 
               '
@@ -229,6 +225,10 @@ Resources:
 
               '
             - '# All is well so signal success
+
+              '
+            - setenforce 1
+            - '
 
               '
             - '/usr/bin/cfn-signal -e 0 --data "${DNS_SEC_KEY}" -r "Broker setup
@@ -369,19 +369,19 @@ Resources:
             - '
 
               '
-            - yum clean all
+            - rm -f /root/openshift.sh;wget https://raw.github.com/openshift/openshift-extras/enterprise-1.2/enterprise/install-scripts/generic/openshift.sh
             - '
 
               '
-            - wget https://raw.github.com/openshift/openshift-extras/enterprise-1.2.z/enterprise/install-scripts/generic/openshift.sh
+            - chmod +x ./openshift.sh
             - '
 
               '
-            - chmod +x openshift.sh
+            - ./openshift.sh 2>&1 | tee /tmp/openshift.out 
             - '
 
               '
-            - ./openshift.sh 2>&1 | tee /tmp/openshift.out
+            - setenforce 1
             - '
 
               '

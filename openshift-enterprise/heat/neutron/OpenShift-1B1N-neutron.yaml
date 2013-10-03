@@ -1,0 +1,301 @@
+heat_template_version: 2013-05-23
+description: Template for setting up an AutoScaled OpenShift Enterprise environment
+parameters:
+  key_name:
+    description: Name of an existing keypair to enable SSH access to the instances
+    type: string
+  prefix:
+    Description: Your DNS Prefix
+    Type: String
+    Default: example.com
+  upstreamDNS:
+    description: Upstream DNS server
+    type: String
+    default: 8.8.8.8
+  broker_server_flavor:
+    description: Flavor of broker server
+    type: String
+    default: m1.small
+    allowed_values: [m1.small, m1.medium, m1.large, m1.xlarge]
+    constraint_description: Must be a valid server flavor
+  node_server_flavor:
+    description: Flavor of node servers
+    type: String
+    default: m1.small
+    allowed_values: [m1.small, m1.medium, m1.large, m1.xlarge]
+    constraint_description: Must be a valid server flavor
+  node_count_minimum:
+    description: Minimum number of nodes to scale down to
+    type: String
+    default: '1'
+    allowed_pattern: '[0-9]*'
+  node_count_maximum:
+    description: Maximum number of nodes to scale up to
+    type: String
+    default: '3'
+    allowed_pattern: '[0-9]*'
+  ConfInstallMethod: {Description: Installation method (yum rhsm rhn), Type: String, MinLength: '1',
+    MaxLength: '255', Default: yum, Allowed_Values: [yum, rhsm, rhn]}
+  ConfSMRegName: {Description: Subscription Manager registration username, Type: String, MinLength: '1',
+    MaxLength: '255', Default: username}
+  ConfSMRegPass: {Description: Subscription Manager registration password, Type: String, MinLength: '1',
+    MaxLength: '255', Default: password}
+  ConfSMRegPool: {Description: Pool ID for OpenShift subscription, Type: String, MinLength: '1',
+    MaxLength: '255', Default: none}
+  ConfRHNRegName: {Description: RHN registration username, Type: String, MinLength: '1',
+    MaxLength: '255', Default: username}
+  ConfRHNRegPass: {Description: RHN registration password, Type: String, MinLength: '1',
+    MaxLength: '255', Default: password}
+  ConfRHNRegAK: {Description: RHN activation key for OpenShift subscription, Type: String, MinLength: '1',
+    MaxLength: '255', Default: activationkey}
+  ConfRHELRepoBase: {Description: RHEL Repo Base, Type: String, MinLength: '1',
+    MaxLength: '255', Default: example.com}
+  ConfRepoBase: {Description: OSE Repo Base, Type: String, MinLength: '1',
+    MaxLength: '255', Default: example.com}
+  ConfJBossRepoBase: {Description: JBoss Repo Base, Type: String, MinLength: '1',
+    MaxLength: '255', Default: example.com}
+  BrokerHostname: {Description: Broker hostname, Type: String, MinLenth: '1', Default: openshift.brokerinstance.novalocal}
+  NodeHostname: {Description: Broker hostname, Type: String, MinLenth: '1', Default: openshift.nodeinstance.novalocal}
+  public_net_id:
+    type: string
+    description: >
+      ID of public network for which floating IP addresses will be allocated
+  private_net_id:
+    type: string
+    description: ID of private network into which servers get deployed
+  private_subnet_id:
+    type: string
+    description: ID of private sub network into which servers get deployed
+  ose_version:
+    description: The version of OpenShift Enterprise to install
+    type: String
+    default: "2.0"
+    allowed_values: ["1.2", "2.0"]
+  yum_validator_version:
+    description: An optional version for the oo-yum-validator tool to use
+    type: String
+    default: "2.0"
+    allowed_values: ["1.2", "2.0", "2.0beta"]
+
+resources:
+  openshift_enterprise_security_group:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Standard firewall rules
+      SecurityGroupIngress:
+      - {IpProtocol: udp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '1', ToPort: '65535', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: icmp, FromPort: '-1', ToPort: '-1', CidrIp: 0.0.0.0/0}
+
+  broker_port:
+    type: OS::Neutron::Port
+    properties:
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+
+  broker_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: broker_port }
+
+  node_port:
+    type: OS::Neutron::Port
+    properties:
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+
+  node_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: node_port }
+
+
+  broker_wait_handle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  broker_wait_condition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: broker_instance
+    Properties:
+      Handle:
+        Ref: broker_wait_handle
+      Timeout: '6000'
+
+  broker_instance:
+    type: OS::Nova::Server
+    properties:
+      name: broker_instance
+      image: RHEL64-x86_64-broker
+      flavor: { get_param: broker_server_flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: broker_port }
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -x
+
+            export CONF_BROKER_IP_ADDR=P_BROKER_FLOATING_IP
+            export CONF_NODE_IP_ADDR=P_NODE_FLOATING_IP
+            export CONF_NAMED_IP_ADDR=P_BROKER_FLOATING_IP
+            export CONF_DOMAIN=P_PREFIX
+            export CONF_BROKER_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_NODE_HOSTNAME=P_NODE_HOSTNAME
+            export CONF_NAMED_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_ACTIVEMQ_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_DATASTORE_HOSTNAME=P_BROKER_HOSTNAME
+            export PREFIX=P_PREFIX
+            export DNS_SEC_KEY=`cat /var/named/K${PREFIX}.*.key  | awk '{print $8}'`
+            export CONF_INSTALL_METHOD=P_CONF_INSTALL_METHOD
+            export CONF_SM_REG_NAME=P_CONF_SM_REG_NAME
+            export CONF_SM_REG_PASS=P_CONF_SM_REG_PASS
+            export CONF_SM_REG_POOL=P_CONF_SM_REG_POOL
+            export CONF_RHN_REG_NAME=P_CONF_RHN_REG_NAME
+            export CONF_RHN_REG_PASS=P_CONF_RHN_REG_PASS
+            export CONF_RHN_REG_ACTKEY=P_CONF_RHN_REG_ACTKEY
+            export CONF_REPOS_BASE=P_CONF_REPOS_BASE
+            export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
+            export CONF_RHEL_REPO=P_CONF_RHEL_REPO
+            export CONF_OSE_VERSION=P_OSE_VERSION
+            export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
+            export CONF_INSTALL_COMPONENTS=broker,named,datastore,activemq
+            # oo-admin-check-sources will ship with 2.0 however it is still compatible with OSE 1.2
+            curl -L https://api.github.com/repos/openshift/openshift-extras/tarball/enterprise-2.0 | tar -xvz
+            pushd openshift-openshift-extras*/admin/yum-validator
+              VALIDATOR_ARGS="--oo-version=${CONF_OSE_VERSION} --role=broker --fix-all"
+              ./oo-admin-yum-validator ${VALIDATOR_ARGS} || ./oo-admin-yum-validator ${VALIDATOR_ARGS}
+            popd
+            wget https://raw.github.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            chmod +x ./openshift.sh
+            ./openshift.sh 2>&1 | tee /tmp/openshift.out
+            echo "${CONF_NODE_HOSTNAME%.${PREFIX}}                      A       ${CONF_NODE_IP_ADDR}" >> /var/named/dynamic/${PREFIX}.db
+            # All is well so signal success
+            setenforce 1
+            cd /etc/init.d
+            for i in `ls cloud-*`; do chkconfig $i off; done
+            /usr/bin/cfn-signal -e 0 --data "${DNS_SEC_KEY}" -r "Broker setup complete" "P_BROKER_WAIT_HANDLE"
+            reboot
+          params:
+            P_BROKER_FLOATING_IP: { get_attr: [ broker_floating_ip, floating_ip_address ] }
+            P_NODE_FLOATING_IP: { get_attr: [ node_floating_ip, floating_ip_address ] }
+            P_PREFIX: { get_param: prefix }
+            P_BROKER_HOSTNAME: { get_param: BrokerHostname }
+            P_NODE_HOSTNAME: { get_param: NodeHostname }
+            P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle }
+            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod }
+            P_CONF_SM_REG_NAME: { get_param: ConfSMRegName }
+            P_CONF_SM_REG_PASS: { get_param: ConfSMRegPass }
+            P_CONF_SM_REG_POOL: { get_param: ConfSMRegPool }
+            P_CONF_RHN_REG_NAME: { get_param: ConfRHNRegName }
+            P_CONF_RHN_REG_PASS: { get_param: ConfRHNRegPass }
+            P_CONF_RHN_REG_ACTKEY: { get_param: ConfRHNRegAK }
+            P_CONF_REPOS_BASE: { get_param: ConfRepoBase }
+            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase }
+            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase }
+            P_OSE_VERSION: { get_param: ose_version }
+            P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
+            P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle }
+
+  node_wait_handle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  node_wait_condition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: node_instance
+    Properties:
+      Handle:
+        Ref: node_wait_handle
+      Timeout: '6000'
+
+  node_instance:
+    type: OS::Nova::Server
+    properties:
+      name: node_instance
+      image: RHEL64-x86_64-node
+      flavor: { get_param: node_server_flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: node_port }
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -x
+
+            export CONF_BROKER_IP_ADDR=P_BROKER_FLOATING_IP
+            export CONF_NODE_IP_ADDR=P_NODE_FLOATING_IP
+            export CONF_NAMED_IP_ADDR=P_BROKER_FLOATING_IP
+            export CONF_DOMAIN=P_PREFIX
+            export CONF_BROKER_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_NODE_HOSTNAME=P_NODE_HOSTNAME
+            export CONF_NAMED_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_ACTIVEMQ_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_DATASTORE_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_INSTALL_METHOD=P_CONF_INSTALL_METHOD
+            export CONF_SM_REG_NAME=P_CONF_SM_REG_NAME
+            export CONF_SM_REG_PASS=P_CONF_SM_REG_PASS
+            export CONF_SM_REG_POOL=P_CONF_SM_REG_POOL
+            export CONF_RHN_REG_NAME=P_CONF_RHN_REG_NAME
+            export CONF_RHN_REG_PASS=P_CONF_RHN_REG_PASS
+            export CONF_RHN_REG_ACTKEY=P_CONF_RHN_REG_ACTKEY
+            export CONF_REPOS_BASE=P_CONF_REPOS_BASE
+            export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
+            export CONF_RHEL_REPO=P_CONF_RHEL_REPO
+            export CONF_OSE_VERSION=P_OSE_VERSION
+            export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
+            export CONF_INSTALL_COMPONENTS=node
+            # oo-admin-check-sources will ship with 2.0 however it is still compatible with OSE 1.2
+            curl -L https://api.github.com/repos/openshift/openshift-extras/tarball/enterprise-2.0 | tar -xvz
+            pushd openshift-openshift-extras*/admin/yum-validator
+              VALIDATOR_ARGS="--oo-version=${P_YUM_VALIDATOR_VERSION} --role=node-eap --fix-all"
+              ./oo-admin-yum-validator ${VALIDATOR_ARGS} || ./oo-admin-yum-validator ${VALIDATOR_ARGS}
+            popd
+            wget https://raw.github.com/openshift/openshift-extras/enterprise-${P_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            chmod +x ./openshift.sh
+            ./openshift.sh 2>&1 | tee /tmp/openshift.out
+            setenforce 1
+            cd /etc/init.d
+            for i in `ls cloud-*`; do chkconfig $i off; done
+            /usr/bin/cfn-signal -e 0 --data "${DNS_SEC_KEY}" -r "Node setup complete" "P_NODE_WAIT_HANDLE"
+            reboot
+          params:
+            P_BROKER_FLOATING_IP: { get_attr: [ broker_floating_ip, floating_ip_address ] }
+            P_NODE_FLOATING_IP: { get_attr: [ node_floating_ip, floating_ip_address ] }
+            P_PREFIX: { get_param: prefix }
+            P_BROKER_HOSTNAME: { get_param: BrokerHostname }
+            P_NODE_HOSTNAME: { get_param: NodeHostname }
+            P_NODE_WAIT_HANDLE: { get_resource: node_wait_handle}
+            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod}
+            P_CONF_SM_REG_NAME: { get_param: ConfSMRegName}
+            P_CONF_SM_REG_PASS: { get_param: ConfSMRegPass}
+            P_CONF_SM_REG_POOL: { get_param: ConfSMRegPool}
+            P_CONF_RHN_REG_NAME: { get_param: ConfRHNRegName}
+            P_CONF_RHN_REG_PASS: { get_param: ConfRHNRegPass}
+            P_CONF_RHN_REG_ACTKEY: { get_param: ConfRHNRegAK}
+            P_CONF_REPOS_BASE: { get_param: ConfRepoBase}
+            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase}
+            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase}
+            P_OSE_VERSION: { get_param: ose_version }
+            P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
+            P_NODE_WAIT_HANDLE: { get_resource: node_wait_handle }
+
+outputs:
+  OpenShiftConsole:
+    Value:
+      Fn::Join:
+      - ''
+      - ['https://', { get_attr: [ broker_instance, first_address ] }, '/console']
+    description: URL for OpenShift Enterprises console
+  NameServerEntry:
+    Value:
+      Fn::Join:
+      - ''
+      - ['nameserver ', { get_attr: [ broker_instance, first_address ] } ]
+    description: Entry to insert into /etc/resolv.conf for application host names to resolve
