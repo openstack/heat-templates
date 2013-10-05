@@ -5,11 +5,11 @@ Description: 'Heat WordPress template to support F19 with no SSH key requirement
   to store the data.'
 Parameters:
   InstanceType:
-    Description: WebServer EC2 instance type
+    Description: Wiki server nova instance type
     Type: String
     Default: m1.small
-    AllowedValues: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
-    ConstraintDescription: must be a valid EC2 instance type.
+    AllowedValues: [m1.tiny, m1.small, m1.medium, m1.large, m1.nano, m1.xlarge, m1.micro]
+    ConstraintDescription: must be a valid nova instance type.
   DBName: {Default: wordpress, Description: The
       WordPress database name, Type: String, MinLength: '1',
     MaxLength: '64', AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*',
@@ -30,8 +30,10 @@ Parameters:
     ConstraintDescription: must contain only alphanumeric characters.}
 Mappings:
   InstanceTypeToImage:
+    m1.nano: {Image: 'F19-i386-cfntools'}
+    m1.micro: {Image: 'F19-i386-cfntools'}
     m1.tiny: {Image: 'F19-i386-cfntools'}
-    m1.small: {Image: 'F19-x86_64-cfntools'}
+    m1.small: {Image: 'F19-i386-cfntools'}
     m1.medium: {Image: 'F19-x86_64-cfntools'}
     m1.large: {Image: 'F19-x86_64-cfntools'}
     m1.xlarge: {Image: 'F19-x86_64-cfntools'}
