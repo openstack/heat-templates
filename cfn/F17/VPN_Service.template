@@ -1,0 +1,226 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Creates new network, router, vpn sevrice and server. More details about VPN service you can find on wikipage: https://wiki.openstack.org/wiki/Quantum/VPNaaS/HowToInstall",
+
+  "Parameters" : {
+
+    "ExternalNetwork" : {
+      "Default" : "public",
+      "Description" : "External network name or id",
+      "Type" : "String",
+      "ConstraintDescription" : "must be a name or id of existing external network"
+    },
+
+    "ExternalGateway" : {
+      "Default" : "172.24.4.233",
+      "Description" : "External Gateway IP address",
+      "Type" : "String",
+      "ConstraintDescription" : "must be an IP address of external gateway"
+    },
+
+    "SubnetCidr" : {
+      "Default" : "10.1.0.0/24",
+      "Description" : "Subnet cidr",
+      "Type" : "String",
+      "ConstraintDescription" : "must be a cidr"
+    },
+
+    "SubnetPoolStart" : {
+      "Default" : "10.1.0.10",
+      "Description" : "Start of allocation pool for subnet",
+      "Type" : "String",
+      "ConstraintDescription" : "must be a valid IP address"
+    },
+
+    "SubnetPoolEnd" : {
+      "Default" : "10.1.0.200",
+      "Description" : "End of allocation pool for subnet",
+      "Type" : "String",
+      "ConstraintDescription" : "must be a valid IP address"
+    },
+
+    "VPNPeerCidr" : {
+      "Default" : "10.2.0.0/24",
+      "Description" : "Cidr for VPN peer",
+      "Type" : "String",
+      "ConstraintDescription" : "must be a valid cidr"
+    },
+
+    "KeyName" : {
+       "Default" : "heat_key",
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+      "Type" : "String"
+    },
+
+    "InstanceType" : {
+      "Description" : "Server EC2 instance type",
+      "Type" : "String",
+      "Default" : "m1.small",
+      "AllowedValues" : [ "m1.tiny", "m1.small", "m1.medium", "m1.large", "m1.xlarge" ],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+
+    "LinuxDistribution": {
+      "Default": "F17",
+      "Description" : "Distribution of choice",
+      "Type": "String",
+      "AllowedValues" : [ "F19", "F18", "F17", "U10", "RHEL-6.1", "RHEL-6.2", "RHEL-6.3" ]
+    }
+
+  },
+
+  "Mappings" : {
+    "AWSInstanceType2Arch" : {
+      "m1.tiny"   : { "Arch" : "32" },
+      "m1.small"  : { "Arch" : "64" },
+      "m1.medium" : { "Arch" : "64" },
+      "m1.large"  : { "Arch" : "64" },
+      "m1.xlarge" : { "Arch" : "64" }
+    },
+    "DistroArch2AMI": {
+      "F19"      : { "32" : "F19-i386-cfntools", "64" : "F19-x86_64-cfntools" },
+      "F18"      : { "32" : "F18-i386-cfntools", "64" : "F18-x86_64-cfntools" },
+      "F17"      : { "32" : "F17-i386-cfntools", "64" : "F17-x86_64-cfntools" },
+      "U10"      : { "32" : "U10-i386-cfntools", "64" : "U10-x86_64-cfntools" },
+      "RHEL-6.1" : { "32" : "rhel61-i386-cfntools", "64" : "rhel61-x86_64-cfntools" },
+      "RHEL-6.2" : { "32" : "rhel62-i386-cfntools", "64" : "rhel62-x86_64-cfntools" },
+      "RHEL-6.3" : { "32" : "rhel63-i386-cfntools", "64" : "rhel63-x86_64-cfntools" }
+    }
+  },
+
+  "Resources" : {
+
+    "Network": {
+      "Type": "OS::Quantum::Net",
+      "Properties": {
+        "name": "My Network"
+      }
+    },
+
+    "Subnet": {
+      "Type": "OS::Quantum::Subnet",
+      "Properties": {
+        "name": "My Subnet",
+        "network_id": { "Ref" : "Network" },
+        "ip_version": 4,
+        "cidr": { "Ref" : "SubnetCidr" },
+        "dns_nameservers": ["8.8.8.8"],
+        "allocation_pools": [ {
+          "start": { "Ref" : "SubnetPoolStart" },
+          "end": { "Ref" : "SubnetPoolEnd" }
+          }
+        ]
+      }
+    },
+
+    "Router": {
+      "Type": "OS::Quantum::Router",
+      "Properties": {
+        "name": "My Router"
+      }
+    },
+
+    "RouterInterface": {
+      "Type": "OS::Quantum::RouterInterface",
+      "Properties": {
+        "router_id": { "Ref" : "Router" },
+        "subnet_id": { "Ref" : "Subnet" }
+      }
+    },
+
+    "RouterGateway": {
+      "Type": "OS::Quantum::RouterGateway",
+      "Properties": {
+        "router_id": { "Ref" : "Router" },
+        "network_id": { "Ref" : "ExternalNetwork" }
+      }
+    },
+
+    "VPNService" : {
+      "Type" : "OS::Neutron::VPNService",
+      "Properties" : {
+        "name" : "VPNService",
+        "description" : "My new VPN service",
+        "admin_state_up" : true,
+        "router_id" : { "Ref" : "Router" },
+        "subnet_id" : { "Ref" : "Subnet" }
+      }
+    },
+
+    "IKEPolicy" : {
+      "Type" : "OS::Neutron::IKEPolicy",
+      "Properties" : {
+        "name" : "IKEPolicy",
+        "description" : "My new IKE policy",
+        "auth_algorithm" : "sha1",
+        "encryption_algorithm" : "3des",
+        "phase1_negotiation_mode" : "main",
+        "lifetime" : {
+            "units" : "seconds",
+            "value" : 3600
+        },
+        "pfs" : "group5",
+        "ike_version" : "v1"
+      }
+    },
+
+    "IPsecPolicy" : {
+      "Type" : "OS::Neutron::IPsecPolicy",
+      "Properties" : {
+        "name" : "IPsecPolicy",
+        "description" : "My new IPsec policy",
+        "transform_protocol": "esp",
+        "encapsulation_mode" : "tunnel",
+        "auth_algorithm" : "sha1",
+        "encryption_algorithm" : "3des",
+        "lifetime" : {
+            "units" : "seconds",
+            "value" : 3600
+        },
+        "pfs" : "group5"
+      }
+    },
+
+    "IPsecSiteConnection" : {
+      "Type" : "OS::Neutron::IPsecSiteConnection",
+      "Properties" : {
+        "name" : "IPsecSiteConnection",
+        "description" : "My new VPN connection",
+        "peer_address" : { "Ref" : "ExternalGateway" },
+        "peer_id" : { "Ref" : "ExternalGateway" },
+        "peer_cidrs" : [ { "Ref" : "VPNPeerCidr" } ],
+        "mtu" : 1500,
+        "dpd" : {
+            "actions" : "hold",
+            "interval" : 30,
+            "timeout" : 120
+        },
+        "psk" : "secret",
+        "initiator" : "bi-directional",
+        "admin_state_up" : true,
+        "ikepolicy_id" : { "Ref" : "IKEPolicy" },
+        "ipsecpolicy_id" : { "Ref" : "IPsecPolicy" },
+        "vpnservice_id" : { "Ref" : "VPNService" }
+      }
+    },
+
+    "Server": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId" : { "Fn::FindInMap" : [ "DistroArch2AMI", { "Ref" : "LinuxDistribution" },
+                          { "Fn::FindInMap" : [ "AWSInstanceType2Arch", { "Ref" : "InstanceType" }, "Arch" ] } ] },
+        "InstanceType" : { "Ref" : "InstanceType" },
+        "KeyName"      : { "Ref" : "KeyName" },
+        "SubnetId"     : { "Ref" : "Subnet" }
+      }
+    }
+  },
+
+  "Outputs" : {
+    "ServerIPAddress" : {
+      "Value" : { "Fn::GetAtt" : [ "Server", "PublicIp" ]},
+      "Description" : "IP address of created server"
+    }
+  }
+}
