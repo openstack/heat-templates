@@ -1,7 +1,7 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "Template to test Quantum resources",
+  "Description" : "Template to test Neutron resources",
 
   "Parameters" : {
 
@@ -22,7 +22,7 @@
   "Resources" : {
 
     "port_floating": {
-      "Type": "OS::Quantum::Port",
+      "Type": "OS::Neutron::Port",
       "Properties": {
         "network_id": { "Ref" : "internal_network" },
         "fixed_ips": [{
@@ -33,14 +33,14 @@
     },
 
     "floating_ip": {
-      "Type": "OS::Quantum::FloatingIP",
+      "Type": "OS::Neutron::FloatingIP",
       "Properties": {
         "floating_network_id": { "Ref" : "external_network" }
       }
     },
 
     "floating_ip_assoc": {
-      "Type": "OS::Quantum::FloatingIPAssociation",
+      "Type": "OS::Neutron::FloatingIPAssociation",
       "Properties": {
         "floatingip_id": { "Ref" : "floating_ip" },
         "port_id": { "Ref" : "port_floating" }

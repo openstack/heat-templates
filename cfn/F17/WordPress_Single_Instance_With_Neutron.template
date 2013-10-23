@@ -89,11 +89,11 @@
   "Resources" : {
 
     "network": {
-      "Type": "OS::Quantum::Net"
+      "Type": "OS::Neutron::Net"
     },
 
     "subnet": {
-      "Type": "OS::Quantum::Subnet",
+      "Type": "OS::Neutron::Subnet",
       "Properties": {
         "network_id": { "Ref" : "network" },
         "ip_version": 4,
@@ -103,7 +103,7 @@
     },
 
     "port": {
-      "Type": "OS::Quantum::Port",
+      "Type": "OS::Neutron::Port",
       "Properties": {
         "device_id": { "Ref" : "WebServer" },
         "network_id": { "Ref" : "network" },
