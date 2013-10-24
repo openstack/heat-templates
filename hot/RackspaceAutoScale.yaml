@@ -1,0 +1,104 @@
+# This is a template that shows how to use Rackspace Auto Scale
+# with a Rackspace Cloud Load Balancer. It sets up a load balancer
+# to port 22 of the instances, and exposes webhooks for scaling
+# the group up and down as stack outputs. Just use:
+#     curl -XPOST <webhook_url>
+# to scale up or down, and then (after waiting a suitable amount
+# of time), ssh to the virtual IP and you'll get a random instance.
+
+heat_template_version: 2013-05-23
+
+description: Rackspace Auto Scale Test
+
+parameters:
+  key_name:
+    type: string
+    description: Name of an existing key pair to use for the instance
+  flavor:
+    type: string
+    description: flavor (actually an integer)
+  image:
+    type: string
+    description: UUID of image
+
+resources:
+
+  my_lb:
+    type: Rackspace::Cloud::LoadBalancer
+    properties:
+      nodes: []
+      protocol: TCP
+      port: 22
+      virtualIps:
+        - {"type": "PUBLIC", "ipVersion": "IPV4"}
+
+  my_group:
+    type: Rackspace::AutoScale::Group
+    properties:
+      groupConfiguration:
+        name: heat-test-group
+        cooldown: 60
+        minEntities: 0
+        maxEntities: 3
+        metadata:
+          cool_factor: "50"
+      launchConfiguration:
+        type: launch_server
+        args:
+          server:
+            name: heat-scaled-server
+            flavorRef: {get_param: flavor}
+            imageRef: {get_param: image}
+            key_name: {get_param: key_name}
+            metadata:
+              hotness_factor: "100"
+          loadBalancers:
+            -
+              loadBalancerId: {get_resource: my_lb}
+              port: 22
+
+  add1:
+    type: Rackspace::AutoScale::ScalingPolicy
+    properties:
+      group: {get_resource: my_group}
+      name: add1
+      change: 1
+      cooldown: 59
+      type: webhook
+
+  dec1:
+    type: Rackspace::AutoScale::ScalingPolicy
+    properties:
+      group: {get_resource: my_group}
+      name: dec1
+      change: -1
+      cooldown: 59
+      type: webhook
+
+
+  add1hook:
+    type: Rackspace::AutoScale::WebHook
+    properties:
+      policy: {get_resource: add1}
+      name: add1hookzzz
+      metadata:
+        is_cool: "true"
+
+  dec1hook:
+    type: Rackspace::AutoScale::WebHook
+    properties:
+      policy: {get_resource: dec1}
+      name: dec1hookzzz
+      metadata:
+        is_cool: "false"
+
+outputs:
+  increment_url:
+    description: POST to this URL to add a server
+    value: {get_attr: [add1hook, capabilityUrl]}
+  decrement_url:
+    description: POST to this URL to remove a server
+    value: {get_attr: [dec1hook, capabilityUrl]}
+  public_ip:
+    description: Public IP of the load balancer
+    value: {get_attr: [my_lb, PublicIp]}
