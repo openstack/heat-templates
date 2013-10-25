@@ -1,7 +1,7 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "Creates new network, router, vpn sevrice and server. More details about VPN service you can find on wikipage: https://wiki.openstack.org/wiki/Quantum/VPNaaS/HowToInstall",
+  "Description" : "Creates new network, router, vpn sevrice and server. More details about VPN service you can find on wikipage: https://wiki.openstack.org/wiki/Neutron/VPNaaS/HowToInstall",
 
   "Parameters" : {
 
@@ -92,14 +92,14 @@
   "Resources" : {
 
     "Network": {
-      "Type": "OS::Quantum::Net",
+      "Type": "OS::Neutron::Net",
       "Properties": {
         "name": "My Network"
       }
     },
 
     "Subnet": {
-      "Type": "OS::Quantum::Subnet",
+      "Type": "OS::Neutron::Subnet",
       "Properties": {
         "name": "My Subnet",
         "network_id": { "Ref" : "Network" },
@@ -115,14 +115,14 @@
     },
 
     "Router": {
-      "Type": "OS::Quantum::Router",
+      "Type": "OS::Neutron::Router",
       "Properties": {
         "name": "My Router"
       }
     },
 
     "RouterInterface": {
-      "Type": "OS::Quantum::RouterInterface",
+      "Type": "OS::Neutron::RouterInterface",
       "Properties": {
         "router_id": { "Ref" : "Router" },
         "subnet_id": { "Ref" : "Subnet" }
@@ -130,7 +130,7 @@
     },
 
     "RouterGateway": {
-      "Type": "OS::Quantum::RouterGateway",
+      "Type": "OS::Neutron::RouterGateway",
       "Properties": {
         "router_id": { "Ref" : "Router" },
         "network_id": { "Ref" : "ExternalNetwork" }
