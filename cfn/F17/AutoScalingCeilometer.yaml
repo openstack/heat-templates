@@ -62,27 +62,27 @@ Resources:
     Type: OS::Metering::Alarm
     Properties:
       description: Scale-up if the average CPU > 50% for 1 minute
-      counter_name: cpu_util
+      meter_name: cpu_util
       statistic: avg
       period: '60'
       evaluation_periods: '1'
       threshold: '50'
       alarm_actions:
       - {"Fn::GetAtt": [WebServerScaleUpPolicy, AlarmUrl]}
-      matching_metadata: {'metadata.user_metadata.server_group': 'WebServerGroup'}
+      matching_metadata: {'metadata.user_metadata.groupname': {Ref: 'WebServerGroup'}}
       comparison_operator: gt
   CPUAlarmLow:
     Type: OS::Metering::Alarm
     Properties:
       description: Scale-down if the average CPU < 15% for 1 minute
-      counter_name: cpu_util
+      meter_name: cpu_util
       statistic: avg
       period: '60'
       evaluation_periods: '1'
       threshold: '15'
       alarm_actions:
       - {"Fn::GetAtt": [WebServerScaleDownPolicy, AlarmUrl]}
-      matching_metadata: {'metadata.user_metadata.server_group': 'WebServerGroup'}
+      matching_metadata: {'metadata.user_metadata.groupname': {Ref: 'WebServerGroup'}}
       comparison_operator: lt
   ElasticLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
