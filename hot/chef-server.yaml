@@ -1,0 +1,177 @@
+heat_template_version: 2013-05-23
+
+description: Heat template to deploy Open Source CHEF server on a VM
+
+parameters:
+  ssh_key_name:
+    type: string
+    description : Name of a Key Pair to enable SSH access to the instance
+
+  chef_image_name:
+    type: string
+    description: Name of image to use for server
+
+  chef_flavor_name:
+    type: string
+    description: Name Flavor to use for server
+
+  chef_server_name:
+    type: string
+    default: OpenSourceChefServer
+    description: The Instance Name
+
+  chef_port:
+    type: number
+    default: 4000
+    description: Port Number
+
+  rabbit_password:
+    default: secrete
+    hidden: true
+    description: Password for RabbitMQ
+    type: string
+    constraints:
+    - length: { min: 1, max: 25 }
+      description: Password MUST be between 1 - 25 characters.
+    - allowed_pattern: "[a-zA-Z0-9]*"
+      description : Only Alpha-Numeric characters are allowed.
+
+resources:
+  ChefServer:
+    type: OS::Nova::Server
+    properties:
+      flavor: { get_param: chef_flavor_name }
+      image: { get_param: chef_image_name }
+      name: { get_param: chef_server_name }
+      key_name: { get_param: ssh_key_name }
+      user_data:
+        str_replace:
+          template: |
+            #!/usr/bin/env bash
+
+            set -v
+
+            function rabbit_setup() {
+              rabbitmqctl add_vhost /chef
+              rabbitmqctl add_user chef %rabbit_password%
+              rabbitmqctl set_permissions -p /chef chef '.*' '.*' '.*'
+            }
+
+            function install_apt_packages() {
+              RABBITMQ="http://www.rabbitmq.com/rabbitmq-signing-key-public.asc"
+              wget -O /tmp/rabbitmq.asc ${RABBITMQ}
+              apt-key add /tmp/rabbitmq.asc
+
+              apt-get update && apt-get install -y git rabbitmq-server wget
+
+              rabbit_setup
+
+              CHEF="${CHEF_URL}/chef/download-server?p=ubuntu&pv=12.04&m=x86_64"
+              wget -O /tmp/chef_server.deb ${CHEF}
+              dpkg -i /tmp/chef_server.deb
+
+            }
+
+            function install_yum_packages() {
+              yum -y install git wget
+
+              IPTABLES="$(which iptables)"
+              if [ "${IPTABLES}" ];then
+                ${IPTABLES} -I INPUT -m tcp -p tcp --dport 443 -j ACCEPT
+                ${IPTABLES} -I INPUT -m tcp -p tcp --dport 80 -j ACCEPT
+                /sbin/service iptables save
+              fi
+
+              # Install ERLANG
+              pushd /tmp
+
+              FED_URL="http://dl.fedoraproject.org"
+              wget ${FED_URL}/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+              wget http://rpms.famillecollet.com/enterprise/remi-release-6.rpm
+              rpm -Uvh remi-release-6*.rpm epel-release-6*.rpm
+
+              popd
+              yum -y install erlang
+
+              # Install RabbitMQ
+              RABBIT_URL="http://www.rabbitmq.com"
+              RABBIT_PATH="/releases/rabbitmq-server/v3.1.5"
+              RABBIT_FILE="rabbitmq-server-3.1.5-1.noarch.rpm"
+              RABBITMQ="${RABBIT_URL}/${RABBIT_PATH}/${RABBIT_FILE}"
+              RABBIT_KEY="${RABBIT_URL}/rabbitmq-signing-key-public.asc"
+
+              wget -O /tmp/rabbitmq.rpm ${RABBITMQ}
+              rpm --import ${RABBIT_KEY}
+              rpm -Uvh /tmp/rabbitmq.rpm
+              chkconfig rabbitmq-server on
+              /sbin/service rabbitmq-server start
+
+              rabbit_setup
+
+              CHEF="${CHEF_URL}/chef/download-server?p=el&pv=6&m=x86_64"
+              wget -O /tmp/chef_server.rpm ${CHEF}
+              yum install -y /tmp/chef_server.rpm
+            }
+
+            CHEF_URL="https://www.opscode.com"
+
+            if [ -f "/etc/redhat-release"  ];then
+              install_yum_packages
+            elif [ "$(grep -i ubuntu /etc/lsb-release)" ];then
+              install_apt_packages
+            else
+              echo "The OS has detection failed."
+              exit 1
+            fi
+
+            mkdir -p /etc/chef-server
+
+            cat > /etc/chef-server/chef-server.rb <<EOF
+            erchef['s3_url_ttl'] = 3600
+            nginx["ssl_port"] = %port%
+            nginx["enable_non_ssl"] = false
+            rabbitmq["enable"] = false
+            rabbitmq["password"] = "%rabbit_password%"
+            bookshelf['url'] = "https://#{node['ipaddress']}:%port%"
+            EOF
+
+            # Reconfigure Chef
+            chef-server-ctl reconfigure
+
+            # Install Chef Client
+            bash <(wget -O - http://opscode.com/chef/install.sh)
+
+            # Set the systems IP ADDRESS
+            SYSIP=$(ohai ipaddress | awk '/^ / {gsub(/ *\"/, ""); print; exit}')
+
+            # Configure Knife
+            mkdir -p /root/.chef
+            cat > /root/.chef/knife.rb <<EOF
+            log_level                :info
+            log_location             STDOUT
+            node_name                'admin'
+            client_key               '/etc/chef-server/admin.pem'
+            validation_client_name   'chef-validator'
+            validation_key           '/etc/chef-server/chef-validator.pem'
+            chef_server_url          "https://${SYSIP}:%port%"
+            cache_options( :path => '/root/.chef/checksums' )
+            EOF
+
+
+          params:
+            "%rabbit_password%": { get_param: rabbit_password }
+            "%port%": { get_param: chef_port }
+
+
+outputs:
+  ChefServer_public_ip:
+    description: The public IP address of the newly configured Server.
+    value: { get_attr: [ ChefServer, first_address ] }
+  CHEF_URL:
+    description: The URL for the Chef Server.
+    value:
+      str_replace:
+        template: https://%host%:%port%
+        params:
+          "%host%": { get_attr: [ ChefServer, first_address ] }
+          "%port%": { get_param: chef_port }
