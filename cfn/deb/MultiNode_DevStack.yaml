@@ -12,9 +12,9 @@ Parameters:
     Type: String
   ComputeNodes:
     Default: '1'
-    MinValue: '0'
     Description: Number of compute nodes
-    Type: Number
+    Type: String
+    AllowedPattern: '[0-9]*'
   ControllerFlavor:
     Description: Instance flavor of the Controller node
     Type: String
