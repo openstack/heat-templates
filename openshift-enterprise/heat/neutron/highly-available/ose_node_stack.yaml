@@ -1,0 +1,337 @@
+heat_template_version: 2013-05-23
+description: >
+  Template (HOT) for deploying an OpenShift node with attached cinder volume
+  with floating IP. May be used stand-alone for scaling out nodes or as part of
+  the HA nested stack.
+parameter_groups:
+- label: General parameters
+  description: General OpenShift parameters
+  parameters:
+  - Broker1Hostname
+  - broker1_floating_ip
+  - NodeHostname
+  - LoadBalHostname
+  - NodeImage
+  - node_server_flavor
+- label: Red Hat subscription
+  description: >
+    Red Hat Subscription Manager (RHSM) or Red Hat Network (RHN) parameters
+  parameters:
+  - ConfInstallMethod
+  - ConfRhRegName
+  - ConfRhRegPass
+  - ConfRhRegPool
+  - ConfRhRegAK
+  - ConfRhRegOpts
+- label: Networking parameters
+  description: Networking-related parameters
+  parameters:
+  - domain
+  - hostsDomain
+  - NamedHostname
+  - NamedIp
+  - Replicants
+  - public_net_id
+  - private_net_id
+  - private_subnet_id
+- label: Credentials
+  description: >
+    Username and password parameters for OpenShift and dependent service
+  parameters:
+  - McollectiveUser
+  - McollectivePass
+  - ActiveMqAdminPass
+  - ActiveMqUserPass
+parameters:
+  key_name:
+    description: Name of an existing keypair to enable SSH access to the instances
+    type: string
+  domain:
+    Description: Your DNS domain
+    type: string
+  hostsDomain:
+    Description: Openshift hosts domain
+    type: string
+  avail_zone:
+    description: >
+      Availability zone to ensure distribution of brokers and nodes
+    type: string
+    default: nova
+  node_server_flavor:
+    description: Flavor of node servers
+    type: string
+    default: m1.medium
+    allowed_values: [m1.small, m1.medium, m1.large, m1.xlarge]
+    constraint_description: Must be a valid server flavor
+  node_vol_size:
+    description: Node cinder volume size (GB)
+    type: number
+    default: 12
+  Broker1Hostname:
+    description: Broker 1 hostname
+    type: string
+    default: broker1
+  broker1_floating_ip:
+    description: Broker 1 floating ip
+    type: string
+  NodeHostname:
+    description: Node hostname
+    type: string
+    default: node
+  LoadBalHostname:
+    description: Load balancer hostname
+    type: string
+    default: broker
+  NodeImage:
+    description: Node image name
+    type: string
+    default: RHEL65-x86_64-node
+  ConfInstallMethod:
+    description: Installation method (yum rhsm rhn)
+    type: string
+    default: rhn
+    allowed_Values: [yum, rhsm, rhn]
+  ConfRhRegName:
+    description: Subscription Manager registration username
+    type: string
+    default: ""
+  ConfRhRegPass:
+    description: Subscription Manager registration password
+    type: string
+    default: ""
+    hidden: true
+  ConfRhRegPool:
+    description: Pool ID for OpenShift subscription
+    type: string
+    default: ""
+  ConfRhRegAK:
+    description: Optional RHN activation key for OpenShift subscription
+    type: string
+    default: ""
+  ConfRhRegOpts:
+    description: RHN options, e.g. --serverUrl=http://my.sat.server.com/XMLRPC
+    type: string
+    default: ""
+  ConfRHELRepoBase:
+    description: RHEL Repository Base URL
+    type: string
+    default: ""
+  ConfRepoBase:
+    description: OSE Repository Base URL
+    type: string
+    default: ""
+  ConfJBossRepoBase:
+    description: JBoss Repository Base URL
+    type: string
+    default: ""
+  NamedHostname:
+    description: named server hostname
+    type: string
+    default: broker1
+  NamedIp:
+    description: named server IP address
+    type: string
+    default: ""
+  UpstreamDnsIp:
+    description: Upstream DNS IP address for zone transfer
+    type: string
+    default: ""
+  Replicants:
+    description: >
+      Comma-separated list (no spaces) of broker hosts (FQDN) running ActiveMQ and MongoDB
+    type: string
+  public_net_id:
+    type: string
+    description: >
+      ID of public network for which floating IP addresses will be allocated
+  private_net_id:
+    type: string
+    description: ID of private network into which servers get deployed
+  private_subnet_id:
+    type: string
+    description: ID of private sub network into which servers get deployed
+  McollectiveUser:
+    description: MCollective username
+    type: string
+    default: mcollective
+  McollectivePass:
+    description: MCollective password
+    type: string
+    hidden: true
+  ActiveMqAdminPass:
+    description: ActiveMQ admin user password
+    type: string
+    hidden: true
+  ActiveMqUserPass:
+    description: ActiveMQ user password
+    type: string
+    hidden: true
+  ose_version:
+    description: The version of OpenShift Enterprise to install
+    type: string
+    default: "2.0"
+    allowed_values: ["1.2", "2.0"]
+  yum_validator_version:
+    description: An optional version for the oo-yum-validator tool to use
+    type: string
+    default: "2.0"
+    allowed_values: ["1.2", "2.0"]
+
+resources:
+  openshift_enterprise_security_group:
+    type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Standard firewall rules
+      SecurityGroupIngress:
+      - {IpProtocol: udp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '1', ToPort: '65535', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: icmp, FromPort: '-1', ToPort: '-1', CidrIp: 0.0.0.0/0}
+
+  node_port:
+    type: OS::Neutron::Port
+    properties:
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+
+  node_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: node_port }
+
+###
+# cinder volume
+###
+  node_vol:
+    type: OS::Cinder::Volume
+    properties:
+      name: node_volume
+      description: persistent storage volume for node
+      size: { get_param: node_vol_size }
+
+  node_attach_vol:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      instance_uuid: { get_resource: node_instance }
+      mountpoint: "/dev/vdb"
+      volume_id: { get_resource: node_vol }
+
+###
+# Node
+###
+  node_instance:
+    type: OS::Nova::Server
+    properties:
+      name: ose_node
+      image: { get_param: NodeImage }
+      flavor: { get_param: node_server_flavor }
+      availability_zone: { get_param: avail_zone }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: node_port }
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -x
+
+            export CONF_BROKER_IP_ADDR=P_BROKER_FLOATING_IP
+            export CONF_NODE_IP_ADDR=P_NODE_FLOATING_IP
+            export CONF_DOMAIN=P_DOMAIN
+            export CONF_BROKER_HOSTNAME=P_LOAD_BAL_HOSTNAME
+            export CONF_NODE_HOSTNAME=P_NODE_HOSTNAME
+            export CONF_NAMED_HOSTNAME=P_NAMED_HOSTNAME
+            export CONF_NAMED_IP_ADDR=P_NAMED_IP
+            export CONF_DATASTORE_REPLICANTS=P_REPLICANTS
+            export CONF_ACTIVEMQ_REPLICANTS=P_REPLICANTS
+            export CONF_INSTALL_METHOD=P_CONF_INSTALL_METHOD
+            export CONF_SM_REG_NAME=P_CONF_RH_REG_NAME
+            export CONF_SM_REG_PASS=P_CONF_RH_REG_PASS
+            export CONF_SM_REG_POOL=P_CONF_RH_REG_POOL
+            export CONF_RHN_REG_NAME=P_CONF_RH_REG_NAME
+            export CONF_RHN_REG_PASS=P_CONF_RH_REG_PASS
+            export CONF_RHN_REG_ACTKEY=P_CONF_RH_REG_ACTKEY
+            export CONF_RHN_REG_OPTS=P_CONF_RHN_REG_OPTS
+            export CONF_REPOS_BASE=P_CONF_REPOS_BASE
+            export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
+            export CONF_RHEL_REPO=P_CONF_RHEL_REPO
+            export CONF_OSE_VERSION=P_OSE_VERSION
+            export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
+            export CONF_INSTALL_COMPONENTS=node
+            export CONF_ACTIONS=do_all_actions
+            export CONF_MCOLLECTIVE_USER=P_CONF_MCOLLECTIVE_USER
+            export CONF_MCOLLECTIVE_PASSWORD=P_CONF_MCOLLECTIVE_PASSWORD
+            export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
+            export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
+
+            # configure OSE
+            yum install -y openshift-enterprise-yum-validator
+            oo-admin-yum-validator
+            wget https://raw.github.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh
+            chmod +x ./openshift.sh
+            ./openshift.sh 2>&1 | tee /tmp/openshift.out
+            setenforce 1
+            cd /etc/init.d
+            for i in `ls cloud-*`; do chkconfig $i off; done
+
+            # configure attached storage and move ose dirs
+            parted --script /dev/vdb -- mklabel msdos
+            parted --script /dev/vdb -- mkpart primary 1024 5G
+            parted --script /dev/vdb -- mkpart primary 5G -1s
+            partx -a /dev/vdb
+            mkfs.ext4 /dev/vdb1
+            mkfs.ext4 /dev/vdb2
+            mkdir /var/lib/node_share
+            mount /dev/vdb1 /var/lib/node_share
+            mkdir /var/lib/node_share/etc_openshift
+            service ruby193-mcollective stop
+            shopt -s dotglob
+            mv /etc/openshift/* /var/lib/node_share/etc_openshift
+            chcon --reference /etc/openshift /var/lib/node_share/etc_openshift
+            echo "/dev/vdb1 /var/lib/node_share ext4 defaults" >> /etc/fstab
+            echo "/var/lib/node_share/etc_openshift /etc/openshift none bind,auto" >> /etc/fstab
+            mount /etc/openshift
+            mount /dev/vdb2 /mnt
+            mv /var/lib/openshift/* /mnt
+            chcon --reference /var/lib/openshift /mnt
+            umount /mnt
+            echo "/dev/vdb2 /var/lib/openshift ext4 usrquota,defaults" >> /etc/fstab
+            mount /var/lib/openshift
+            quotacheck --create-files --no-remount --user --group /var/lib/openshift
+            restorecon /var/lib/openshift/aquota.user
+            quotaon /var/lib/openshift
+            service ruby193-mcollective start
+            reboot
+          params:
+            P_BROKER_FLOATING_IP: { get_param: broker1_floating_ip }
+            P_NODE_FLOATING_IP: { get_attr: [ node_floating_ip, floating_ip_address ] }
+            P_DOMAIN: { get_param: domain }
+            P_HOSTS_DOMAIN: { get_param: hostsDomain }
+            P_LOAD_BAL_HOSTNAME: { get_param: LoadBalHostname }
+            P_NODE_HOSTNAME: { get_param: NodeHostname }
+            P_NAMED_HOSTNAME: { get_param: NamedHostname }
+            P_NAMED_IP: { get_param: broker1_floating_ip }
+            P_REPLICANTS: { get_param: Replicants }
+            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod}
+            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
+            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
+            P_CONF_RH_REG_POOL: { get_param: ConfRhRegPool}
+            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
+            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
+            P_CONF_RH_REG_ACTKEY: { get_param: ConfRhRegAK}
+            P_CONF_RHN_REG_OPTS: { get_param: ConfRhRegOpts}
+            P_CONF_REPOS_BASE: { get_param: ConfRepoBase}
+            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase}
+            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase}
+            P_OSE_VERSION: { get_param: ose_version }
+            P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
+            P_CONF_MCOLLECTIVE_USER: { get_param: McollectiveUser }
+            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: McollectivePass }
+            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: ActiveMqAdminPass }
+            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: ActiveMqUserPass }
+
+outputs:
+  node_floating_ip:
+    value: { get_attr: [ node_floating_ip, floating_ip_address ] }

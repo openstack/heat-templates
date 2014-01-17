@@ -1,0 +1,756 @@
+heat_template_version: 2013-05-23
+description: >
+  Nested HOT template for deploying a highly available OpenShift Enterprise
+  environment. Deploys 3 HA brokers, 3 nodes, with floating IPs, LBaaS, cinder
+  attached storage (nodes) and dynamic DNS on broker1
+parameter_groups:
+- label: General parameters
+  description: General OpenShift parameters
+  parameters:
+  - Broker1Hostname
+  - Broker2Hostname
+  - Broker3Hostname
+  - Node1Hostname
+  - Node2Hostname
+  - Node3Hostname
+  - LoadBalHostname
+  - BrokerImage
+  - NodeImage
+  - broker_server_flavor
+  - node_server_flavor
+- label: Red Hat subscription
+  description: >
+    Red Hat Subscription Manager (RHSM) or Red Hat Network (RHN) parameters
+  parameters:
+  - ConfInstallMethod
+  - ConfRhRegName
+  - ConfRhRegPass
+  - ConfRhRegPool
+  - ConfRhRegAK
+  - ConfRhRegOpts
+- label: Networking parameters
+  description: Networking-related parameters
+  parameters:
+  - domain
+  - hostsDomain
+  - NamedHostname
+  - NamedIp
+  - UpstreamDnsIp
+  - Replicants
+  - public_net_id
+  - private_net_id
+  - private_subnet_id
+- label: Credentials
+  description: >
+    Username and password parameters for OpenShift and dependent service
+  parameters:
+  - OpenshiftUser1
+  - OpenshiftPass1
+  - MongoDbBrokerUser
+  - MongoDbBrokerPass
+  - McollectiveUser
+  - McollectivePass
+  - ActiveMqAdminPass
+  - ActiveMqUserPass
+parameters:
+  key_name:
+    description: Name of an existing keypair to enable SSH access to the instances
+    type: string
+  domain:
+    Description: Your DNS domain
+    type: string
+  hostsDomain:
+    Description: Openshift hosts domain
+    type: string
+  broker_server_flavor:
+    description: Flavor of broker server
+    type: string
+    default: m1.small
+    allowed_values: [m1.small, m1.medium, m1.large, m1.xlarge]
+    constraint_description: Must be a valid server flavor
+  primary_avail_zone:
+    description: >
+      Primary availability zone to ensure distribution of brokers and nodes
+    type: string
+    default: nova
+  secondary_avail_zone:
+    description: >
+      Secondary availability zone to ensure distribution of brokers and nodes
+    type: string
+    default: nova
+  node_server_flavor:
+    description: Flavor of node servers
+    type: string
+    default: m1.medium
+    allowed_values: [m1.small, m1.medium, m1.large, m1.xlarge]
+    constraint_description: Must be a valid server flavor
+  node_vol_size:
+    description: Node cinder volume size (GB)
+    type: number
+    default: 10
+  Broker1Hostname:
+    description: Broker 1 hostname
+    type: string
+    default: broker1
+  Broker2Hostname:
+    description: Broker 2 hostname
+    type: string
+    default: broker2
+  Broker3Hostname:
+    description: Broker 3 hostname
+    type: string
+    default: broker3
+  Node1Hostname:
+    description: Node 1 hostname
+    type: string
+    default: node1
+  Node2Hostname:
+    description: Node 2 hostname
+    type: string
+    default: node2
+  Node3Hostname:
+    description: Node 3 hostname
+    type: string
+    default: node3
+  LoadBalHostname:
+    description: Load balancer hostname
+    type: string
+    default: broker
+  BrokerImage:
+    description: Broker image name
+    type: string
+    default: RHEL65-x86_64-broker
+  NodeImage:
+    description: Node image name
+    type: string
+    default: RHEL65-x86_64-node
+  ConfInstallMethod:
+    description: Installation method (yum rhsm rhn)
+    type: string
+    default: rhn
+    allowed_Values: [yum, rhsm, rhn]
+  ConfRhRegName:
+    description: Subscription Manager registration username
+    type: string
+    default: ""
+  ConfRhRegPass:
+    description: Subscription Manager registration password
+    type: string
+    default: ""
+    hidden: true
+  ConfRhRegPool:
+    description: Pool ID for OpenShift subscription
+    type: string
+    default: ""
+  ConfRhRegAK:
+    description: Optional RHN activation key for OpenShift subscription
+    type: string
+    default: ""
+  ConfRhRegOpts:
+    description: RHN options, e.g. --serverUrl=http://my.sat.server.com/XMLRPC
+    type: string
+    default: ""
+  ConfRHELRepoBase:
+    description: RHEL Repository Base URL
+    type: string
+    default: ""
+  ConfRepoBase:
+    description: OSE Repository Base URL
+    type: string
+    default: ""
+  ConfJBossRepoBase:
+    description: JBoss Repository Base URL
+    type: string
+    default: ""
+  NamedHostname:
+    description: named server hostname
+    type: string
+    default: broker1
+  NamedIp:
+    description: named server IP address
+    type: string
+    default: ""
+  UpstreamDnsIp:
+    description: Upstream DNS IP address for zone transfer
+    type: string
+    default: ""
+  Replicants:
+    description: >
+      Comma-separated list (no spaces) of broker hosts (FQDN) running ActiveMQ and MongoDB
+    type: string
+  public_net_id:
+    type: string
+    description: >
+      ID of public network for which floating IP addresses will be allocated
+  private_net_id:
+    type: string
+    description: ID of private network into which servers get deployed
+  private_subnet_id:
+    type: string
+    description: ID of private sub network into which servers get deployed
+  OpenshiftUser1:
+    description: OpenShift username
+    type: string
+    default: user1
+  OpenshiftPass1:
+    description: OpenShift user password
+    type: string
+    hidden: true
+  MongoDbBrokerUser:
+    description: MongoDB broker username
+    type: string
+    default: openshift
+  MongoDbBrokerPass:
+    description: MongoDB broker password
+    type: string
+    hidden: true
+  McollectiveUser:
+    description: MCollective username
+    type: string
+    default: mcollective
+  McollectivePass:
+    description: MCollective password
+    type: string
+    hidden: true
+  ActiveMqAdminPass:
+    description: ActiveMQ admin user password
+    type: string
+    hidden: true
+  ActiveMqUserPass:
+    description: ActiveMQ user password
+    type: string
+    hidden: true
+  ose_version:
+    description: The version of OpenShift Enterprise to install
+    type: string
+    default: "2.0"
+    allowed_values: ["1.2", "2.0"]
+  yum_validator_version:
+    description: An optional version for the oo-yum-validator tool to use
+    type: string
+    default: "2.0"
+    allowed_values: ["1.2", "2.0"]
+
+resources:
+  openshift_enterprise_security_group:
+    type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Standard firewall rules
+      SecurityGroupIngress:
+      - {IpProtocol: udp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '1', ToPort: '65535', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: icmp, FromPort: '-1', ToPort: '-1', CidrIp: 0.0.0.0/0}
+
+  broker1_port:
+    type: OS::Neutron::Port
+    properties:
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+
+  broker1_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: broker1_port }
+
+  broker2_port:
+    type: OS::Neutron::Port
+    properties:
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+
+  broker2_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: broker2_port }
+
+  broker3_port:
+    type: OS::Neutron::Port
+    properties:
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+
+  broker3_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: broker3_port }
+
+  broker_wait_handle:
+    type: AWS::CloudFormation::WaitConditionHandle
+
+  broker_wait_condition:
+    type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Count: 3
+      Handle:
+        Ref: broker_wait_handle
+      Timeout: '6000'
+
+###
+# load balancer
+###
+  lb_vip_port:
+    type: OS::Neutron::Port
+    properties:
+      # FIXME: review security groups
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+
+  lb_vip_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: lb_vip_port }
+
+  lb_pool_vip:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: lb_vip_floating_ip }
+      port_id: { 'Fn::Select': ['port_id', {'Fn::GetAtt': [pool, vip]}]}
+
+  monitor:
+    type: OS::Neutron::HealthMonitor
+    properties:
+      type: HTTPS
+      delay: 3
+      max_retries: 5
+      timeout: 10
+
+  pool:
+    type: OS::Neutron::Pool
+    properties:
+      name: ose_broker_lb_pool
+      description: Load balancer for OpenShift Enterprise broker hosts
+      protocol: HTTPS
+      subnet_id: { get_param: private_subnet_id }
+      lb_method: ROUND_ROBIN
+      monitors: [ { get_resource: monitor } ]
+      vip:
+        name: ose_broker_vip
+        description: broker virtual IP (VIP)
+        protocol_port: 443
+
+  mylb:
+    type: OS::Neutron::LoadBalancer
+    properties:
+    #  members: [ { get_resource: broker1_instance }, { get_resource: broker2_instance }, { get_resource: broker3_instance } ]
+      pool_id: { get_resource: pool }
+      protocol_port: 443
+
+###
+# Broker 1
+###
+  broker1_instance:
+    type: OS::Nova::Server
+    properties:
+      name: ose_broker1
+      image: { get_param: BrokerImage }
+      flavor: { get_param: broker_server_flavor }
+      availability_zone: { get_param: primary_avail_zone }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: broker1_port }
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -x
+
+            export CONF_BROKER_IP_ADDR=P_BROKER_FLOATING_IP
+            export CONF_BROKER2_IP_ADDR=P_BROKER2_FLOATING_IP
+            export CONF_BROKER3_IP_ADDR=P_BROKER3_FLOATING_IP
+            export CONF_DOMAIN=P_DOMAIN
+            export CONF_BROKER_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_BROKER2_HOSTNAME=P_BROKER2_HOSTNAME
+            export CONF_BROKER3_HOSTNAME=P_BROKER3_HOSTNAME
+            export CONF_NAMED_HOSTNAME=P_NAMED_HOSTNAME
+            export CONF_NAMED_IP_ADDR=P_NAMED_IP
+            export CONF_NAMED_ENTRIES=P_BROKER2_HOSTNAME:P_BROKER2_FLOATING_IP,P_BROKER3_HOSTNAME:P_BROKER3_FLOATING_IP,P_NODE1_HOSTNAME:P_NODE1_FLOATING_IP,P_NODE2_HOSTNAME:P_NODE2_FLOATING_IP,P_NODE3_HOSTNAME:P_NODE3_FLOATING_IP,P_LOAD_BAL_HOSTNAME:P_LOAD_BAL_IP
+            export CONF_BIND_KEYALGORITHM="HMAC-MD5"
+            export CONF_ACTIVEMQ_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_DATASTORE_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_DATASTORE_REPLICANTS=P_REPLICANTS
+            export CONF_ACTIVEMQ_REPLICANTS=P_REPLICANTS
+            export CONF_INSTALL_METHOD=P_CONF_INSTALL_METHOD
+            export CONF_SM_REG_NAME=P_CONF_RH_REG_NAME
+            export CONF_SM_REG_PASS=P_CONF_RH_REG_PASS
+            export CONF_SM_REG_POOL=P_CONF_RH_REG_POOL
+            export CONF_RHN_REG_NAME=P_CONF_RH_REG_NAME
+            export CONF_RHN_REG_PASS=P_CONF_RH_REG_PASS
+            export CONF_RHN_REG_ACTKEY=P_CONF_RH_REG_ACTKEY
+            export CONF_RHN_REG_OPTS=P_CONF_RHN_REG_OPTS
+            export CONF_REPOS_BASE=P_CONF_REPOS_BASE
+            export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
+            export CONF_RHEL_REPO=P_CONF_RHEL_REPO
+            export CONF_OSE_VERSION=P_OSE_VERSION
+            export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
+            export CONF_INSTALL_COMPONENTS=broker,activemq,datastore,named
+            export CONF_ACTIONS=do_all_actions,configure_datastore_add_replicants,configure_datastore_add_users
+            export CONF_OPENSHIFT_USER1=P_CONF_OPENSHIFT_USER1
+            export CONF_OPENSHIFT_PASSWORD1=P_CONF_OPENSHIFT_PASSWORD1
+            export CONF_MONGODB_BROKER_USER=P_CONF_MONGODB_BROKER_USER
+            export CONF_MONGODB_BROKER_PASSWORD=P_CONF_MONGODB_BROKER_PASSWORD
+            export CONF_MCOLLECTIVE_USER=P_CONF_MCOLLECTIVE_USER
+            export CONF_MCOLLECTIVE_PASSWORD=P_CONF_MCOLLECTIVE_PASSWORD
+            export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
+            export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
+
+            yum install -y openshift-enterprise-yum-validator
+            oo-admin-yum-validator
+            wget https://raw.github.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            chmod +x ./openshift.sh
+            ./openshift.sh 2>&1 | tee /tmp/openshift.out
+            sed -i '/type master/a \
+                    also-notify { P_UPSTREAM_DNS_IP; };\n        notify yes;' /etc/named.conf
+            setenforce 1
+            cd /etc/init.d
+            for i in `ls cloud-*`; do chkconfig $i off; done
+            # FIXME: shouldn't need this. DIB step? selinux enabled when pkg instld? see rpm -q --scripts ruby193-rubygem-passenger-native
+            semodule -i /opt/rh/ruby193/root/usr/share/selinux/packages/ruby193-rubygem-passenger/ruby193-rubygem-passenger.pp 2>/dev/null
+            fixfiles -R ruby193-rubygem-passenger restore
+            fixfiles -R ruby193-rubygem-passenger-native restore
+            /usr/bin/cfn-signal -e 0 -s "Broker 1 setup complete" -i "P_BROKER_HOSTNAME.P_DOMAIN" "P_BROKER_WAIT_HANDLE"
+            reboot
+          params:
+            P_BROKER_FLOATING_IP: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
+            P_NODE1_FLOATING_IP: { get_attr: [ node1_instance, node_floating_ip ] }
+            P_NODE2_FLOATING_IP: { get_attr: [ node2_instance, node_floating_ip ] }
+            P_NODE3_FLOATING_IP: { get_attr: [ node3_instance, node_floating_ip ] }
+            P_BROKER2_FLOATING_IP: { get_attr: [ broker2_floating_ip, floating_ip_address ] }
+            P_BROKER3_FLOATING_IP: { get_attr: [ broker3_floating_ip, floating_ip_address ] }
+            P_DOMAIN: { get_param: domain }
+            P_HOSTS_DOMAIN: { get_param: hostsDomain }
+            P_LOAD_BAL_HOSTNAME: { get_param: LoadBalHostname }
+            P_LOAD_BAL_IP: { get_attr: [ lb_vip_floating_ip, floating_ip_address ] }
+            P_BROKER_HOSTNAME: { get_param: Broker1Hostname }
+            P_BROKER2_HOSTNAME: { get_param: Broker2Hostname }
+            P_BROKER3_HOSTNAME: { get_param: Broker3Hostname }
+            P_NODE1_HOSTNAME: { get_param: Node1Hostname }
+            P_NODE2_HOSTNAME: { get_param: Node2Hostname }
+            P_NODE3_HOSTNAME: { get_param: Node3Hostname }
+            P_NAMED_HOSTNAME: { get_param: NamedHostname }
+            P_NAMED_IP: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
+            P_UPSTREAM_DNS_IP: { get_param: UpstreamDnsIp }
+            P_REPLICANTS: { get_param: Replicants }
+            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod}
+            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
+            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
+            P_CONF_RH_REG_POOL: { get_param: ConfRhRegPool}
+            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
+            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
+            P_CONF_RH_REG_ACTKEY: { get_param: ConfRhRegAK}
+            P_CONF_RHN_REG_OPTS: { get_param: ConfRhRegOpts}
+            P_CONF_REPOS_BASE: { get_param: ConfRepoBase}
+            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase}
+            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase}
+            P_OSE_VERSION: { get_param: ose_version }
+            P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
+            P_CONF_OPENSHIFT_USER1: { get_param: OpenshiftUser1 }
+            P_CONF_OPENSHIFT_PASSWORD1: { get_param: OpenshiftPass1 }
+            P_CONF_MONGODB_BROKER_USER: { get_param: MongoDbBrokerUser }
+            P_CONF_MONGODB_BROKER_PASSWORD: { get_param: MongoDbBrokerPass }
+            P_CONF_MCOLLECTIVE_USER: { get_param: McollectiveUser }
+            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: McollectivePass }
+            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: ActiveMqAdminPass }
+            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: ActiveMqUserPass }
+            P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle }
+
+###
+# Broker 2
+###
+  broker2_instance:
+    type: OS::Nova::Server
+    properties:
+      name: ose_broker2
+      image: { get_param: BrokerImage }
+      flavor: { get_param: broker_server_flavor }
+      availability_zone: { get_param: secondary_avail_zone }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: broker2_port }
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -x
+
+            export CONF_BROKER_IP_ADDR=P_BROKER_FLOATING_IP
+            export CONF_DOMAIN=P_DOMAIN
+            export CONF_BROKER_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_NAMED_HOSTNAME=P_NAMED_HOSTNAME
+            export CONF_NAMED_IP_ADDR=P_NAMED_IP
+            export CONF_DATASTORE_REPLICANTS=P_REPLICANTS
+            export CONF_ACTIVEMQ_REPLICANTS=P_REPLICANTS
+            export CONF_INSTALL_METHOD=P_CONF_INSTALL_METHOD
+            export CONF_SM_REG_NAME=P_CONF_RH_REG_NAME
+            export CONF_SM_REG_PASS=P_CONF_RH_REG_PASS
+            export CONF_SM_REG_POOL=P_CONF_RH_REG_POOL
+            export CONF_RHN_REG_NAME=P_CONF_RH_REG_NAME
+            export CONF_RHN_REG_PASS=P_CONF_RH_REG_PASS
+            export CONF_RHN_REG_ACTKEY=P_CONF_RH_REG_ACTKEY
+            export CONF_RHN_REG_OPTS=P_CONF_RHN_REG_OPTS
+            export CONF_REPOS_BASE=P_CONF_REPOS_BASE
+            export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
+            export CONF_RHEL_REPO=P_CONF_RHEL_REPO
+            export CONF_OSE_VERSION=P_OSE_VERSION
+            export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
+            export CONF_INSTALL_COMPONENTS=broker,activemq,datastore
+            export CONF_ACTIONS=do_all_actions
+            export CONF_OPENSHIFT_USER1=P_CONF_OPENSHIFT_USER1
+            export CONF_OPENSHIFT_PASSWORD1=P_CONF_OPENSHIFT_PASSWORD1
+            export CONF_MONGODB_BROKER_USER=P_CONF_MONGODB_BROKER_USER
+            export CONF_MONGODB_BROKER_PASSWORD=P_CONF_MONGODB_BROKER_PASSWORD
+            export CONF_MCOLLECTIVE_USER=P_CONF_MCOLLECTIVE_USER
+            export CONF_MCOLLECTIVE_PASSWORD=P_CONF_MCOLLECTIVE_PASSWORD
+            export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
+            export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
+
+            yum install -y openshift-enterprise-yum-validator
+            oo-admin-yum-validator
+            wget https://raw.github.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            chmod +x ./openshift.sh
+            ./openshift.sh 2>&1 | tee /tmp/openshift.out
+            setenforce 1
+            cd /etc/init.d
+            for i in `ls cloud-*`; do chkconfig $i off; done
+            #/usr/sbin/lokkit --service=dns
+            # FIXME: shouldn't need this. DIB step? selinux enabled when pkg instld? see rpm -q --scripts ruby193-rubygem-passenger-native
+            semodule -i /opt/rh/ruby193/root/usr/share/selinux/packages/ruby193-rubygem-passenger/ruby193-rubygem-passenger.pp 2>/dev/null
+            fixfiles -R ruby193-rubygem-passenger restore
+            fixfiles -R ruby193-rubygem-passenger-native restore
+            /usr/bin/cfn-signal -e 0 -s "Broker 2 setup complete" -i "P_BROKER_HOSTNAME.P_DOMAIN" "P_BROKER_WAIT_HANDLE"
+            reboot
+          params:
+            P_BROKER_FLOATING_IP: { get_attr: [ broker2_floating_ip, floating_ip_address ] }
+            P_DOMAIN: { get_param: domain }
+            P_HOSTS_DOMAIN: { get_param: hostsDomain }
+            P_BROKER_HOSTNAME: { get_param: Broker2Hostname }
+            P_NAMED_HOSTNAME: { get_param: NamedHostname }
+            P_NAMED_IP: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
+            P_REPLICANTS: { get_param: Replicants }
+            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod}
+            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
+            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
+            P_CONF_RH_REG_POOL: { get_param: ConfRhRegPool}
+            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
+            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
+            P_CONF_RH_REG_ACTKEY: { get_param: ConfRhRegAK}
+            P_CONF_RHN_REG_OPTS: { get_param: ConfRhRegOpts}
+            P_CONF_REPOS_BASE: { get_param: ConfRepoBase}
+            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase}
+            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase}
+            P_OSE_VERSION: { get_param: ose_version }
+            P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
+            P_CONF_OPENSHIFT_USER1: { get_param: OpenshiftUser1 }
+            P_CONF_OPENSHIFT_PASSWORD1: { get_param: OpenshiftPass1 }
+            P_CONF_MONGODB_BROKER_USER: { get_param: MongoDbBrokerUser }
+            P_CONF_MONGODB_BROKER_PASSWORD: { get_param: MongoDbBrokerPass }
+            P_CONF_MCOLLECTIVE_USER: { get_param: McollectiveUser }
+            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: McollectivePass }
+            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: ActiveMqAdminPass }
+            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: ActiveMqUserPass }
+            P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle}
+
+###
+# Broker3
+###
+  broker3_instance:
+    type: OS::Nova::Server
+    properties:
+      name: ose_broker3
+      image: { get_param: BrokerImage }
+      flavor: { get_param: broker_server_flavor }
+      availability_zone: { get_param: primary_avail_zone }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: broker3_port }
+      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -x
+
+            export CONF_BROKER_IP_ADDR=P_BROKER_FLOATING_IP
+            export CONF_DOMAIN=P_DOMAIN
+            export CONF_BROKER_HOSTNAME=P_BROKER_HOSTNAME
+            export CONF_NAMED_HOSTNAME=P_NAMED_HOSTNAME
+            export CONF_NAMED_IP_ADDR=P_NAMED_IP
+            export CONF_DATASTORE_REPLICANTS=P_REPLICANTS
+            export CONF_ACTIVEMQ_REPLICANTS=P_REPLICANTS
+            export CONF_INSTALL_METHOD=P_CONF_INSTALL_METHOD
+            export CONF_SM_REG_NAME=P_CONF_RH_REG_NAME
+            export CONF_SM_REG_PASS=P_CONF_RH_REG_PASS
+            export CONF_SM_REG_POOL=P_CONF_RH_REG_POOL
+            export CONF_RHN_REG_NAME=P_CONF_RH_REG_NAME
+            export CONF_RHN_REG_PASS=P_CONF_RH_REG_PASS
+            export CONF_RHN_REG_ACTKEY=P_CONF_RH_REG_ACTKEY
+            export CONF_RHN_REG_OPTS=P_CONF_RHN_REG_OPTS
+            export CONF_REPOS_BASE=P_CONF_REPOS_BASE
+            export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
+            export CONF_RHEL_REPO=P_CONF_RHEL_REPO
+            export CONF_OSE_VERSION=P_OSE_VERSION
+            export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
+            export CONF_INSTALL_COMPONENTS=broker,activemq,datastore
+            export CONF_ACTIONS=do_all_actions
+            export CONF_OPENSHIFT_USER1=P_CONF_OPENSHIFT_USER1
+            export CONF_OPENSHIFT_PASSWORD1=P_CONF_OPENSHIFT_PASSWORD1
+            export CONF_MONGODB_BROKER_USER=P_CONF_MONGODB_BROKER_USER
+            export CONF_MONGODB_BROKER_PASSWORD=P_CONF_MONGODB_BROKER_PASSWORD
+            export CONF_MCOLLECTIVE_USER=P_CONF_MCOLLECTIVE_USER
+            export CONF_MCOLLECTIVE_PASSWORD=P_CONF_MCOLLECTIVE_PASSWORD
+            export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
+            export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
+
+            yum install -y openshift-enterprise-yum-validator
+            oo-admin-yum-validator
+            wget https://raw.github.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            chmod +x ./openshift.sh
+            ./openshift.sh 2>&1 | tee /tmp/openshift.out
+            setenforce 1
+            cd /etc/init.d
+            for i in `ls cloud-*`; do chkconfig $i off; done
+            #/usr/sbin/lokkit --service=dns
+            # FIXME: shouldn't need this. DIB step? selinux enabled when pkg instld? see rpm -q --scripts ruby193-rubygem-passenger-native
+            semodule -i /opt/rh/ruby193/root/usr/share/selinux/packages/ruby193-rubygem-passenger/ruby193-rubygem-passenger.pp 2>/dev/null
+            fixfiles -R ruby193-rubygem-passenger restore
+            fixfiles -R ruby193-rubygem-passenger-native restore
+            /usr/bin/cfn-signal -e 0 -s "Broker 3 setup complete" -i "P_BROKER_HOSTNAME.P_DOMAIN" "P_BROKER_WAIT_HANDLE"
+            reboot
+          params:
+            P_BROKER_FLOATING_IP: { get_attr: [ broker3_floating_ip, floating_ip_address ] }
+            P_DOMAIN: { get_param: domain }
+            P_HOSTS_DOMAIN: { get_param: hostsDomain }
+            P_BROKER_HOSTNAME: { get_param: Broker3Hostname }
+            P_NAMED_HOSTNAME: { get_param: NamedHostname }
+            P_NAMED_IP: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
+            P_REPLICANTS: { get_param: Replicants }
+            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod}
+            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
+            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
+            P_CONF_RH_REG_POOL: { get_param: ConfRhRegPool}
+            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
+            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
+            P_CONF_RH_REG_ACTKEY: { get_param: ConfRhRegAK}
+            P_CONF_RHN_REG_OPTS: { get_param: ConfRhRegOpts}
+            P_CONF_REPOS_BASE: { get_param: ConfRepoBase}
+            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase}
+            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase}
+            P_OSE_VERSION: { get_param: ose_version }
+            P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
+            P_CONF_OPENSHIFT_USER1: { get_param: OpenshiftUser1 }
+            P_CONF_OPENSHIFT_PASSWORD1: { get_param: OpenshiftPass1 }
+            P_CONF_MONGODB_BROKER_USER: { get_param: MongoDbBrokerUser }
+            P_CONF_MONGODB_BROKER_PASSWORD: { get_param: MongoDbBrokerPass }
+            P_CONF_MCOLLECTIVE_USER: { get_param: McollectiveUser }
+            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: McollectivePass }
+            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: ActiveMqAdminPass }
+            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: ActiveMqUserPass }
+            P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle}
+
+###
+# Node
+###
+  node1_instance:
+    type: OpenShift::Node::Server
+    properties:
+      key_name: { get_param: key_name }
+      domain: { get_param: domain }
+      hostsDomain: { get_param: hostsDomain }
+      Broker1Hostname: { get_param: Broker1Hostname }
+      broker1_floating_ip: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
+      NodeHostname: { get_param: Node1Hostname }
+      LoadBalHostname: { get_param: LoadBalHostname }
+      NodeImage: { get_param: NodeImage }
+      Replicants: { get_param: Replicants }
+      ConfRhRegName: { get_param: ConfRhRegName }
+      ConfRhRegPass: { get_param: ConfRhRegPass }
+      ConfRhRegAK: { get_param: ConfRhRegAK }
+      ConfRhRegOpts: { get_param: ConfRhRegOpts }
+      public_net_id: { get_param: public_net_id }
+      private_net_id: { get_param: private_net_id }
+      private_subnet_id: { get_param: private_subnet_id }
+      McollectiveUser: { get_param: McollectiveUser }
+      McollectivePass: { get_param: McollectivePass }
+      ActiveMqAdminPass: { get_param: ActiveMqAdminPass }
+      ActiveMqUserPass: { get_param: ActiveMqUserPass }
+      avail_zone: { get_param: primary_avail_zone }
+      node_server_flavor: { get_param: node_server_flavor }
+
+  node2_instance:
+    type: OpenShift::Node::Server
+    properties:
+      key_name: { get_param: key_name }
+      domain: { get_param: domain }
+      hostsDomain: { get_param: hostsDomain }
+      Broker1Hostname: { get_param: Broker1Hostname }
+      broker1_floating_ip: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
+      NodeHostname: { get_param: Node2Hostname }
+      LoadBalHostname: { get_param: LoadBalHostname }
+      NodeImage: { get_param: NodeImage }
+      Replicants: { get_param: Replicants }
+      ConfRhRegName: { get_param: ConfRhRegName }
+      ConfRhRegPass: { get_param: ConfRhRegPass }
+      ConfRhRegAK: { get_param: ConfRhRegAK }
+      ConfRhRegOpts: { get_param: ConfRhRegOpts }
+      public_net_id: { get_param: public_net_id }
+      private_net_id: { get_param: private_net_id }
+      private_subnet_id: { get_param: private_subnet_id }
+      McollectiveUser: { get_param: McollectiveUser }
+      McollectivePass: { get_param: McollectivePass }
+      ActiveMqAdminPass: { get_param: ActiveMqAdminPass }
+      ActiveMqUserPass: { get_param: ActiveMqUserPass }
+      avail_zone: { get_param: secondary_avail_zone }
+      node_server_flavor: { get_param: node_server_flavor }
+
+  node3_instance:
+    type: OpenShift::Node::Server
+    properties:
+      key_name: { get_param: key_name }
+      domain: { get_param: domain }
+      hostsDomain: { get_param: hostsDomain }
+      Broker1Hostname: { get_param: Broker1Hostname }
+      broker1_floating_ip: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
+      NodeHostname: { get_param: Node3Hostname }
+      LoadBalHostname: { get_param: LoadBalHostname }
+      NodeImage: { get_param: NodeImage }
+      Replicants: { get_param: Replicants }
+      ConfRhRegName: { get_param: ConfRhRegName }
+      ConfRhRegPass: { get_param: ConfRhRegPass }
+      ConfRhRegAK: { get_param: ConfRhRegAK }
+      ConfRhRegOpts: { get_param: ConfRhRegOpts }
+      public_net_id: { get_param: public_net_id }
+      private_net_id: { get_param: private_net_id }
+      private_subnet_id: { get_param: private_subnet_id }
+      McollectiveUser: { get_param: McollectiveUser }
+      McollectivePass: { get_param: McollectivePass }
+      ActiveMqAdminPass: { get_param: ActiveMqAdminPass }
+      ActiveMqUserPass: { get_param: ActiveMqUserPass }
+      avail_zone: { get_param: secondary_avail_zone }
+      node_server_flavor: { get_param: node_server_flavor }
+
+outputs:
+  console_url:
+    description: OpenShift Enterprise console URL
+    value:
+      str_replace:
+        template: |
+          https://host.domain/console
+        params:
+          host: { get_param: LoadBalHostname }
+          domain: { get_param: domain }
+  default_user:
+    description: OpenShift Enterprise default user
+    value: { get_param: OpenshiftUser1 }
+  load_balancer_floating_ip:
+    description: load balancer floating IP address
+    value: { get_attr: [ lb_vip_floating_ip, floating_ip_address ] }

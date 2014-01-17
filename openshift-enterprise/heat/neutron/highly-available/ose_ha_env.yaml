@@ -1,0 +1,26 @@
+parameters:
+  # existing OpenStack keypair
+  key_name: mykey
+  domain: example.com
+  hostsDomain: example.com
+  Replicants: broker1.example.com,broker2.example.com,broker3.example.com
+  # IP address of existing DNS server that will be configured for zone xfer
+  # this server will be a slave for the OpenShift zone
+  UpstreamDnsIp: 10.0.0.1
+  # Name of glance images. Using prepped images will greatly reduce deploy time.
+  NodeImage: RHEL65-x86_64-node
+  BrokerImage: RHEL65-x86_64-broker
+  ActiveMqAdminPass: password
+  ActiveMqUserPass: password
+  McollectivePass: password
+  MongoDbBrokerPass: password
+  OpenshiftPass1: password
+  # Red Hat registration credentials
+  ConfRhRegName: admin
+  ConfRhRegPass: password
+  # Use 'neutron net-list' and 'neutron subnet-list' and replace these values
+  private_net_id: 12345678-1234-5678-adcd-12345678
+  public_net_id: 12345678-1234-5678-adcd-12345678
+  private_subnet_id: 12345678-1234-5678-adcd-12345678
+resource_registry:
+  OpenShift::Node::Server: ose_node_stack.yaml
