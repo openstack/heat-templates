@@ -1,0 +1,23 @@
+heat_template_version: 2013-05-23
+description: Template which creates a Swift container ressource
+
+resources:
+  SwiftContainerWebsite:
+    DeletionPolicy: "Delete"
+    type: OS::Swift::Container
+    properties:
+      X-Container-Read: ".r:*"
+      X-Container-Meta:
+        web-index: "index.html"
+        web-error: "error.html"
+
+  SwiftContainer:
+    type: OS::Swift::Container
+
+outputs:
+  WebsiteURL:
+    description: "URL for website hosted on S3"
+    value: { get_attr: [SwiftContainerWebsite, WebsiteURL] }
+  DomainName:
+    description: "Domain of Swift host"
+    value: { get_attr: [SwiftContainer, DomainName] }
