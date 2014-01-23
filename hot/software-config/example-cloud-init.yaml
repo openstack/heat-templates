@@ -1,0 +1,100 @@
+heat_template_version: 2013-05-23
+description: >
+  This template demonstrates the different ways configuration resources
+  can be used to specify boot-time cloud-init configuration.
+parameters:
+  key_name:
+    type: string
+  flavor:
+    type: string
+  image:
+    type: string
+
+resources:
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  one_init:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        write_files:
+        - path: /tmp/one
+          content: "The one is bar"
+
+  five_init:
+    # this resource demonstrates multiple cloud-config resources
+    # with a merge_how strategy
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        merge_how: 'dict(recurse_array,no_replace)+list(append)'
+        write_files:
+        - path: /tmp/five
+          content: "The five is bar"
+
+  two_init:
+    # this resource is a simple shell script. No inputs or outputs are
+    # specified since this is not supported by cloud-init but values
+    # could be inserted into the script using str_replace.
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: |
+        #!/bin/sh
+        echo "The two is bar" > /tmp/two
+
+  three_init:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: |
+        #!/bin/sh
+        echo "The three is bar" > /tmp/three
+
+  four_init:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: |
+        #!/bin/sh
+        echo "The four is bar" > /tmp/four
+
+  three_four_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+      - config: {get_resource: three_init}
+      - config: {get_resource: four_init}
+
+  server_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+      - config: {get_resource: one_init}
+      - config: {get_resource: two_init}
+        # referencing another OS::Heat::MultipartMime resource will result
+        # in each part of that resource being appended to this one.
+      - config: {get_resource: three_four_init}
+        type: multipart
+      - config: {get_resource: five_init}
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: RAW
+      user_data:
+        get_resource: server_init
