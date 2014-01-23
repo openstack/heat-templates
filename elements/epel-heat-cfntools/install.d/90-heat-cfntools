@@ -12,17 +12,8 @@ priority=2
 sslverify=false
 
 YUM
-
-cat > /etc/yum.repos.d/cloudinit.repo <<YUM
-[cloudinit]
-name=Cloud Init Packages
-baseurl=http://file.rdu.redhat.com/~calfonso/cloud-init/
-failovermethod=priority
-enabled=1
-gpgcheck=0
-YUM
-
+install-packages http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
 install-packages cloud-init heat-cfntools
 
 rm -f /etc/yum.repos.d/havana-epel.repo
-rm -f /etc/yum.repos.d/cloudinit.repo
+rpm -e epel-release-6-8
