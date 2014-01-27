@@ -131,7 +131,7 @@ resources:
     type: OS::Nova::Server
     properties:
       name: broker_instance
-      image: RHEL64-x86_64-broker
+      image: RHEL65-x86_64-broker
       flavor: { get_param: broker_server_flavor }
       key_name: { get_param: key_name }
       networks:
@@ -218,7 +218,7 @@ resources:
     type: OS::Nova::Server
     properties:
       name: node_instance
-      image: RHEL64-x86_64-node
+      image: RHEL65-x86_64-node
       flavor: { get_param: node_server_flavor }
       key_name: { get_param: key_name }
       networks:
@@ -257,7 +257,7 @@ resources:
               VALIDATOR_ARGS="--oo-version=${P_YUM_VALIDATOR_VERSION} --role=node-eap --fix-all"
               ./oo-admin-yum-validator ${VALIDATOR_ARGS} || ./oo-admin-yum-validator ${VALIDATOR_ARGS}
             popd
-            wget https://raw.github.com/openshift/openshift-extras/enterprise-${P_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            wget https://raw.github.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
             chmod +x ./openshift.sh
             ./openshift.sh 2>&1 | tee /tmp/openshift.out
             setenforce 1

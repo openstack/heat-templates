@@ -66,7 +66,7 @@ pushd openshift-openshift-extras*/admin/yum-validator
 popd
 rm -rf openshift-openshift-extras*
 
-OSE_PACKAGES="yum-plugin-priorities openshift-origin-broker openshift-origin-broker-util rubygem-openshift-origin-msg-broker-mcollective rubygem-openshift-origin-auth-remote-user rubygem-openshift-origin-dns-nsupdate openshift-origin-console rhc activemq mongodb mongodb-server bind bind-utils mod_auth_kerb ntp ntpdate "
+OSE_PACKAGES="yum-plugin-priorities openshift-origin-broker openshift-origin-broker-util rubygem-openshift-origin-msg-broker-mcollective rubygem-openshift-origin-auth-remote-user rubygem-openshift-origin-dns-nsupdate openshift-origin-console rhc activemq mongodb mongodb-server bind bind-utils mod_auth_kerb ntp ntpdate wget "
 
 
 OSE_V1_PACKAGES="mcollective-client "

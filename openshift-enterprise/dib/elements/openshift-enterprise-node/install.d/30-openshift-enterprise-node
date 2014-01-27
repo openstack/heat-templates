@@ -94,7 +94,7 @@ pushd openshift-openshift-extras*/admin/yum-validator
 popd
 rm -rf openshift-openshift-extras*
 
-OSE_PACKAGES="yum-plugin-priorities rubygem-openshift-origin-node ruby193-rubygem-passenger-native openshift-origin-node-util policycoreutils-python openshift-origin-cartridge-cron openshift-origin-cartridge-diy openshift-origin-cartridge-haproxy openshift-origin-cartridge-jbossews openshift-origin-cartridge-jbosseap openshift-origin-cartridge-jenkins openshift-origin-cartridge-jenkins-client openshift-origin-cartridge-mysql openshift-origin-cartridge-nodejs openshift-origin-cartridge-perl openshift-origin-cartridge-php openshift-origin-cartridge-postgresql openshift-origin-cartridge-python openshift-origin-cartridge-ruby openshift-origin-msg-node-mcollective " 
+OSE_PACKAGES="yum-plugin-priorities rubygem-openshift-origin-node ruby193-rubygem-passenger-native openshift-origin-node-util policycoreutils-python openshift-origin-cartridge-cron openshift-origin-cartridge-diy openshift-origin-cartridge-haproxy openshift-origin-cartridge-jbossews openshift-origin-cartridge-jbosseap openshift-origin-cartridge-jenkins openshift-origin-cartridge-jenkins-client openshift-origin-cartridge-mysql openshift-origin-cartridge-nodejs openshift-origin-cartridge-perl openshift-origin-cartridge-php openshift-origin-cartridge-postgresql openshift-origin-cartridge-python openshift-origin-cartridge-ruby openshift-origin-msg-node-mcollective wget "
 OSE_V1_PACKAGES="mcollective "
 
 
