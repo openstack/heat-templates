@@ -27,11 +27,11 @@ parameters:
         description:
           Image ID must be either F18-i386-cfntools or F18-x86_64-cfntools.
   availability_zone:
-    type: String
+    type: string
     description: The Availability Zone to launch the instance.
     default: nova
   volume_size:
-    type: Number
+    type: number
     description: Size of the volume to be created.
     default: 1
     constraints:
