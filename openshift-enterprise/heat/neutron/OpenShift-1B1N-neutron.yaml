@@ -5,57 +5,112 @@ parameters:
     description: Name of an existing keypair to enable SSH access to the instances
     type: string
   prefix:
-    Description: Your DNS Prefix
-    Type: String
-    Default: example.com
+    description: Your DNS Prefix
+    type: string
+    default: example.com
   upstreamDNS:
     description: Upstream DNS server
-    type: String
+    type: string
     default: 8.8.8.8
   broker_server_flavor:
     description: Flavor of broker server
-    type: String
+    type: string
     default: m1.small
-    allowed_values: [m1.small, m1.medium, m1.large, m1.xlarge]
-    constraint_description: Must be a valid server flavor
+    constraints:
+      - allowed_values: [m1.small, m1.medium, m1.large, m1.xlarge]
+        description: Must be a valid server flavor
   node_server_flavor:
     description: Flavor of node servers
-    type: String
+    type: string
     default: m1.small
-    allowed_values: [m1.small, m1.medium, m1.large, m1.xlarge]
-    constraint_description: Must be a valid server flavor
+    constraints:
+      - allowed_values: [m1.small, m1.medium, m1.large, m1.xlarge]
+        description: Must be a valid server flavor
   node_count_minimum:
     description: Minimum number of nodes to scale down to
-    type: String
+    type: string
     default: '1'
-    allowed_pattern: '[0-9]*'
+    constraints:
+      - allowed_pattern: '[0-9]*'
   node_count_maximum:
     description: Maximum number of nodes to scale up to
-    type: String
+    type: string
     default: '3'
-    allowed_pattern: '[0-9]*'
-  ConfInstallMethod: {Description: Installation method (yum rhsm rhn), Type: String, MinLength: '1',
-    MaxLength: '255', Default: yum, Allowed_Values: [yum, rhsm, rhn]}
-  ConfSMRegName: {Description: Subscription Manager registration username, Type: String, MinLength: '1',
-    MaxLength: '255', Default: username}
-  ConfSMRegPass: {Description: Subscription Manager registration password, Type: String, MinLength: '1',
-    MaxLength: '255', Default: password}
-  ConfSMRegPool: {Description: Pool ID for OpenShift subscription, Type: String, MinLength: '1',
-    MaxLength: '255', Default: none}
-  ConfRHNRegName: {Description: RHN registration username, Type: String, MinLength: '1',
-    MaxLength: '255', Default: username}
-  ConfRHNRegPass: {Description: RHN registration password, Type: String, MinLength: '1',
-    MaxLength: '255', Default: password}
-  ConfRHNRegAK: {Description: RHN activation key for OpenShift subscription, Type: String, MinLength: '1',
-    MaxLength: '255', Default: activationkey}
-  ConfRHELRepoBase: {Description: RHEL Repo Base, Type: String, MinLength: '1',
-    MaxLength: '255', Default: example.com}
-  ConfRepoBase: {Description: OSE Repo Base, Type: String, MinLength: '1',
-    MaxLength: '255', Default: example.com}
-  ConfJBossRepoBase: {Description: JBoss Repo Base, Type: String, MinLength: '1',
-    MaxLength: '255', Default: example.com}
-  BrokerHostname: {Description: Broker hostname, Type: String, MinLenth: '1', Default: openshift.brokerinstance.novalocal}
-  NodeHostname: {Description: Broker hostname, Type: String, MinLenth: '1', Default: openshift.nodeinstance.novalocal}
+    constraints:
+      - allowed_pattern: '[0-9]*'
+  ConfInstallMethod:
+    description: Installation method (yum rhsm rhn)
+    type: string
+    default: yum
+    constraints:
+      - length: {min: 1, max: 255}
+      - allowed_values: [yum, rhsm, rhn]
+  ConfSMRegName:
+    description: Subscription Manager registration username
+    type: string
+    default: username
+    constraints:
+      - length: {min: 1, max: 255}
+  ConfSMRegPass:
+    description: Subscription Manager registration password
+    type: string
+    default: password
+    constraints:
+      - length: {min: 1, max: 255}
+  ConfSMRegPool:
+    description: Pool ID for OpenShift subscription
+    type: string
+    default: none
+    constraints:
+      - length: {min: 1, max: 255}
+  ConfRHNRegName:
+    description: RHN registration username
+    type: string
+    default: username
+    constraints:
+      - length: {min: 1, max: 255}
+  ConfRHNRegPass:
+    description: RHN registration password
+    type: string
+    default: password
+    constraints:
+      - length: {min: 1, max: 255}
+  ConfRHNRegAK:
+    description: RHN activation key for OpenShift subscription
+    type: string
+    default: activationkey
+    constraints:
+      - length: {min: 1, max: 255}
+  ConfRHELRepoBase:
+    description: RHEL Repo Base
+    type: string
+    default: example.com
+    constraints:
+      - length: {min: 1, max: 255}
+  ConfRepoBase:
+    description: OSE Repo Base
+    type: string
+    default: example.com
+    constraints:
+      - length: {min: 1, max: 255}
+  ConfJBossRepoBase:
+    description: JBoss Repo Base
+    type: string
+    default: example.com
+    constraints:
+      - length: {min: 1, max: 255}
+  BrokerHostname:
+    description: Broker hostname
+    type: string
+    default: openshift.brokerinstance.novalocal
+    constraints:
+      - length: {min: 1}
+  NodeHostname:
+    description: Node hostname
+    type: string
+    default: openshift.nodeinstance.novalocal
+    constraints:
+      - length: {min: 1}
   public_net_id:
     type: string
     description: >
@@ -68,19 +123,21 @@ parameters:
     description: ID of private sub network into which servers get deployed
   ose_version:
     description: The version of OpenShift Enterprise to install
-    type: String
+    type: string
     default: "2.0"
-    allowed_values: ["1.2", "2.0"]
+    constraints:
+      - allowed_values: ["1.2", "2.0"]
   yum_validator_version:
     description: An optional version for the oo-yum-validator tool to use
-    type: String
+    type: string
     default: "2.0"
-    allowed_values: ["1.2", "2.0", "2.0beta"]
+    constraints:
+      - allowed_values: ["1.2", "2.0", "2.0beta"]
 
 resources:
   openshift_enterprise_security_group:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
+    type: AWS::EC2::SecurityGroup
+    properties:
       GroupDescription: Standard firewall rules
       SecurityGroupIngress:
       - {IpProtocol: udp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
@@ -117,14 +174,14 @@ resources:
 
 
   broker_wait_handle:
-    Type: AWS::CloudFormation::WaitConditionHandle
+    type: AWS::CloudFormation::WaitConditionHandle
 
   broker_wait_condition:
-    Type: AWS::CloudFormation::WaitCondition
+    type: AWS::CloudFormation::WaitCondition
     DependsOn: broker_instance
-    Properties:
+    properties:
       Handle:
-        Ref: broker_wait_handle
+        get_resource: broker_wait_handle
       Timeout: '6000'
 
   broker_instance:
@@ -204,14 +261,14 @@ resources:
             P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle }
 
   node_wait_handle:
-    Type: AWS::CloudFormation::WaitConditionHandle
+    type: AWS::CloudFormation::WaitConditionHandle
 
   node_wait_condition:
-    Type: AWS::CloudFormation::WaitCondition
+    type: AWS::CloudFormation::WaitCondition
     DependsOn: node_instance
-    Properties:
+    properties:
       Handle:
-        Ref: node_wait_handle
+        get_resource: node_wait_handle
       Timeout: '6000'
 
   node_instance:
@@ -288,13 +345,13 @@ resources:
 
 outputs:
   OpenShiftConsole:
-    Value:
+    value:
       Fn::Join:
       - ''
       - ['https://', { get_attr: [ broker_instance, first_address ] }, '/console']
     description: URL for OpenShift Enterprises console
   NameServerEntry:
-    Value:
+    value:
       Fn::Join:
       - ''
       - ['nameserver ', { get_attr: [ broker_instance, first_address ] } ]
