@@ -1,0 +1,48 @@
+heat_template_version: 2013-05-23
+
+description: >
+  HOT template to create a neutron public network and subnet.
+
+parameters:
+  public_net_name:
+    type: string
+    default: ext_net
+    description: Name of public network to be created
+  public_net_cidr:
+    type: string
+    default: 10.16.136.0/21
+    description: Public network address (CIDR notation)
+  public_net_gateway:
+    type: string
+    default: 10.16.143.254
+    description: Public network gateway address
+  public_net_pool_start:
+    type: string
+    default: 10.16.137.112
+    description: Start of public network IP address allocation pool
+  public_net_pool_end:
+    type: string
+    default: 10.16.137.114
+    description: End of public network IP address allocation pool
+
+resources:
+  public_net:
+    type: OS::Neutron::Net
+    properties:
+      name: { get_param: public_net_name }
+      value_specs: { 'router:external': 'True', 'provider:network_type' : 'flat', 'provider:physical_network': 'physext' }
+
+  public_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: public
+      network_id: { get_resource: public_net }
+      cidr: { get_param: public_net_cidr }
+      gateway_ip: { get_param: public_net_gateway }
+      allocation_pools:
+        - start: { get_param: public_net_pool_start }
+          end: { get_param: public_net_pool_end }
+      enable_dhcp: false
+
+outputs:
+  public_net_id: { get_resource: public_net }
