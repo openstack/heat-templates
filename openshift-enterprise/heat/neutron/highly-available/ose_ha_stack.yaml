@@ -7,36 +7,36 @@ parameter_groups:
 - label: General parameters
   description: General OpenShift parameters
   parameters:
-  - Broker1Hostname
-  - Broker2Hostname
-  - Broker3Hostname
-  - Node1Hostname
-  - Node2Hostname
-  - Node3Hostname
-  - LoadBalHostname
-  - BrokerImage
-  - NodeImage
+  - broker1_hostname
+  - broker2_hostname
+  - broker3_hostname
+  - node1_hostname
+  - node2_hostname
+  - node3_hostname
+  - load_bal_hostname
+  - broker_image
+  - node_image
   - broker_server_flavor
   - node_server_flavor
 - label: Red Hat subscription
   description: >
     Red Hat Subscription Manager (RHSM) or Red Hat Network (RHN) parameters
   parameters:
-  - ConfInstallMethod
-  - ConfRhRegName
-  - ConfRhRegPass
-  - ConfRhRegPool
-  - ConfRhRegAK
-  - ConfRhRegOpts
+  - install_method
+  - rh_reg_name
+  - rh_reg_pass
+  - rh_reg_pool
+  - rh_reg_act_key
+  - rh_reg_opts
 - label: Networking parameters
   description: Networking-related parameters
   parameters:
   - domain
-  - hostsDomain
-  - NamedHostname
-  - NamedIp
-  - UpstreamDnsIp
-  - Replicants
+  - hosts_domain
+  - named_hostname
+  - named_ip
+  - upstream_dns_ip
+  - replicants
   - cartridges
   - public_net_id
   - private_net_id
@@ -45,14 +45,14 @@ parameter_groups:
   description: >
     Username and password parameters for OpenShift and dependent service
   parameters:
-  - OpenshiftUser1
-  - OpenshiftPass1
-  - MongoDbBrokerUser
-  - MongoDbBrokerPass
-  - McollectiveUser
-  - McollectivePass
-  - ActiveMqAdminPass
-  - ActiveMqUserPass
+  - openshift_user1
+  - openshift_pass1
+  - mongo_broker_user
+  - mongo_broker_pass
+  - mcollective_user
+  - mcollective_pass
+  - activemq_admin_pass
+  - activemq_user_pass
 parameters:
   key_name:
     description: Name of an existing keypair to enable SSH access to the instances
@@ -60,7 +60,7 @@ parameters:
   domain:
     Description: Your DNS domain
     type: string
-  hostsDomain:
+  hosts_domain:
     Description: Openshift hosts domain
     type: string
   broker_server_flavor:
@@ -89,93 +89,93 @@ parameters:
     description: Node cinder volume size (GB)
     type: number
     default: 10
-  Broker1Hostname:
+  broker1_hostname:
     description: Broker 1 hostname
     type: string
     default: broker1
-  Broker2Hostname:
+  broker2_hostname:
     description: Broker 2 hostname
     type: string
     default: broker2
-  Broker3Hostname:
+  broker3_hostname:
     description: Broker 3 hostname
     type: string
     default: broker3
-  Node1Hostname:
+  node1_hostname:
     description: Node 1 hostname
     type: string
     default: node1
-  Node2Hostname:
+  node2_hostname:
     description: Node 2 hostname
     type: string
     default: node2
-  Node3Hostname:
+  node3_hostname:
     description: Node 3 hostname
     type: string
     default: node3
-  LoadBalHostname:
+  load_bal_hostname:
     description: Load balancer hostname
     type: string
     default: broker
-  BrokerImage:
+  broker_image:
     description: Broker image name
     type: string
     default: RHEL65-x86_64-broker
-  NodeImage:
+  node_image:
     description: Node image name
     type: string
     default: RHEL65-x86_64-node
-  ConfInstallMethod:
+  install_method:
     description: Installation method (yum rhsm rhn)
     type: string
     default: rhn
     allowed_Values: [yum, rhsm, rhn]
-  ConfRhRegName:
+  rh_reg_name:
     description: Subscription Manager registration username
     type: string
     default: ""
-  ConfRhRegPass:
+  rh_reg_pass:
     description: Subscription Manager registration password
     type: string
     default: ""
     hidden: true
-  ConfRhRegPool:
+  rh_reg_pool:
     description: Pool ID for OpenShift subscription
     type: string
     default: ""
-  ConfRhRegAK:
+  rh_reg_act_key:
     description: Optional RHN activation key for OpenShift subscription
     type: string
     default: ""
-  ConfRhRegOpts:
+  rh_reg_opts:
     description: RHN options, e.g. --serverUrl=http://my.sat.server.com/XMLRPC
     type: string
     default: ""
-  ConfRHELRepoBase:
+  rhel_repo_base:
     description: RHEL Repository Base URL
     type: string
     default: ""
-  ConfRepoBase:
+  openshift_repo_base:
     description: OSE Repository Base URL
     type: string
     default: ""
-  ConfJBossRepoBase:
+  jboss_repo_base:
     description: JBoss Repository Base URL
     type: string
     default: ""
-  NamedHostname:
+  named_hostname:
     description: named server hostname
     type: string
     default: broker1
-  NamedIp:
+  named_ip:
     description: named server IP address
     type: string
     default: ""
-  UpstreamDnsIp:
+  upstream_dns_ip:
     description: Upstream DNS IP address for zone transfer
     type: string
     default: ""
-  Replicants:
+  replicants:
     description: >
       Comma-separated list (no spaces) of broker hosts (FQDN) running ActiveMQ and MongoDB
     type: string
@@ -194,35 +194,35 @@ parameters:
   private_subnet_id:
     type: string
     description: ID of private sub network into which servers get deployed
-  OpenshiftUser1:
+  openshift_user1:
     description: OpenShift username
     type: string
     default: user1
-  OpenshiftPass1:
+  openshift_pass1:
     description: OpenShift user password
     type: string
     hidden: true
-  MongoDbBrokerUser:
+  mongo_broker_user:
     description: MongoDB broker username
     type: string
     default: openshift
-  MongoDbBrokerPass:
+  mongo_broker_pass:
     description: MongoDB broker password
     type: string
     hidden: true
-  McollectiveUser:
+  mcollective_user:
     description: MCollective username
     type: string
     default: mcollective
-  McollectivePass:
+  mcollective_pass:
     description: MCollective password
     type: string
     hidden: true
-  ActiveMqAdminPass:
+  activemq_admin_pass:
     description: ActiveMQ admin user password
     type: string
     hidden: true
-  ActiveMqUserPass:
+  activemq_user_pass:
     description: ActiveMQ user password
     type: string
     hidden: true
@@ -360,7 +360,7 @@ resources:
     type: OS::Nova::Server
     properties:
       name: ose_broker1
-      image: { get_param: BrokerImage }
+      image: { get_param: broker_image }
       flavor: { get_param: broker_server_flavor }
       availability_zone: { get_param: primary_avail_zone }
       key_name: { get_param: key_name }
@@ -435,40 +435,40 @@ resources:
             P_BROKER2_FLOATING_IP: { get_attr: [ broker2_floating_ip, floating_ip_address ] }
             P_BROKER3_FLOATING_IP: { get_attr: [ broker3_floating_ip, floating_ip_address ] }
             P_DOMAIN: { get_param: domain }
-            P_HOSTS_DOMAIN: { get_param: hostsDomain }
-            P_LOAD_BAL_HOSTNAME: { get_param: LoadBalHostname }
+            P_HOSTS_DOMAIN: { get_param: hosts_domain }
+            P_LOAD_BAL_HOSTNAME: { get_param: load_bal_hostname }
             P_LOAD_BAL_IP: { get_attr: [ lb_vip_floating_ip, floating_ip_address ] }
-            P_BROKER_HOSTNAME: { get_param: Broker1Hostname }
-            P_BROKER2_HOSTNAME: { get_param: Broker2Hostname }
-            P_BROKER3_HOSTNAME: { get_param: Broker3Hostname }
-            P_NODE1_HOSTNAME: { get_param: Node1Hostname }
-            P_NODE2_HOSTNAME: { get_param: Node2Hostname }
-            P_NODE3_HOSTNAME: { get_param: Node3Hostname }
-            P_NAMED_HOSTNAME: { get_param: NamedHostname }
+            P_BROKER_HOSTNAME: { get_param: broker1_hostname }
+            P_BROKER2_HOSTNAME: { get_param: broker2_hostname }
+            P_BROKER3_HOSTNAME: { get_param: broker3_hostname }
+            P_NODE1_HOSTNAME: { get_param: node1_hostname }
+            P_NODE2_HOSTNAME: { get_param: node2_hostname }
+            P_NODE3_HOSTNAME: { get_param: node3_hostname }
+            P_NAMED_HOSTNAME: { get_param: named_hostname }
             P_NAMED_IP: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
-            P_UPSTREAM_DNS_IP: { get_param: UpstreamDnsIp }
-            P_REPLICANTS: { get_param: Replicants }
-            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod}
-            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
-            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
-            P_CONF_RH_REG_POOL: { get_param: ConfRhRegPool}
-            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
-            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
-            P_CONF_RH_REG_ACTKEY: { get_param: ConfRhRegAK}
-            P_CONF_RHN_REG_OPTS: { get_param: ConfRhRegOpts}
-            P_CONF_REPOS_BASE: { get_param: ConfRepoBase}
-            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase}
-            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase}
+            P_UPSTREAM_DNS_IP: { get_param: upstream_dns_ip }
+            P_REPLICANTS: { get_param: replicants }
+            P_CONF_INSTALL_METHOD: { get_param: install_method}
+            P_CONF_RH_REG_NAME: { get_param: rh_reg_name}
+            P_CONF_RH_REG_PASS: { get_param: rh_reg_pass}
+            P_CONF_RH_REG_POOL: { get_param: rh_reg_pool}
+            P_CONF_RH_REG_NAME: { get_param: rh_reg_name}
+            P_CONF_RH_REG_PASS: { get_param: rh_reg_pass}
+            P_CONF_RH_REG_ACTKEY: { get_param: rh_reg_act_key}
+            P_CONF_RHN_REG_OPTS: { get_param: rh_reg_opts}
+            P_CONF_REPOS_BASE: { get_param: openshift_repo_base}
+            P_CONF_JBOSS_REPO_BASE: { get_param: jboss_repo_base}
+            P_CONF_RHEL_REPO: { get_param: rhel_repo_base}
             P_OSE_VERSION: { get_param: ose_version }
             P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
-            P_CONF_OPENSHIFT_USER1: { get_param: OpenshiftUser1 }
-            P_CONF_OPENSHIFT_PASSWORD1: { get_param: OpenshiftPass1 }
-            P_CONF_MONGODB_BROKER_USER: { get_param: MongoDbBrokerUser }
-            P_CONF_MONGODB_BROKER_PASSWORD: { get_param: MongoDbBrokerPass }
-            P_CONF_MCOLLECTIVE_USER: { get_param: McollectiveUser }
-            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: McollectivePass }
-            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: ActiveMqAdminPass }
-            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: ActiveMqUserPass }
+            P_CONF_OPENSHIFT_USER1: { get_param: openshift_user1 }
+            P_CONF_OPENSHIFT_PASSWORD1: { get_param: openshift_pass1 }
+            P_CONF_MONGODB_BROKER_USER: { get_param: mongo_broker_user }
+            P_CONF_MONGODB_BROKER_PASSWORD: { get_param: mongo_broker_pass }
+            P_CONF_MCOLLECTIVE_USER: { get_param: mcollective_user }
+            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: mcollective_pass }
+            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: activemq_admin_pass }
+            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: activemq_user_pass }
             P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle }
 
 ###
@@ -478,7 +478,7 @@ resources:
     type: OS::Nova::Server
     properties:
       name: ose_broker2
-      image: { get_param: BrokerImage }
+      image: { get_param: broker_image }
       flavor: { get_param: broker_server_flavor }
       availability_zone: { get_param: secondary_avail_zone }
       key_name: { get_param: key_name }
@@ -539,32 +539,32 @@ resources:
           params:
             P_BROKER_FLOATING_IP: { get_attr: [ broker2_floating_ip, floating_ip_address ] }
             P_DOMAIN: { get_param: domain }
-            P_HOSTS_DOMAIN: { get_param: hostsDomain }
-            P_BROKER_HOSTNAME: { get_param: Broker2Hostname }
-            P_NAMED_HOSTNAME: { get_param: NamedHostname }
+            P_HOSTS_DOMAIN: { get_param: hosts_domain }
+            P_BROKER_HOSTNAME: { get_param: broker2_hostname }
+            P_NAMED_HOSTNAME: { get_param: named_hostname }
             P_NAMED_IP: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
-            P_REPLICANTS: { get_param: Replicants }
-            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod}
-            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
-            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
-            P_CONF_RH_REG_POOL: { get_param: ConfRhRegPool}
-            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
-            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
-            P_CONF_RH_REG_ACTKEY: { get_param: ConfRhRegAK}
-            P_CONF_RHN_REG_OPTS: { get_param: ConfRhRegOpts}
-            P_CONF_REPOS_BASE: { get_param: ConfRepoBase}
-            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase}
-            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase}
+            P_REPLICANTS: { get_param: replicants }
+            P_CONF_INSTALL_METHOD: { get_param: install_method}
+            P_CONF_RH_REG_NAME: { get_param: rh_reg_name}
+            P_CONF_RH_REG_PASS: { get_param: rh_reg_pass}
+            P_CONF_RH_REG_POOL: { get_param: rh_reg_pool}
+            P_CONF_RH_REG_NAME: { get_param: rh_reg_name}
+            P_CONF_RH_REG_PASS: { get_param: rh_reg_pass}
+            P_CONF_RH_REG_ACTKEY: { get_param: rh_reg_act_key}
+            P_CONF_RHN_REG_OPTS: { get_param: rh_reg_opts}
+            P_CONF_REPOS_BASE: { get_param: openshift_repo_base}
+            P_CONF_JBOSS_REPO_BASE: { get_param: jboss_repo_base}
+            P_CONF_RHEL_REPO: { get_param: rhel_repo_base}
             P_OSE_VERSION: { get_param: ose_version }
             P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
-            P_CONF_OPENSHIFT_USER1: { get_param: OpenshiftUser1 }
-            P_CONF_OPENSHIFT_PASSWORD1: { get_param: OpenshiftPass1 }
-            P_CONF_MONGODB_BROKER_USER: { get_param: MongoDbBrokerUser }
-            P_CONF_MONGODB_BROKER_PASSWORD: { get_param: MongoDbBrokerPass }
-            P_CONF_MCOLLECTIVE_USER: { get_param: McollectiveUser }
-            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: McollectivePass }
-            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: ActiveMqAdminPass }
-            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: ActiveMqUserPass }
+            P_CONF_OPENSHIFT_USER1: { get_param: openshift_user1 }
+            P_CONF_OPENSHIFT_PASSWORD1: { get_param: openshift_pass1 }
+            P_CONF_MONGODB_BROKER_USER: { get_param: mongo_broker_user }
+            P_CONF_MONGODB_BROKER_PASSWORD: { get_param: mongo_broker_pass }
+            P_CONF_MCOLLECTIVE_USER: { get_param: mcollective_user }
+            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: mcollective_pass }
+            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: activemq_admin_pass }
+            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: activemq_user_pass }
             P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle}
 
 ###
@@ -574,7 +574,7 @@ resources:
     type: OS::Nova::Server
     properties:
       name: ose_broker3
-      image: { get_param: BrokerImage }
+      image: { get_param: broker_image }
       flavor: { get_param: broker_server_flavor }
       availability_zone: { get_param: primary_avail_zone }
       key_name: { get_param: key_name }
@@ -635,32 +635,32 @@ resources:
           params:
             P_BROKER_FLOATING_IP: { get_attr: [ broker3_floating_ip, floating_ip_address ] }
             P_DOMAIN: { get_param: domain }
-            P_HOSTS_DOMAIN: { get_param: hostsDomain }
-            P_BROKER_HOSTNAME: { get_param: Broker3Hostname }
-            P_NAMED_HOSTNAME: { get_param: NamedHostname }
+            P_HOSTS_DOMAIN: { get_param: hosts_domain }
+            P_BROKER_HOSTNAME: { get_param: broker3_hostname }
+            P_NAMED_HOSTNAME: { get_param: named_hostname }
             P_NAMED_IP: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
-            P_REPLICANTS: { get_param: Replicants }
-            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod}
-            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
-            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
-            P_CONF_RH_REG_POOL: { get_param: ConfRhRegPool}
-            P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
-            P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}
-            P_CONF_RH_REG_ACTKEY: { get_param: ConfRhRegAK}
-            P_CONF_RHN_REG_OPTS: { get_param: ConfRhRegOpts}
-            P_CONF_REPOS_BASE: { get_param: ConfRepoBase}
-            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase}
-            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase}
+            P_REPLICANTS: { get_param: replicants }
+            P_CONF_INSTALL_METHOD: { get_param: install_method}
+            P_CONF_RH_REG_NAME: { get_param: rh_reg_name}
+            P_CONF_RH_REG_PASS: { get_param: rh_reg_pass}
+            P_CONF_RH_REG_POOL: { get_param: rh_reg_pool}
+            P_CONF_RH_REG_NAME: { get_param: rh_reg_name}
+            P_CONF_RH_REG_PASS: { get_param: rh_reg_pass}
+            P_CONF_RH_REG_ACTKEY: { get_param: rh_reg_act_key}
+            P_CONF_RHN_REG_OPTS: { get_param: rh_reg_opts}
+            P_CONF_REPOS_BASE: { get_param: openshift_repo_base}
+            P_CONF_JBOSS_REPO_BASE: { get_param: jboss_repo_base}
+            P_CONF_RHEL_REPO: { get_param: rhel_repo_base}
             P_OSE_VERSION: { get_param: ose_version }
             P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
-            P_CONF_OPENSHIFT_USER1: { get_param: OpenshiftUser1 }
-            P_CONF_OPENSHIFT_PASSWORD1: { get_param: OpenshiftPass1 }
-            P_CONF_MONGODB_BROKER_USER: { get_param: MongoDbBrokerUser }
-            P_CONF_MONGODB_BROKER_PASSWORD: { get_param: MongoDbBrokerPass }
-            P_CONF_MCOLLECTIVE_USER: { get_param: McollectiveUser }
-            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: McollectivePass }
-            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: ActiveMqAdminPass }
-            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: ActiveMqUserPass }
+            P_CONF_OPENSHIFT_USER1: { get_param: openshift_user1 }
+            P_CONF_OPENSHIFT_PASSWORD1: { get_param: openshift_pass1 }
+            P_CONF_MONGODB_BROKER_USER: { get_param: mongo_broker_user }
+            P_CONF_MONGODB_BROKER_PASSWORD: { get_param: mongo_broker_pass }
+            P_CONF_MCOLLECTIVE_USER: { get_param: mcollective_user }
+            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: mcollective_pass }
+            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: activemq_admin_pass }
+            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: activemq_user_pass }
             P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle}
 
 ###
@@ -671,25 +671,25 @@ resources:
     properties:
       key_name: { get_param: key_name }
       domain: { get_param: domain }
-      hostsDomain: { get_param: hostsDomain }
-      Broker1Hostname: { get_param: Broker1Hostname }
+      hosts_domain: { get_param: hosts_domain }
+      broker1_hostname: { get_param: broker1_hostname }
       broker1_floating_ip: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
-      NodeHostname: { get_param: Node1Hostname }
-      LoadBalHostname: { get_param: LoadBalHostname }
-      NodeImage: { get_param: NodeImage }
-      Replicants: { get_param: Replicants }
+      node_hostname: { get_param: node1_hostname }
+      load_bal_hostname: { get_param: load_bal_hostname }
+      node_image: { get_param: node_image }
+      replicants: { get_param: replicants }
       cartridges: { get_param: cartridges }
-      ConfRhRegName: { get_param: ConfRhRegName }
-      ConfRhRegPass: { get_param: ConfRhRegPass }
-      ConfRhRegAK: { get_param: ConfRhRegAK }
-      ConfRhRegOpts: { get_param: ConfRhRegOpts }
+      rh_reg_name: { get_param: rh_reg_name }
+      rh_reg_pass: { get_param: rh_reg_pass }
+      rh_reg_act_key: { get_param: rh_reg_act_key }
+      rh_reg_opts: { get_param: rh_reg_opts }
       public_net_id: { get_param: public_net_id }
       private_net_id: { get_param: private_net_id }
       private_subnet_id: { get_param: private_subnet_id }
-      McollectiveUser: { get_param: McollectiveUser }
-      McollectivePass: { get_param: McollectivePass }
-      ActiveMqAdminPass: { get_param: ActiveMqAdminPass }
-      ActiveMqUserPass: { get_param: ActiveMqUserPass }
+      mcollective_user: { get_param: mcollective_user }
+      mcollective_pass: { get_param: mcollective_pass }
+      activemq_admin_pass: { get_param: activemq_admin_pass }
+      activemq_user_pass: { get_param: activemq_user_pass }
       avail_zone: { get_param: primary_avail_zone }
       node_server_flavor: { get_param: node_server_flavor }
 
@@ -698,25 +698,25 @@ resources:
     properties:
       key_name: { get_param: key_name }
       domain: { get_param: domain }
-      hostsDomain: { get_param: hostsDomain }
-      Broker1Hostname: { get_param: Broker1Hostname }
+      hosts_domain: { get_param: hosts_domain }
+      broker1_hostname: { get_param: broker1_hostname }
       broker1_floating_ip: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
-      NodeHostname: { get_param: Node2Hostname }
-      LoadBalHostname: { get_param: LoadBalHostname }
-      NodeImage: { get_param: NodeImage }
-      Replicants: { get_param: Replicants }
+      node_hostname: { get_param: node2_hostname }
+      load_bal_hostname: { get_param: load_bal_hostname }
+      node_image: { get_param: node_image }
+      replicants: { get_param: replicants }
       cartridges: { get_param: cartridges }
-      ConfRhRegName: { get_param: ConfRhRegName }
-      ConfRhRegPass: { get_param: ConfRhRegPass }
-      ConfRhRegAK: { get_param: ConfRhRegAK }
-      ConfRhRegOpts: { get_param: ConfRhRegOpts }
+      rh_reg_name: { get_param: rh_reg_name }
+      rh_reg_pass: { get_param: rh_reg_pass }
+      rh_reg_act_key: { get_param: rh_reg_act_key }
+      rh_reg_opts: { get_param: rh_reg_opts }
       public_net_id: { get_param: public_net_id }
       private_net_id: { get_param: private_net_id }
       private_subnet_id: { get_param: private_subnet_id }
-      McollectiveUser: { get_param: McollectiveUser }
-      McollectivePass: { get_param: McollectivePass }
-      ActiveMqAdminPass: { get_param: ActiveMqAdminPass }
-      ActiveMqUserPass: { get_param: ActiveMqUserPass }
+      mcollective_user: { get_param: mcollective_user }
+      mcollective_pass: { get_param: mcollective_pass }
+      activemq_admin_pass: { get_param: activemq_admin_pass }
+      activemq_user_pass: { get_param: activemq_user_pass }
       avail_zone: { get_param: secondary_avail_zone }
       node_server_flavor: { get_param: node_server_flavor }
 
@@ -725,25 +725,25 @@ resources:
     properties:
       key_name: { get_param: key_name }
       domain: { get_param: domain }
-      hostsDomain: { get_param: hostsDomain }
-      Broker1Hostname: { get_param: Broker1Hostname }
+      hosts_domain: { get_param: hosts_domain }
+      broker1_hostname: { get_param: broker1_hostname }
       broker1_floating_ip: { get_attr: [ broker1_floating_ip, floating_ip_address ] }
-      NodeHostname: { get_param: Node3Hostname }
-      LoadBalHostname: { get_param: LoadBalHostname }
-      NodeImage: { get_param: NodeImage }
-      Replicants: { get_param: Replicants }
+      node_hostname: { get_param: node3_hostname }
+      load_bal_hostname: { get_param: load_bal_hostname }
+      node_image: { get_param: node_image }
+      replicants: { get_param: replicants }
       cartridges: { get_param: cartridges }
-      ConfRhRegName: { get_param: ConfRhRegName }
-      ConfRhRegPass: { get_param: ConfRhRegPass }
-      ConfRhRegAK: { get_param: ConfRhRegAK }
-      ConfRhRegOpts: { get_param: ConfRhRegOpts }
+      rh_reg_name: { get_param: rh_reg_name }
+      rh_reg_pass: { get_param: rh_reg_pass }
+      rh_reg_act_key: { get_param: rh_reg_act_key }
+      rh_reg_opts: { get_param: rh_reg_opts }
       public_net_id: { get_param: public_net_id }
       private_net_id: { get_param: private_net_id }
       private_subnet_id: { get_param: private_subnet_id }
-      McollectiveUser: { get_param: McollectiveUser }
-      McollectivePass: { get_param: McollectivePass }
-      ActiveMqAdminPass: { get_param: ActiveMqAdminPass }
-      ActiveMqUserPass: { get_param: ActiveMqUserPass }
+      mcollective_user: { get_param: mcollective_user }
+      mcollective_pass: { get_param: mcollective_pass }
+      activemq_admin_pass: { get_param: activemq_admin_pass }
+      activemq_user_pass: { get_param: activemq_user_pass }
       avail_zone: { get_param: secondary_avail_zone }
       node_server_flavor: { get_param: node_server_flavor }
 
@@ -755,11 +755,11 @@ outputs:
         template: |
           https://host.domain/console
         params:
-          host: { get_param: LoadBalHostname }
+          host: { get_param: load_bal_hostname }
           domain: { get_param: domain }
   default_user:
     description: OpenShift Enterprise default user
-    value: { get_param: OpenshiftUser1 }
+    value: { get_param: openshift_user1 }
   load_balancer_floating_ip:
     description: load balancer floating IP address
     value: { get_attr: [ lb_vip_floating_ip, floating_ip_address ] }
