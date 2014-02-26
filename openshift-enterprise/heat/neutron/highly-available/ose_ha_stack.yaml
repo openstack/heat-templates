@@ -312,11 +312,21 @@ resources:
 
   broker_wait_condition:
     type: AWS::CloudFormation::WaitCondition
-    Properties:
-      Count: 3
+    properties:
+      Count: 2
       Handle:
         Ref: broker_wait_handle
       Timeout: '6000'
+
+  broker1_wait_handle:
+    type: AWS::CloudFormation::WaitConditionHandle
+
+  broker1_wait_condition:
+    type: AWS::CloudFormation::WaitCondition
+    properties:
+      Handle:
+        Ref: broker1_wait_handle
+      Timeout: '3600'
 
 ###
 # load balancer
@@ -377,6 +387,7 @@ resources:
 ###
   broker1_instance:
     type: OS::Nova::Server
+    DependsOn: broker_wait_condition
     properties:
       name: ose_broker1
       image: { get_param: broker_image }
@@ -418,7 +429,7 @@ resources:
             export CONF_RHEL_REPO=P_CONF_RHEL_REPO
             export CONF_RHEL_OPTIONAL_REPO=P_CONF_RHEL_OPTIONAL_REPO
             export CONF_INSTALL_COMPONENTS=broker,activemq,datastore,named
-            export CONF_ACTIONS=do_all_actions,configure_datastore_add_replicants,configure_datastore_add_users
+            export CONF_ACTIONS=do_all_actions,configure_datastore_add_replicants
             export CONF_OPENSHIFT_USER1=P_CONF_OPENSHIFT_USER1
             export CONF_OPENSHIFT_PASSWORD1=P_CONF_OPENSHIFT_PASSWORD1
             export CONF_MONGODB_BROKER_USER=P_CONF_MONGODB_BROKER_USER
@@ -483,7 +494,7 @@ resources:
             P_CONF_MCOLLECTIVE_PASSWORD: { get_param: mcollective_pass }
             P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: activemq_admin_pass }
             P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: activemq_user_pass }
-            P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle }
+            P_BROKER_WAIT_HANDLE: { get_resource: broker1_wait_handle }
 
 ###
 # Broker 2
