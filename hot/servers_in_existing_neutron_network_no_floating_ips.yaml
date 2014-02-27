@@ -1,0 +1,78 @@
+heat_template_version: 2013-05-23
+
+description: HOT template to deploy two servers to an existing Neutron network.
+
+parameters:
+  key_name:
+    type: string
+    description: Name of keypair to assign to servers
+  image:
+    type: string
+    description: Name of image to use for servers
+  flavor:
+    type: string
+    description: Flavor to use for servers
+  net_id:
+    type: string
+    description: ID of Neutron network into which servers get deployed
+  subnet_id:
+    type: string
+    description: ID of Neutron sub network into which servers get deployed
+
+resources:
+  server1:
+    type: OS::Nova::Server
+    properties:
+      name: Server1
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: server1_port }
+
+  server1_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: net_id }
+      fixed_ips:
+        - subnet_id: { get_param: subnet_id }
+      security_groups: [{ get_resource: server_security_group }]
+
+  server2:
+    type: OS::Nova::Server
+    properties:
+      name: Server2
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: server2_port }
+
+  server2_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: net_id }
+      fixed_ips:
+        - subnet_id: { get_param: subnet_id }
+      security_groups: [{ get_resource: server_security_group }]
+
+  server_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: Test group to demonstrate Neutron security group functionality with Heat.
+      name: test-security-group
+      rules: [
+        {remote_ip_prefix: 0.0.0.0/0,
+        protocol: tcp,
+        port_range_min: 22,
+        port_range_max: 22},
+        {remote_ip_prefix: 0.0.0.0/0,
+        protocol: icmp}]
+
+outputs:
+  server1_provider_ip:
+    description: IP address of server1 in provider network
+    value: { get_attr: [ server1, first_address ] }
+  server2_provider_ip:
+    description: IP address of server2 in provider network
+    value: { get_attr: [ server2, first_address ] }
