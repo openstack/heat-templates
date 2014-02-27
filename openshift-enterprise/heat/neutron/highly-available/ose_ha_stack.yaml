@@ -340,6 +340,8 @@ resources:
         name: ose_broker_vip
         description: broker virtual IP (VIP)
         protocol_port: 443
+        session_persistence:
+          type: SOURCE_IP
 
   mylb:
     type: OS::Neutron::LoadBalancer
