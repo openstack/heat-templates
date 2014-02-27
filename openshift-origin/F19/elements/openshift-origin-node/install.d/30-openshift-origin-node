@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -uex
+
+install-packages \
+    openssh \
+    ntpdate \
+    openssh-server \
+    git \
+    puppet \
+    facter \
+    tar \
+    ntp \
+
+sed --in-place -e s/Type=oneshot/"Type=oneshot\nTimeoutSec=0"/ /lib/systemd/system/cloud-final.service
+

@@ -1,0 +1,326 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+
+    "Description": "Template for setting up an OpenShift Origin environment",
+
+    "Parameters": {
+      "KeyName": {
+        "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+        "Type": "String",
+        "MinLength": "1",
+        "MaxLength": "64",
+        "AllowedPattern": "[-_ a-zA-Z0-9]*"
+      },
+      "Prefix": {
+        "Description": "Your DNS Prefix",
+        "Type": "String",
+        "Default": "example.com"
+      },
+      "UpstreamDNS": {
+        "Description": "Upstream DNS server",
+        "Type": "String",
+        "Default": "8.8.8.8"
+      },
+      "UpstreamNTP": {
+        "Description": "Upstream NTP server",
+        "Type": "String",
+        "Default": "'clock.redhat.com iburst'"
+      },
+      "BrokerFlavor": {
+        "Description": "Flavor of Broker instance",
+        "Type": "String",
+        "Default": "m1.small",
+        "AllowedValues": ["m1.small","m1.medium", "m1.large", "m1.xlarge"]
+      },
+      "NodeFlavor": {
+        "Description": "Flavor of Node instance",
+        "Type": "String",
+        "Default": "m1.small",
+        "AllowedValues": ["m1.small","m1.medium", "m1.large", "m1.xlarge"]
+      },
+      "Username": {
+        "Description": "Username for accessing OpenShift Origin",
+        "Type": "String",
+        "Default": "openshift"
+      },
+      "Password": {
+        "Description": "Password for accessing OpenShift Origin",
+        "Type": "String",
+        "Default": "password"
+      },
+      "NetID": {
+        "Description": "ID of Neutron network into which servers get deployed",
+         "Type": "String"
+      },
+      "SubnetID": {
+        "Description": "ID of Neutron subnet into which servers get deployed",
+        "Type": "String"
+      },
+      "DevMode": {
+        "Description": "Sets development mode and extra logging.",
+        "Type": "String",
+        "AllowedValues": [ "True", "False", "true", "false" ],
+        "Default": "false"
+      },
+      "PuppetModuleURL": {
+        "Description": "Sets the URL to pull the OpenShift Origin Puppet module from.",
+        "Type": "String",
+        "Default": "https://github.com/openshift/puppet-openshift_origin.git"
+      },
+      "PuppetModuleBranch": {
+        "Description": "Sets the repo branch to pull the OpenShift Origin Puppet module from.",
+        "Type": "String",
+        "Default": "master"
+      }
+    },
+
+    "Resources": {
+      "OpenShiftOriginSecurityGroup": {
+        "Type": "OS::Neutron::SecurityGroup",
+        "Properties": {
+          "description": "OpenShift Origin Firewall Rules",
+          "rules": [
+            {
+             "remote_ip_prefix": "0.0.0.0/0",
+             "protocol": "icmp"
+            },
+            {
+             "remote_ip_prefix": "0.0.0.0/0",
+             "protocol": "tcp",
+             "port_range_min": "22",
+             "port_range_max": "22"
+            },
+            {
+             "remote_ip_prefix": "0.0.0.0/0",
+             "protocol": "udp",
+             "port_range_min": "53",
+             "port_range_max": "53"
+            },
+            {
+             "remote_ip_prefix": "0.0.0.0/0",
+             "protocol": "tcp",
+             "port_range_min": "80",
+             "port_range_max": "80"
+            },
+            {
+             "remote_ip_prefix": "0.0.0.0/0",
+             "protocol": "tcp",
+             "port_range_min": "443",
+             "port_range_max": "443"
+            },
+            {
+             "remote_ip_prefix": "0.0.0.0/0",
+             "protocol": "tcp",
+             "port_range_min": "8443",
+             "port_range_max": "8443"
+            },
+            {
+             "remote_ip_prefix": "0.0.0.0/0",
+             "protocol": "tcp",
+             "port_range_min": "8000",
+             "port_range_max": "8000"
+            },
+            {
+             "remote_ip_prefix": "0.0.0.0/0",
+             "protocol": "tcp",
+             "port_range_min": "8161",
+             "port_range_max": "8161"
+            },
+            {
+             "remote_ip_prefix": "0.0.0.0/0",
+             "protocol": "tcp",
+             "port_range_min": "8080",
+             "port_range_max": "8080"
+            },
+            {
+             "remote_ip_prefix": "0.0.0.0/0",
+             "protocol": "tcp",
+             "port_range_min": "8161",
+             "port_range_max": "8161"
+            }
+          ]
+        }
+      },
+
+      "BrokerPort": {
+        "Type": "OS::Neutron::Port",
+        "Properties": {
+          "network_id": { "Ref": "NetID" },
+          "fixed_ips": [{
+            "subnet_id": { "Ref": "SubnetID" }
+          }],
+          "security_groups": [{ "Ref": "OpenShiftOriginSecurityGroup" }]
+        }
+      },
+
+      "BrokerWaitHandle": {
+        "Type": "AWS::CloudFormation::WaitConditionHandle"
+      },
+
+      "BrokerWaitCondition": {
+        "Type": "AWS::CloudFormation::WaitCondition",
+        "DependsOn": "BrokerInstance",
+        "Properties": {
+          "Handle": { "Ref": "BrokerWaitHandle" },
+          "Timeout": "1800"
+        }
+      },
+
+      "BrokerInstance": {
+        "Type": "OS::Nova::Server",
+        "Properties": {
+          "image": "F19-x86_64-openshift-origin-broker",
+          "flavor": { "Ref": "BrokerFlavor" },
+          "key_name": { "Ref": "KeyName" },
+          "networks": [{
+            "port": { "Ref": "BrokerPort" }
+          }],
+          "user_data": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "",
+                  [
+                    "#!/bin/bash -x\n",
+                    "export PREFIX=", { "Ref": "Prefix" }, "\n",
+                    "export UPSTREAM_DNS=", { "Ref": "UpstreamDNS" }, "\n",
+                    "export UPSTREAM_NTP=", { "Ref": "UpstreamNTP" }, "\n",
+                    "export BROKER_WAIT_HANDLE=\"", { "Ref": "BrokerWaitHandle" }, "\"\n",
+                    "/usr/sbin/dnssec-keygen -a HMAC-MD5 -b 512 -n USER -r /dev/urandom -K /var/named ${PREFIX}\n",
+                    "export DNS_SEC_KEY=\"`cat /var/named/K${PREFIX}.*.key  | awk '{print $8}'`\"\n",
+                    "export HOSTNAME=\"`facter hostname`\"\n",
+                    "export USERNAME=", { "Ref": "Username" }, "\n",
+                    "export PASSWORD=", { "Ref": "Password" }, "\n",
+                    "export DEV_MODE=", { "Ref": "DevMode" }, "\n",
+                    "export PUPPET_MODULE_URL=", { "Ref": "PuppetModuleURL" }, "\n",
+                    "export PUPPET_MODULE_BRANCH=", { "Ref": "PuppetModuleBranch" }, "\n",
+                    "cat << EOF > /root/configure.pp\n",
+                      "\\$my_hostname='${HOSTNAME}.${PREFIX}'\n",
+                      "exec { \"set hostname\":\n",
+                      "  command => \"/bin/hostname \\${my_hostname} ; echo \\${my_hostname} > /etc/hostname\"\n",
+                      "}\n",
+                      "class { 'openshift_origin' :\n",
+                      "  roles                    => ['broker','named','activemq','datastore'],\n",
+                      "  bind_key                 => '${DNS_SEC_KEY}',\n",
+                      "  domain                   => '${PREFIX}',\n",
+                      "  register_host_with_named => true,\n",
+                      "  conf_named_upstream_dns  => ['${UPSTREAM_DNS}'],\n",
+                      "  ntp_servers              => ['${UPSTREAM_NTP}'],\n",
+                      "  broker_hostname          => \\$my_hostname,\n",
+                      "  named_hostname           => \\$my_hostname,\n",
+                      "  datastore_hostname       => \\$my_hostname,\n",
+                      "  activemq_hostname        => \\$my_hostname,\n",
+                      "  broker_auth_plugin       => 'htpasswd',\n",
+                      "  openshift_user1          => '${USERNAME}',\n",
+                      "  openshift_password1      => '${PASSWORD}',\n",
+                      "  development_mode         => ${DEV_MODE},\n",
+                      "}\n",
+                      "EOF\n",
+                      "mkdir -p /etc/puppet/modules\n",
+                      "git clone -b ${PUPPET_MODULE_BRANCH} ${PUPPET_MODULE_URL} /etc/puppet/modules/openshift_origin", "\n",
+                      "puppet module install puppetlabs/stdlib", "\n",
+                      "puppet module install puppetlabs/ntp", "\n",
+                      "puppet apply --verbose /root/configure.pp | tee /var/log/configure_openshift.log", "\n",
+                      "/opt/aws/bin/cfn-signal -e 0 --data \"${DNS_SEC_KEY}\" -r \"Broker setup complete\" \"${BROKER_WAIT_HANDLE}\"\n"
+                  ]
+              ]
+            }
+          }
+        }
+      },
+
+      "NodePort": {
+        "Type": "OS::Neutron::Port",
+        "Properties": {
+          "network_id": { "Ref": "NetID" },
+          "fixed_ips": [{
+            "subnet_id": { "Ref": "SubnetID" }
+          }],
+          "security_groups": [{ "Ref": "OpenShiftOriginSecurityGroup" }]
+        }
+      },
+
+      "NodeWaitHandle": {
+        "Type": "AWS::CloudFormation::WaitConditionHandle"
+      },
+
+      "NodeWaitCondition": {
+        "Type": "AWS::CloudFormation::WaitCondition",
+        "DependsOn": "BrokerInstance",
+        "Properties": {
+          "Handle": { "Ref": "BrokerWaitHandle" },
+          "Timeout": "1800"
+        }
+      },
+
+      "NodeInstance": {
+        "Type": "OS::Nova::Server",
+        "DependsOn": "BrokerWaitCondition",
+        "Properties": {
+          "image": "F19-x86_64-openshift-origin-node",
+          "flavor": { "Ref": "NodeFlavor" },
+          "key_name": { "Ref": "KeyName" },
+          "networks": [{
+            "port": { "Ref": "NodePort" }
+          }],
+          "user_data": {
+            "Fn::Base64": {
+              "Fn::Join": [
+                "",
+                  [
+                    "#!/bin/bash -x\n",
+                    "export DNS_SEC_KEY=\"`python -c 'print ",{ "Fn::GetAtt": [ "BrokerWaitCondition", "Data" ] },"[\"00000\"]'`\"\n",
+                    "export BROKER_IP=", { "Fn::GetAtt": [ "BrokerInstance", "first_address" ] }, "\n",
+                    "export PREFIX=", { "Ref": "Prefix" }, "\n",
+                    "export UPSTREAM_DNS=", { "Ref": "UpstreamDNS" }, "\n",
+                    "export UPSTREAM_NTP=", { "Ref": "UpstreamNTP" }, "\n",
+                    "export NODE_WAIT_HANDLE=\"", { "Ref": "NodeWaitHandle" }, "\"\n",
+                    "export HOSTNAME=\"`facter hostname`\"\n",
+                    "export DEV_MODE=", { "Ref": "DevMode" }, "\n",
+                    "export PUPPET_MODULE_URL=", { "Ref": "PuppetModuleURL" }, "\n",
+                    "export PUPPET_MODULE_BRANCH=", { "Ref": "PuppetModuleBranch" }, "\n",
+                    "cat << EOF > /root/configure.pp\n",
+                      "\\$my_hostname=\"${HOSTNAME}.${PREFIX}\"\n",
+                      "exec { \"set hostname\":\n",
+                      "  command => \"/bin/hostname \\${my_hostname} ; echo \\${my_hostname} > /etc/hostname\"\n",
+                      "}\n",
+                      "class { 'openshift_origin' :\n",
+                      "  roles                    => ['node'],\n",
+                      "  bind_key                 => '${DNS_SEC_KEY}',\n",
+                      "  named_ip_addr            => '${BROKER_IP}',\n",
+                      "  domain                   => '${PREFIX}',\n",
+                      "  register_host_with_named => true,\n",
+                      "  broker_hostname          => '${BROKER_IP}',\n",
+                      "  activemq_hostname        => '${BROKER_IP}',\n",
+                      "  ntp_servers              => ['${UPSTREAM_NTP}'],\n",
+                      "  node_hostname            => \\$my_hostname,\n",
+                      "  install_method           => 'yum',\n",
+                      "  jenkins_repo_base        => 'http://pkg.jenkins-ci.org/redhat',\n",
+                      "  install_cartridges       => ['php', 'mysql'],\n",
+                      "  development_mode         => ${DEV_MODE},\n",
+                      "}\n",
+                      "EOF\n",
+                      "mkdir -p /etc/puppet/modules\n",
+                      "git clone -b ${PUPPET_MODULE_BRANCH} ${PUPPET_MODULE_URL} /etc/puppet/modules/openshift_origin", "\n",
+                      "puppet module install puppetlabs/stdlib", "\n",
+                      "puppet module install puppetlabs/ntp", "\n",
+                      "puppet apply --verbose /root/configure.pp | tee /var/log/configure_openshift.log", "\n",
+                      "/opt/aws/bin/cfn-signal -e 0 -r \"Node setup complete\" \"${NODE_WAIT_HANDLE}\"\n"
+                  ]
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    "Outputs" : {
+    "OpenShiftConsole" : {
+      "Value" : { "Fn::Join" : ["", ["https://", { "Fn::GetAtt" : [ "BrokerInstance", "first_address" ]}, "/console"]] },
+      "Description" : "URL for OpenShift Origin cConsole"
+    },
+    "NameServerEntry" : {
+      "Value" : { "Fn::Join" : ["", ["nameserver ", { "Fn::GetAtt" : [ "BrokerInstance", "first_address" ]}]] },
+      "Description" : "Entry to insert into /etc/resolv.conf for application host names to resolve"
+    }
+  }
+}
