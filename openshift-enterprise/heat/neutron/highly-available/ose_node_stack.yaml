@@ -191,19 +191,33 @@ parameters:
     allowed_values: ["1.2", "2.0"]
 
 resources:
-  openshift_enterprise_security_group:
+  ose_node_sec_grp:
     type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Standard firewall rules
+      GroupDescription: Node firewall rules
+      VpcId: { get_param: private_net_id }
       SecurityGroupIngress:
+      - {IpProtocol: tcp, FromPort: '22', ToPort: '22', CidrIp: 0.0.0.0/0}
       - {IpProtocol: udp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
-      - {IpProtocol: tcp, FromPort: '1', ToPort: '65535', CidrIp: 0.0.0.0/0}
-      - {IpProtocol: icmp, FromPort: '-1', ToPort: '-1', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '80', ToPort: '80', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '443', ToPort: '443', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '8000', ToPort: '8000', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '8443', ToPort: '8443', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '2303', ToPort: '2308', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '35531', ToPort: '65535', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '27017', ToPort: '27017', CidrIp: 0.0.0.0/0}
+      SecurityGroupEgress:
+      - {IpProtocol: udp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '443', ToPort: '443', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '35531', ToPort: '65535', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '61613', ToPort: '61613', CidrIp: 0.0.0.0/0}
 
   node_port:
     type: OS::Neutron::Port
     properties:
-      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      security_groups: [{ get_resource: ose_node_sec_grp }]
       network_id: { get_param: private_net_id }
       fixed_ips:
         - subnet_id: { get_param: private_subnet_id }
@@ -244,7 +258,7 @@ resources:
       key_name: { get_param: key_name }
       networks:
         - port: { get_resource: node_port }
-      security_groups: [{ get_resource: openshift_enterprise_security_group }]
+      security_groups: [{ get_resource: ose_node_sec_grp }]
       user_data:
         str_replace:
           template: |
