@@ -38,74 +38,80 @@ parameters:
     default: '3'
     constraints:
       - allowed_pattern: '[0-9]*'
-  ConfInstallMethod:
+  conf_install_method:
     description: Installation method (yum rhsm rhn)
     type: string
     default: yum
     constraints:
       - length: {min: 1, max: 255}
       - allowed_values: [yum, rhsm, rhn]
-  ConfSMRegName:
+  conf_sm_reg_name:
     description: Subscription Manager registration username
     type: string
     default: username
     constraints:
       - length: {min: 1, max: 255}
-  ConfSMRegPass:
+  conf_sm_reg_pass:
     description: Subscription Manager registration password
     type: string
     default: password
     constraints:
       - length: {min: 1, max: 255}
-  ConfSMRegPool:
+  conf_sm_reg_pool:
     description: Pool ID for OpenShift subscription
     type: string
     default: none
     constraints:
       - length: {min: 1, max: 255}
-  ConfRHNRegName:
+  conf_rhn_reg_name:
     description: RHN registration username
     type: string
     default: username
     constraints:
       - length: {min: 1, max: 255}
-  ConfRHNRegPass:
+  conf_rhn_reg_pass:
     description: RHN registration password
     type: string
     default: password
     constraints:
       - length: {min: 1, max: 255}
-  ConfRHNRegAK:
+  conf_rhn_reg_ak:
     description: RHN activation key for OpenShift subscription
     type: string
     default: activationkey
     constraints:
       - length: {min: 1, max: 255}
-  ConfRHELRepoBase:
+  conf_rhel_repo_base:
     description: RHEL Repo Base
     type: string
     default: example.com
     constraints:
       - length: {min: 1, max: 255}
-  ConfRepoBase:
+  conf_ose_repo_base:
     description: OSE Repo Base
     type: string
     default: example.com
     constraints:
       - length: {min: 1, max: 255}
-  ConfJBossRepoBase:
+  conf_jboss_repo_base:
     description: JBoss Repo Base
     type: string
     default: example.com
     constraints:
       - length: {min: 1, max: 255}
-  BrokerHostname:
+  conf_rhscl_repo_base:
+    description: RHSCL Repo Base
+    type: string
+    default: example.com
+    constraints:
+      - length: {min: 1, max: 255}
+  broker_hostname:
     description: Broker hostname
     type: string
     default: openshift.brokerinstance.novalocal
     constraints:
       - length: {min: 1}
-  NodeHostname:
+  node_hostname:
     description: Node hostname
     type: string
     default: openshift.nodeinstance.novalocal
@@ -217,9 +223,10 @@ resources:
             export CONF_RHN_REG_NAME=P_CONF_RHN_REG_NAME
             export CONF_RHN_REG_PASS=P_CONF_RHN_REG_PASS
             export CONF_RHN_REG_ACTKEY=P_CONF_RHN_REG_ACTKEY
-            export CONF_REPOS_BASE=P_CONF_REPOS_BASE
+            export CONF_OSE_REPO_BASE=P_CONF_OSE_REPO_BASE
             export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
             export CONF_RHEL_REPO=P_CONF_RHEL_REPO
+            export CONF_RHSCL_REPO_BASE=P_CONF_RHSCL_REPO_BASE
             export CONF_OSE_VERSION=P_OSE_VERSION
             export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
             export CONF_INSTALL_COMPONENTS=broker,named,datastore,activemq
@@ -243,19 +250,20 @@ resources:
             P_BROKER_FLOATING_IP: { get_attr: [ broker_floating_ip, floating_ip_address ] }
             P_NODE_FLOATING_IP: { get_attr: [ node_floating_ip, floating_ip_address ] }
             P_PREFIX: { get_param: prefix }
-            P_BROKER_HOSTNAME: { get_param: BrokerHostname }
-            P_NODE_HOSTNAME: { get_param: NodeHostname }
+            P_BROKER_HOSTNAME: { get_param: broker_hostname }
+            P_NODE_HOSTNAME: { get_param: node_hostname }
             P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle }
-            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod }
-            P_CONF_SM_REG_NAME: { get_param: ConfSMRegName }
-            P_CONF_SM_REG_PASS: { get_param: ConfSMRegPass }
-            P_CONF_SM_REG_POOL: { get_param: ConfSMRegPool }
-            P_CONF_RHN_REG_NAME: { get_param: ConfRHNRegName }
-            P_CONF_RHN_REG_PASS: { get_param: ConfRHNRegPass }
-            P_CONF_RHN_REG_ACTKEY: { get_param: ConfRHNRegAK }
-            P_CONF_REPOS_BASE: { get_param: ConfRepoBase }
-            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase }
-            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase }
+            P_CONF_INSTALL_METHOD: { get_param: conf_install_method }
+            P_CONF_SM_REG_NAME: { get_param: conf_sm_reg_name }
+            P_CONF_SM_REG_PASS: { get_param: conf_sm_reg_pass }
+            P_CONF_SM_REG_POOL: { get_param: conf_sm_reg_pool }
+            P_CONF_RHN_REG_NAME: { get_param: conf_rhn_reg_name }
+            P_CONF_RHN_REG_PASS: { get_param: conf_rhn_reg_pass }
+            P_CONF_RHN_REG_ACTKEY: { get_param: conf_rhn_reg_ak }
+            P_CONF_OSE_REPO_BASE: { get_param: conf_ose_repo_base }
+            P_CONF_JBOSS_REPO_BASE: { get_param: conf_jboss_repo_base }
+            P_CONF_RHEL_REPO: { get_param: conf_rhel_repo_base }
+            P_CONF_RHSCL_REPO_BASE: { get_param: conf_rhscl_repo_base }
             P_OSE_VERSION: { get_param: ose_version }
             P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
             P_BROKER_WAIT_HANDLE: { get_resource: broker_wait_handle }
@@ -302,9 +310,10 @@ resources:
             export CONF_RHN_REG_NAME=P_CONF_RHN_REG_NAME
             export CONF_RHN_REG_PASS=P_CONF_RHN_REG_PASS
             export CONF_RHN_REG_ACTKEY=P_CONF_RHN_REG_ACTKEY
-            export CONF_REPOS_BASE=P_CONF_REPOS_BASE
+            export CONF_OSE_REPO_BASE=P_CONF_OSE_REPO_BASE
             export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
             export CONF_RHEL_REPO=P_CONF_RHEL_REPO
+            export CONF_RHSCL_REPO_BASE=P_CONF_RHSCL_REPO_BASE
             export CONF_OSE_VERSION=P_OSE_VERSION
             export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
             export CONF_INSTALL_COMPONENTS=node
@@ -326,19 +335,20 @@ resources:
             P_BROKER_FLOATING_IP: { get_attr: [ broker_floating_ip, floating_ip_address ] }
             P_NODE_FLOATING_IP: { get_attr: [ node_floating_ip, floating_ip_address ] }
             P_PREFIX: { get_param: prefix }
-            P_BROKER_HOSTNAME: { get_param: BrokerHostname }
-            P_NODE_HOSTNAME: { get_param: NodeHostname }
+            P_BROKER_HOSTNAME: { get_param: broker_hostname }
+            P_NODE_HOSTNAME: { get_param: node_hostname }
+            P_CONF_INSTALL_METHOD: { get_param: conf_install_method }
+            P_CONF_SM_REG_NAME: { get_param: conf_sm_reg_name }
+            P_CONF_SM_REG_PASS: { get_param: conf_sm_reg_pass }
+            P_CONF_SM_REG_POOL: { get_param: conf_sm_reg_pool }
+            P_CONF_RHN_REG_NAME: { get_param: conf_rhn_reg_name }
+            P_CONF_RHN_REG_PASS: { get_param: conf_rhn_reg_pass }
+            P_CONF_RHN_REG_ACTKEY: { get_param: conf_rhn_reg_ak }
+            P_CONF_OSE_REPO_BASE: { get_param: conf_ose_repo_base }
+            P_CONF_JBOSS_REPO_BASE: { get_param: conf_jboss_repo_base }
+            P_CONF_RHEL_REPO: { get_param: conf_rhel_repo_base }
+            P_CONF_RHSCL_REPO_BASE: { get_param: conf_rhscl_repo_base }
             P_NODE_WAIT_HANDLE: { get_resource: node_wait_handle}
-            P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod}
-            P_CONF_SM_REG_NAME: { get_param: ConfSMRegName}
-            P_CONF_SM_REG_PASS: { get_param: ConfSMRegPass}
-            P_CONF_SM_REG_POOL: { get_param: ConfSMRegPool}
-            P_CONF_RHN_REG_NAME: { get_param: ConfRHNRegName}
-            P_CONF_RHN_REG_PASS: { get_param: ConfRHNRegPass}
-            P_CONF_RHN_REG_ACTKEY: { get_param: ConfRHNRegAK}
-            P_CONF_REPOS_BASE: { get_param: ConfRepoBase}
-            P_CONF_JBOSS_REPO_BASE: { get_param: ConfJBossRepoBase}
-            P_CONF_RHEL_REPO: { get_param: ConfRHELRepoBase}
             P_OSE_VERSION: { get_param: ose_version }
             P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
             P_NODE_WAIT_HANDLE: { get_resource: node_wait_handle }
