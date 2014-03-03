@@ -18,7 +18,7 @@ parameter_groups:
     Red Hat Subscription Manager (RHSM) or Red Hat Network (RHN) parameters
   parameters:
   - install_method
-  - rh_reg_name
+  - rh_reg_user
   - rh_reg_pass
   - rh_reg_pool
   - rh_reg_act_key
@@ -90,14 +90,14 @@ parameters:
   install_method:
     description: Installation method (yum rhsm rhn)
     type: string
-    default: rhn
+    default: rhsm
     allowed_Values: [yum, rhsm, rhn]
-  rh_reg_name:
-    description: Subscription Manager registration username
+  rh_reg_user:
+    description: Red Hat registration username
     type: string
     default: ""
   rh_reg_pass:
-    description: Subscription Manager registration password
+    description: Red Hat registration password
     type: string
     default: ""
     hidden: true
@@ -115,6 +115,18 @@ parameters:
     default: ""
   rhel_repo_base:
     description: RHEL Repository Base URL
+    type: string
+    default: ""
+  openshift_extra_repo_base:
+    description: OSE Extra Repository Base URL
+    type: string
+    default: ""
+  rhscl_repo_base:
+    description: Red Hat Software Collections Repository Base URL
+    type: string
+    default: ""
+  rhel_opt_repo_base:
+    description: RHEL Optional Repository Base URL
     type: string
     default: ""
   openshift_repo_base:
@@ -249,16 +261,17 @@ resources:
             export CONF_ACTIVEMQ_REPLICANTS=P_REPLICANTS
             export CONF_CARTRIDGES=P_CONF_CARTRIDGES
             export CONF_INSTALL_METHOD=P_CONF_INSTALL_METHOD
-            export CONF_SM_REG_NAME=P_CONF_RH_REG_NAME
-            export CONF_SM_REG_PASS=P_CONF_RH_REG_PASS
+            export CONF_RHN_USER=P_CONF_RH_USER
+            export CONF_RHN_PASS=P_CONF_RH_PASS
             export CONF_SM_REG_POOL=P_CONF_RH_REG_POOL
-            export CONF_RHN_REG_NAME=P_CONF_RH_REG_NAME
-            export CONF_RHN_REG_PASS=P_CONF_RH_REG_PASS
             export CONF_RHN_REG_ACTKEY=P_CONF_RH_REG_ACTKEY
             export CONF_RHN_REG_OPTS=P_CONF_RHN_REG_OPTS
-            export CONF_REPOS_BASE=P_CONF_REPOS_BASE
+            export CONF_OSE_REPOS_BASE=P_CONF_OSE_REPOS_BASE
+            export CONF_OSE_EXTRA_REPO_BASE=P_CONF_OSE_EXTRA_REPOS_BASE
             export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
             export CONF_RHEL_REPO=P_CONF_RHEL_REPO
+            export CONF_RHSCL_REPO_BASE=P_CONF_RHSCL_REPO
+            export CONF_RHEL_OPTIONAL_REPO=P_CONF_RHEL_OPTIONAL_REPO
             export CONF_INSTALL_COMPONENTS=node
             export CONF_ACTIONS=do_all_actions
             export CONF_MCOLLECTIVE_USER=P_CONF_MCOLLECTIVE_USER
@@ -314,16 +327,17 @@ resources:
             P_REPLICANTS: { get_param: replicants }
             P_CONF_CARTRIDGES: { get_param: cartridges }
             P_CONF_INSTALL_METHOD: { get_param: install_method}
-            P_CONF_RH_REG_NAME: { get_param: rh_reg_name}
-            P_CONF_RH_REG_PASS: { get_param: rh_reg_pass}
+            P_CONF_RH_USER: { get_param: rh_reg_user}
+            P_CONF_RH_PASS: { get_param: rh_reg_pass}
             P_CONF_RH_REG_POOL: { get_param: rh_reg_pool}
-            P_CONF_RH_REG_NAME: { get_param: rh_reg_name}
-            P_CONF_RH_REG_PASS: { get_param: rh_reg_pass}
             P_CONF_RH_REG_ACTKEY: { get_param: rh_reg_act_key}
             P_CONF_RHN_REG_OPTS: { get_param: rh_reg_opts}
-            P_CONF_REPOS_BASE: { get_param: openshift_repo_base}
+            P_CONF_OSE_REPOS_BASE: { get_param: openshift_repo_base}
+            P_CONF_OSE_EXTRA_REPOS_BASE: { get_param: openshift_extra_repo_base}
             P_CONF_JBOSS_REPO_BASE: { get_param: jboss_repo_base}
             P_CONF_RHEL_REPO: { get_param: rhel_repo_base}
+            P_CONF_RHSCL_REPO: { get_param: rhscl_repo_base}
+            P_CONF_RHEL_OPTIONAL_REPO: { get_param: rhel_opt_repo_base }
             P_OSE_VERSION: { get_param: ose_version }
             P_CONF_MCOLLECTIVE_USER: { get_param: mcollective_user }
             P_CONF_MCOLLECTIVE_PASSWORD: { get_param: mcollective_pass }
