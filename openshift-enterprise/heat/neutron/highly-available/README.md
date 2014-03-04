@@ -43,6 +43,7 @@ This nested heat stack deploys a highly-available OpenShift Enterprise environme
 
 
 ## Requirements
+* Neutron networking: one private and one public network
 * Compute quota for six VM instances
 * Pool of seven available floating IP addresses. Addresses will be created and assigned at deployment.
 * Available Cinder storage: at least 40GB
@@ -73,28 +74,9 @@ These templates are [Heat Orchestration Templates (HOT)](http://docs.openstack.o
 5. Monitor progress. Options include:
   * `tail -f /var/log/heat/heat-engine.log`
   * `heat stack-list`
-  * `heat event-list openshift-ha-stack`
-6. Possible additional steps depending on order resources are created:
+  * `heat resource-list openshift-ha-stack`
+6. Additional configuration:
   * Copy BIND_KEYVALUE from broker1 `/etc/openshift/plugins.d/openshift-origin-dns-nsupdate.conf` to broker2 and broker3 and restart broker service, `service openshift-broker restart`.
-  * Confirm MongoDB replica set is created. If needed, create openshift_broker user and replica set.
-
-
-            # mongo
-            > rs.initiate()
-            PRIMARY> rs.add("broker2.example.com:27017")
-            { "ok" : 1 }
-            PRIMARY> rs.add("broker3.example.com:27017")
-            { "ok" : 1 }
-            PRIMARY> rs.status()
-            ...
-            PRIMARY> exit
-            # mongo openshift_broker --eval 'db.addUser("openshift", "<mongopass>")'
-            # mongo
-            PRIMARY> show dbs
-            admin (empty)
-            local 1.06201171875GB
-            openshift_broker 0.0625GB
-
 
 ## Scaling: Adding Nodes
 
@@ -103,23 +85,21 @@ OpenShift nodes may be manually added as needed using the OpenShift node heat te
 1. From directory `heat-templates/openshift-enterprise/heat/neutron/highly-available/` edit the heat environment file `ose_node_env.yaml`
 2. Launch node stack. This will deploy a single node server with attached cinder volume and floating IP address. Be sure to pass in the node hostname parameter to override the default.
 
-        heat stack-create openshift-node -f ose_node_stack.yaml -e ose_node_env.yaml -P "NodeHostname=node4"
+        heat stack-create openshift-node -f ose_node_stack.yaml -e ose_node_env.yaml -P "node_hostname=node4"
 
-3. On broker1 add a DNS record for the new node server in `/var/named/dynamic/<my_domain>.db` and restart named, `service named restart`. To force a zone transfer to the upstream DNS be sure to increment the serial number by 1 and run `rndc freeze ; rndc thaw`.
+3. On broker1 add a DNS record for the new node server in `/var/named/dynamic/<my_domain>.db`. To force a zone transfer to the upstream DNS increment the serial number by 1 and run `rndc freeze ; rndc thaw`.
 
 ## Additional configuration Steps
 
 1. Add brokers to LBaaS pool. On OpenStack:
 
-        neutron lb-member-create --address <broker1_fixed_ip> --protocol-port 443 ose_broker_pool
-        neutron lb-member-create --address <broker2_fixed_ip> --protocol-port 443 ose_broker_pool
-        neutron lb-member-create --address <broker3_fixed_ip> --protocol-port 443 ose_broker_pool
+        neutron lb-member-create --address <broker1_fixed_ip> --protocol-port 443 ose_broker_lb_pool
+        neutron lb-member-create --address <broker2_fixed_ip> --protocol-port 443 ose_broker_lb_pool
+        neutron lb-member-create --address <broker3_fixed_ip> --protocol-port 443 ose_broker_lb_pool
 
-2. Create districts. The following creates a small district and adds two nodes to the district.
+2. Add session persistence to LBaaS virtual IP (VIP):
 
-        oo-admin-ctl-district -c create -n small_district -p small
-        oo-admin-ctl-district -c add-node -n small_district -i <node1_hostname>
-        oo-admin-ctl-district -c add-node -n small_district -i <node2_hostname>
+        neutron lb-vip-update ose_broker_vip --session-persistence type=dict type='SOURCE_IP'
 
 3. Update upstream DNS server to accept zone transfers from the OpenShift dynamic DNS. An example configuration would be to add a slave zone to /var/named.conf
 
@@ -132,6 +112,12 @@ OpenShift nodes may be manually added as needed using the OpenShift node heat te
 
 
     * If the upstream DNS configuration is not available a test client machine may be pointed to the broker 1 IP address (e.g. edit /etc/resolv.conf).
+
+4. Create districts. The following creates a small district and adds two nodes to the district.
+
+        oo-admin-ctl-district -c create -n small_district -p small
+        oo-admin-ctl-district -c add-node -n small_district -i <node1_hostname>
+        oo-admin-ctl-district -c add-node -n small_district -i <node2_hostname>
 
 ## Troubleshooting
 * `oo-mco ping` on a broker to verify nodes are registered
