@@ -62,8 +62,6 @@ parameters:
     description: Flavor of node servers
     type: string
     default: m1.medium
-    allowed_values: [m1.small, m1.medium, m1.large, m1.xlarge]
-    constraint_description: Must be a valid server flavor
   node_vol_size:
     description: Node cinder volume size (GB)
     type: number
@@ -91,7 +89,8 @@ parameters:
     description: Installation method (yum rhsm rhn)
     type: string
     default: rhsm
-    allowed_Values: [yum, rhsm, rhn]
+    constraints:
+    - allowed_values: [yum, rhsm, rhn]
   rh_reg_user:
     description: Red Hat registration username
     type: string
@@ -188,7 +187,8 @@ parameters:
     description: The version of OpenShift Enterprise to install
     type: string
     default: "2.0"
-    allowed_values: ["1.2", "2.0"]
+    constraints:
+    - allowed_values: ["1.2", "2.0"]
 
 resources:
   ose_node_sec_grp:
