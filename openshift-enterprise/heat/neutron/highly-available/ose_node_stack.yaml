@@ -31,6 +31,7 @@ parameter_groups:
   - NamedHostname
   - NamedIp
   - Replicants
+  - cartridges
   - public_net_id
   - private_net_id
   - private_subnet_id
@@ -140,6 +141,11 @@ parameters:
     description: >
       Comma-separated list (no spaces) of broker hosts (FQDN) running ActiveMQ and MongoDB
     type: string
+  cartridges:
+    description: >
+      Cartridges to install. "all" for all cartridges; "standard" for all cartridges except for JBossEWS or JBossEAP
+    type: string
+    default: standard
   public_net_id:
     type: string
     description: >
@@ -246,6 +252,7 @@ resources:
             export CONF_NAMED_IP_ADDR=P_NAMED_IP
             export CONF_DATASTORE_REPLICANTS=P_REPLICANTS
             export CONF_ACTIVEMQ_REPLICANTS=P_REPLICANTS
+            export CONF_CARTRIDGES=P_CONF_CARTRIDGES
             export CONF_INSTALL_METHOD=P_CONF_INSTALL_METHOD
             export CONF_SM_REG_NAME=P_CONF_RH_REG_NAME
             export CONF_SM_REG_PASS=P_CONF_RH_REG_PASS
@@ -314,6 +321,7 @@ resources:
             P_NAMED_HOSTNAME: { get_param: NamedHostname }
             P_NAMED_IP: { get_param: broker1_floating_ip }
             P_REPLICANTS: { get_param: Replicants }
+            P_CONF_CARTRIDGES: { get_param: cartridges }
             P_CONF_INSTALL_METHOD: { get_param: ConfInstallMethod}
             P_CONF_RH_REG_NAME: { get_param: ConfRhRegName}
             P_CONF_RH_REG_PASS: { get_param: ConfRhRegPass}

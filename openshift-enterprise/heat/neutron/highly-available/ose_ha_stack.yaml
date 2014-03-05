@@ -37,6 +37,7 @@ parameter_groups:
   - NamedIp
   - UpstreamDnsIp
   - Replicants
+  - cartridges
   - public_net_id
   - private_net_id
   - private_subnet_id
@@ -178,6 +179,11 @@ parameters:
     description: >
       Comma-separated list (no spaces) of broker hosts (FQDN) running ActiveMQ and MongoDB
     type: string
+  cartridges:
+    description: >
+      Cartridges to install. "all" for all cartridges; "standard" for all cartridges except for JBossEWS or JBossEAP
+    type: string
+    default: standard
   public_net_id:
     type: string
     description: >
@@ -672,6 +678,7 @@ resources:
       LoadBalHostname: { get_param: LoadBalHostname }
       NodeImage: { get_param: NodeImage }
       Replicants: { get_param: Replicants }
+      cartridges: { get_param: cartridges }
       ConfRhRegName: { get_param: ConfRhRegName }
       ConfRhRegPass: { get_param: ConfRhRegPass }
       ConfRhRegAK: { get_param: ConfRhRegAK }
@@ -698,6 +705,7 @@ resources:
       LoadBalHostname: { get_param: LoadBalHostname }
       NodeImage: { get_param: NodeImage }
       Replicants: { get_param: Replicants }
+      cartridges: { get_param: cartridges }
       ConfRhRegName: { get_param: ConfRhRegName }
       ConfRhRegPass: { get_param: ConfRhRegPass }
       ConfRhRegAK: { get_param: ConfRhRegAK }
@@ -724,6 +732,7 @@ resources:
       LoadBalHostname: { get_param: LoadBalHostname }
       NodeImage: { get_param: NodeImage }
       Replicants: { get_param: Replicants }
+      cartridges: { get_param: cartridges }
       ConfRhRegName: { get_param: ConfRhRegName }
       ConfRhRegPass: { get_param: ConfRhRegPass }
       ConfRhRegAK: { get_param: ConfRhRegAK }
