@@ -14,7 +14,7 @@ This nested heat stack deploys a highly-available OpenShift Enterprise environme
 
 
 
-       zone transfered to
+       zone transferred to
         upstream DNS (IT)
                   \          ----------------------
                    \        /   mongo replica set  \
