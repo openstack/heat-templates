@@ -231,11 +231,6 @@ parameters:
     type: string
     default: "2.0"
     allowed_values: ["1.2", "2.0"]
-  yum_validator_version:
-    description: An optional version for the oo-yum-validator tool to use
-    type: string
-    default: "2.0"
-    allowed_values: ["1.2", "2.0"]
 
 resources:
   openshift_enterprise_security_group:
@@ -398,8 +393,6 @@ resources:
             export CONF_REPOS_BASE=P_CONF_REPOS_BASE
             export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
             export CONF_RHEL_REPO=P_CONF_RHEL_REPO
-            export CONF_OSE_VERSION=P_OSE_VERSION
-            export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
             export CONF_INSTALL_COMPONENTS=broker,activemq,datastore,named
             export CONF_ACTIONS=do_all_actions,configure_datastore_add_replicants,configure_datastore_add_users
             export CONF_OPENSHIFT_USER1=P_CONF_OPENSHIFT_USER1
@@ -411,9 +404,7 @@ resources:
             export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
             export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
 
-            yum install -y openshift-enterprise-yum-validator
-            oo-admin-yum-validator
-            wget https://raw.github.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            curl -O https://raw.github.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
             chmod +x ./openshift.sh
             ./openshift.sh 2>&1 | tee /tmp/openshift.out
             sed -i '/type master/a \
@@ -460,7 +451,6 @@ resources:
             P_CONF_JBOSS_REPO_BASE: { get_param: jboss_repo_base}
             P_CONF_RHEL_REPO: { get_param: rhel_repo_base}
             P_OSE_VERSION: { get_param: ose_version }
-            P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
             P_CONF_OPENSHIFT_USER1: { get_param: openshift_user1 }
             P_CONF_OPENSHIFT_PASSWORD1: { get_param: openshift_pass1 }
             P_CONF_MONGODB_BROKER_USER: { get_param: mongo_broker_user }
@@ -508,8 +498,6 @@ resources:
             export CONF_REPOS_BASE=P_CONF_REPOS_BASE
             export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
             export CONF_RHEL_REPO=P_CONF_RHEL_REPO
-            export CONF_OSE_VERSION=P_OSE_VERSION
-            export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
             export CONF_INSTALL_COMPONENTS=broker,activemq,datastore
             export CONF_ACTIONS=do_all_actions
             export CONF_OPENSHIFT_USER1=P_CONF_OPENSHIFT_USER1
@@ -521,9 +509,7 @@ resources:
             export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
             export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
 
-            yum install -y openshift-enterprise-yum-validator
-            oo-admin-yum-validator
-            wget https://raw.github.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            curl -O https://raw.github.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
             chmod +x ./openshift.sh
             ./openshift.sh 2>&1 | tee /tmp/openshift.out
             setenforce 1
@@ -556,7 +542,6 @@ resources:
             P_CONF_JBOSS_REPO_BASE: { get_param: jboss_repo_base}
             P_CONF_RHEL_REPO: { get_param: rhel_repo_base}
             P_OSE_VERSION: { get_param: ose_version }
-            P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
             P_CONF_OPENSHIFT_USER1: { get_param: openshift_user1 }
             P_CONF_OPENSHIFT_PASSWORD1: { get_param: openshift_pass1 }
             P_CONF_MONGODB_BROKER_USER: { get_param: mongo_broker_user }
@@ -604,8 +589,6 @@ resources:
             export CONF_REPOS_BASE=P_CONF_REPOS_BASE
             export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
             export CONF_RHEL_REPO=P_CONF_RHEL_REPO
-            export CONF_OSE_VERSION=P_OSE_VERSION
-            export CONF_YUM_VALIDATOR_VERSION=P_YUM_VALIDATOR_VERSION
             export CONF_INSTALL_COMPONENTS=broker,activemq,datastore
             export CONF_ACTIONS=do_all_actions
             export CONF_OPENSHIFT_USER1=P_CONF_OPENSHIFT_USER1
@@ -617,9 +600,7 @@ resources:
             export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
             export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
 
-            yum install -y openshift-enterprise-yum-validator
-            oo-admin-yum-validator
-            wget https://raw.github.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            curl -O https://raw.github.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
             chmod +x ./openshift.sh
             ./openshift.sh 2>&1 | tee /tmp/openshift.out
             setenforce 1
@@ -652,7 +633,6 @@ resources:
             P_CONF_JBOSS_REPO_BASE: { get_param: jboss_repo_base}
             P_CONF_RHEL_REPO: { get_param: rhel_repo_base}
             P_OSE_VERSION: { get_param: ose_version }
-            P_YUM_VALIDATOR_VERSION: { get_param: yum_validator_version }
             P_CONF_OPENSHIFT_USER1: { get_param: openshift_user1 }
             P_CONF_OPENSHIFT_PASSWORD1: { get_param: openshift_pass1 }
             P_CONF_MONGODB_BROKER_USER: { get_param: mongo_broker_user }
