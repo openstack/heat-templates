@@ -82,18 +82,20 @@ YUM
   fi
 fi
 
-yum install -y yum-plugin-priorities
-# oo-admin-check-sources will ship with 2.0 however it is still compatible with OSE 1.2
-curl -L https://api.github.com/repos/openshift/openshift-extras/tarball/master | tar -xvz
-pushd openshift-openshift-extras*/admin/yum-validator
-  VALIDATOR_ARGS=" --role=node-eap --fix-all"
-  if [[ -n "${DIB_YUM_VALIDATOR_VERSION}" ]]; then
-    VALIDATOR_ARGS+=" --oo-version ${DIB_YUM_VALIDATOR_VERSION}"
-  fi
-  ./oo-admin-yum-validator ${VALIDATOR_ARGS} || ./oo-admin-yum-validator ${VALIDATOR_ARGS}
-popd
-rm -rf openshift-openshift-extras*
-
+# DIB_REG_TYPE of rhn or rhsm should be used if oo-admin-yum-validator is to be triggered
+if [ -n "${DIB_REG_TYPE}" ]; then
+  yum install -y yum-plugin-priorities
+  # oo-admin-check-sources will ship with 2.0 however it is still compatible with OSE 1.2
+  curl -L https://api.github.com/repos/openshift/openshift-extras/tarball/master | tar -xvz
+  pushd openshift-openshift-extras*/admin/yum-validator
+    VALIDATOR_ARGS=" --role=node-eap --fix-all"
+    if [[ -n "${DIB_YUM_VALIDATOR_VERSION}" ]]; then
+      VALIDATOR_ARGS+=" --oo-version ${DIB_YUM_VALIDATOR_VERSION}"
+    fi
+    ./oo-admin-yum-validator ${VALIDATOR_ARGS} || ./oo-admin-yum-validator ${VALIDATOR_ARGS}
+  popd
+  rm -rf openshift-openshift-extras*
+fi
 OSE_PACKAGES="yum-plugin-priorities rubygem-openshift-origin-node ruby193-rubygem-passenger-native openshift-origin-node-util policycoreutils-python openshift-origin-cartridge-cron openshift-origin-cartridge-diy openshift-origin-cartridge-haproxy openshift-origin-cartridge-jbossews openshift-origin-cartridge-jbosseap openshift-origin-cartridge-jenkins openshift-origin-cartridge-jenkins-client openshift-origin-cartridge-mysql openshift-origin-cartridge-nodejs openshift-origin-cartridge-perl openshift-origin-cartridge-php openshift-origin-cartridge-postgresql openshift-origin-cartridge-python openshift-origin-cartridge-ruby openshift-origin-msg-node-mcollective wget "
 OSE_V1_PACKAGES="mcollective "
 
