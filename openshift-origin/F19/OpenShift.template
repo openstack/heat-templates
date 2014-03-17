@@ -245,9 +245,9 @@
 
       "NodeWaitCondition": {
         "Type": "AWS::CloudFormation::WaitCondition",
-        "DependsOn": "BrokerInstance",
+        "DependsOn": "NodeInstance",
         "Properties": {
-          "Handle": { "Ref": "BrokerWaitHandle" },
+          "Handle": { "Ref": "NodeWaitHandle" },
           "Timeout": "1800"
         }
       },
