@@ -38,6 +38,18 @@
         "Default": "m1.small",
         "AllowedValues": ["m1.small","m1.medium", "m1.large", "m1.xlarge"]
       },
+      "BrokerHostname": {
+        "Description": "Hostname of Broker instance",
+        "Type": "String",
+        "Default": "openshift.brokerinstance.novalocal",
+        "MinLength": "1"
+      },
+      "NodeHostname": {
+        "Description": "Hostname of Node instance",
+        "Type": "String",
+        "Default": "openshift.nodeinstance.novalocal",
+        "MinLength": "1"
+      },
       "Username": {
         "Description": "Username for accessing OpenShift Origin",
         "Type": "String",
@@ -181,7 +193,7 @@
                     "export BROKER_WAIT_HANDLE=\"", { "Ref": "BrokerWaitHandle" }, "\"\n",
                     "/usr/sbin/dnssec-keygen -a HMAC-MD5 -b 512 -n USER -r /dev/urandom -K /var/named ${PREFIX}\n",
                     "export DNS_SEC_KEY=\"`cat /var/named/K${PREFIX}.*.key  | awk '{print $8}'`\"\n",
-                    "export HOSTNAME=\"`facter hostname`\"\n",
+                    "export HOSTNAME=", { "Ref": "BrokerHostname"}, "\n",
                     "export USERNAME=", { "Ref": "Username" }, "\n",
                     "export PASSWORD=", { "Ref": "Password" }, "\n",
                     "export DEV_MODE=", { "Ref": "DevMode" }, "\n",
@@ -268,7 +280,7 @@
                     "export UPSTREAM_DNS=", { "Ref": "UpstreamDNS" }, "\n",
                     "export UPSTREAM_NTP=", { "Ref": "UpstreamNTP" }, "\n",
                     "export NODE_WAIT_HANDLE=\"", { "Ref": "NodeWaitHandle" }, "\"\n",
-                    "export HOSTNAME=\"`facter hostname`\"\n",
+                    "export HOSTNAME=", { "Ref": "NodeHostname"}, "\n",
                     "export DEV_MODE=", { "Ref": "DevMode" }, "\n",
                     "export PUPPET_MODULE_URL=", { "Ref": "PuppetModuleURL" }, "\n",
                     "export PUPPET_MODULE_BRANCH=", { "Ref": "PuppetModuleBranch" }, "\n",
