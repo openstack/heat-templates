@@ -123,20 +123,14 @@
             {
              "remote_ip_prefix": "0.0.0.0/0",
              "protocol": "tcp",
-             "port_range_min": 8161,
-             "port_range_max": 8161
-            },
-            {
-             "remote_ip_prefix": "0.0.0.0/0",
-             "protocol": "tcp",
              "port_range_min": 8080,
              "port_range_max": 8080
             },
             {
              "remote_ip_prefix": "0.0.0.0/0",
              "protocol": "tcp",
-             "port_range_min": 8161,
-             "port_range_max": 8161
+             "port_range_min": 61613,
+             "port_range_max": 61613
             }
           ]
         }
