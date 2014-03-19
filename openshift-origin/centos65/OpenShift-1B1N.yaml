@@ -1,0 +1,159 @@
+heat_template_version: 2013-05-23
+description: Template for setting up an OpenShift Origin environment
+parameters:
+  dns_prefix:
+    description: your DNS prefix
+    type: string
+    default: example.com
+  dns_server:
+    description: upstream DNS server
+    type: string
+    default: 8.8.8.8
+  key_name:
+    description: name of a key pair to enable SSH access to the instances
+    type: string
+  instance_type:
+    description: instance type for server
+    type: string
+    default: m1.small
+    constraints:
+      - allowed_values: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
+        description: must be a valid instance type
+  user_name:
+    description: user name for OpenShift login
+    type: string
+    default: openshift
+  password:
+    description: password for OpenShift login
+    type: string
+    default: password
+resources:
+  broker_wait_handle:
+    type: AWS::CloudFormation::WaitConditionHandle
+
+  broker_wait_condition:
+    type: AWS::CloudFormation::WaitCondition
+    depends_on: OpenShiftBroker
+    properties:
+      Handle:
+        get_resource: broker_wait_handle
+      Timeout: 6000
+
+  OpenShiftSecurityGroup:
+    type: AWS::EC2::SecurityGroup
+    properties:
+      GroupDescription: Standard firewall rules
+      SecurityGroupIngress:
+      - {IpProtocol: udp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '22', ToPort: '22', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '80', ToPort: '80', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '443', ToPort: '443', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '8000', ToPort: '8000', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '8443', ToPort: '8443', CidrIp: 0.0.0.0/0}
+
+  OpenShiftBroker:
+    type: OS::Nova::Server
+    properties:
+      image: centos-6.5-x86_64-cfntools
+      flavor: {get_param: instance_type}
+      key_name: {get_param: key_name}
+      security_groups: [ {get_resource: OpenShiftSecurityGroup} ]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+
+            yum -y install http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+            yum -y install http://yum.puppetlabs.com/el/6/products/x86_64/puppetlabs-release-6-10.noarch.rpm
+            yum -y install augeas
+
+            augtool setm /files/etc/yum.repos.d/puppetlabs.repo/* exclude '*mcollective*\ activemq'
+            augtool set /files/etc/sysconfig/network/HOSTNAME broker.$dns_prefix$
+
+            yum install -y puppet facter tar bind
+            mkdir -p /etc/puppet/modules && cd /etc/puppet/modules
+            puppet module install openshift/openshift_origin --version 3.0.1
+
+            /usr/sbin/dnssec-keygen -a HMAC-MD5 -b 512 -n USER -r /dev/urandom -K /var/named $dns_prefix$
+            export DNS_SEC_KEY="`cat /var/named/K$dns_prefix$.*.key  | awk '{print $8}'`"
+
+            cat << EOF > configure_origin.pp
+            class { 'openshift_origin' :
+                roles => ['broker','named','activemq','datastore'],
+                broker_hostname => 'broker.$dns_prefix$',
+                named_hostname => 'broker.$dns_prefix$',
+                datastore_hostname => 'broker.$dns_prefix$',
+                activemq_hostname => 'broker.$dns_prefix$',
+                bind_key => '${DNS_SEC_KEY}',
+                domain => '$dns_prefix$',
+                register_host_with_named => true,
+                conf_named_upstream_dns => ['$dns_server$'],
+                broker_auth_plugin => 'htpasswd',
+                openshift_user1 => '$user_name$',
+                openshift_password1 => '$password$',
+                development_mode => true,
+            }
+            EOF
+
+            puppet apply --verbose configure_origin.pp | tee /var/log/configure_origin.log
+            /usr/bin/cfn-signal -e 0 --data "${DNS_SEC_KEY}" -r "Broker setup complete" "$broker_wait_handle$"
+            reboot
+          params:
+            $dns_prefix$: { get_param: dns_prefix }
+            $dns_server$: { get_param: dns_server }
+            $user_name$: { get_param: user_name }
+            $password$: { get_param: password }
+            $broker_wait_handle$: { get_resource: broker_wait_handle }
+
+  OpenShiftNode:
+    type: OS::Nova::Server
+    depends_on: broker_wait_condition
+    properties:
+      image: centos-6.5-x86_64-cfntools
+      flavor: {get_param: instance_type}
+      key_name: {get_param: key_name}
+      security_groups: [ {get_resource: OpenShiftSecurityGroup} ]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+
+            yum -y install http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+            yum -y install http://yum.puppetlabs.com/el/6/products/x86_64/puppetlabs-release-6-10.noarch.rpm
+            yum -y install augeas
+
+            augtool setm /files/etc/yum.repos.d/puppetlabs.repo/* exclude '*mcollective*\ activemq'
+            augtool set /files/etc/sysconfig/network/HOSTNAME node.$dns_prefix$
+
+            yum install -y puppet facter tar bind-utils
+            mkdir -p /etc/puppet/modules && cd /etc/puppet/modules
+            puppet module install openshift/openshift_origin --version 3.0.1
+
+            export DNS_SEC_KEY="`python -c 'print $dns_sec_key$.values().pop()'`"
+            export BROKER_IP="$broker_ip$"
+
+            cat << EOF > configure_origin.pp
+            class { 'openshift_origin' :
+                roles => ['node'],
+                named_ip_addr => '${BROKER_IP}',
+                bind_key => '${DNS_SEC_KEY}',
+                domain => '$dns_prefix$',
+                register_host_with_named => true,
+                broker_hostname => 'broker.$dns_prefix$',
+                activemq_hostname => 'broker.$dns_prefix$',
+                node_hostname => 'node.$dns_prefix$',
+                install_method => 'yum',
+                jenkins_repo_base => 'http://pkg.jenkins-ci.org/redhat',
+                development_mode => true,
+            }
+            EOF
+
+            puppet apply --verbose configure_origin.pp | tee /var/log/configure_origin.log
+            reboot
+          params:
+            $dns_prefix$: { get_param: dns_prefix }
+            $dns_server$: { get_param: dns_server }
+            $dns_sec_key$: { get_attr: [ broker_wait_condition, Data ] }
+            $broker_ip$: { get_attr: [ OpenShiftBroker, first_address ] }
+
