@@ -1,0 +1,104 @@
+heat_template_version: 2013-05-23
+###################################################################
+# The example is designed to demo how software deployment to handle
+# dependencies.
+#
+# The scenario:
+#  deployment_c -- hosted on --> server_a
+#  | (explicit depends on via depends_on property)
+#  deployment_b -- hosted on --> server_b
+#  | (implicit depends on via get_attr in input_values property)
+#  deployment_a -- hosted on --> server_a
+#
+# So the right deployment sequence should be:
+#  deployment_a (server_a)
+#  -->
+#  deployment_b (server_b)
+#  -->
+#  deployment_c (back to server_a)
+#
+# How to deploy the sample:
+#
+# 1. Create on image with element heat-config-script in
+# 2. heat stack-create -f example-deploy-sequence.yaml sequence
+# 3. heat stack-show sequence
+###################################################################
+parameters:
+  key_name:
+    type: string
+    default: heat_key
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+    default: fedora-amd64
+resources:
+  config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      inputs:
+      - name: previous
+        default: 'NONE'
+      group: script
+      config: |
+        #!/bin/bash
+        echo "Previous: $previous"
+        echo "${deploy_resource_name} is running on $(hostname) at $(date)"
+  deployment_a:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: config
+      server:
+        get_resource: server_a
+  deployment_b:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      input_values:
+        previous:
+          get_attr: [deployment_a, deploy_stdout]
+      config:
+        get_resource: config
+      server:
+        get_resource: server_b
+  deployment_c:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: deployment_b
+    properties:
+      input_values:
+        previous: 'deployment_b'
+      config:
+        get_resource: config
+      server:
+        get_resource: server_a
+  server_a:
+    type: OS::Nova::Server
+    properties:
+      image:
+        get_param: image
+      flavor:
+        get_param: flavor
+      key_name:
+        get_param: key_name
+      user_data_format: SOFTWARE_CONFIG
+  server_b:
+    type: OS::Nova::Server
+    properties:
+      image:
+        get_param: image
+      flavor:
+        get_param: flavor
+      key_name:
+        get_param: key_name
+      user_data_format: SOFTWARE_CONFIG
+outputs:
+  deployment_a_stdout:
+    value:
+      get_attr: [deployment_a, deploy_stdout]
+  deployment_b_stdout:
+    value:
+      get_attr: [deployment_b, deploy_stdout]
+  deployment_c_stdout:
+    value:
+      get_attr: [deployment_c, deploy_stdout]
