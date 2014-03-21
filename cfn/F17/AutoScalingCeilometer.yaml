@@ -42,8 +42,6 @@ Resources:
       MaxSize: '3'
       LoadBalancerNames:
       - {Ref: ElasticLoadBalancer}
-      Tags:
-      - {Key: metering.server_group, Value: WebServerGroup}
   WebServerScaleUpPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
