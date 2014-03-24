@@ -1,0 +1,153 @@
+heat_template_version: 2013-05-23
+description: AutoScaling Wordpress
+parameters:
+  image:
+    type: string
+    description: Image used for servers
+  key:
+    type: string
+    description: SSH key to connect to the servers
+  flavor:
+    type: string
+    description: flavor used by the web servers
+  database_flavor:
+    type: string
+    description: flavor used by the db server
+  subnet_id:
+    type: string
+    description: subnet on which the load balancer will be located
+  database_name:
+    type: string
+    description: Name of the wordpress DB
+    default: wordpress
+  database_user:
+    type: string
+    description: Name of the wordpress user
+    default: wordpress
+resources:
+  database_password:
+    type: OS::Heat::RandomString
+  database_root_password:
+    type: OS::Heat::RandomString
+  db:
+    type: OS::Nova::Server
+    properties:
+      flavor: {get_param: database_flavor}
+      image: {get_param: image}
+      key_name: {get_param: key}
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+            yum -y install mariadb mariadb-server
+            systemctl enable mariadb.service
+            systemctl start mariadb.service
+            mysqladmin -u root password $db_rootpassword
+            cat << EOF | mysql -u root --password=$db_rootpassword
+            CREATE DATABASE $db_name;
+            GRANT ALL PRIVILEGES ON $db_name.* TO "$db_user"@"%"
+            IDENTIFIED BY "$db_password";
+            FLUSH PRIVILEGES;
+            EXIT
+            EOF
+          params:
+            $db_rootpassword: {get_attr: [database_root_password, value]}
+            $db_name: {get_param: database_name}
+            $db_user: {get_param: database_user}
+            $db_password: {get_attr: [database_password, value]}
+  web_server_group:
+    type: OS::Heat::AutoScalingGroup
+    properties:
+      min_size: 1
+      max_size: 3
+      resource:
+        type: lb_server.yaml
+        properties:
+          flavor: {get_param: flavor}
+          image: {get_param: image}
+          key_name: {get_param: key}
+          pool_id: {get_resource: pool}
+          user_data:
+            str_replace:
+              template: |
+                #!/bin/bash -v
+                yum -y install httpd wordpress
+                systemctl enable httpd.service
+                systemctl start httpd.service
+                setsebool -P httpd_can_network_connect_db=1
+
+                sed -i "/Deny from All/d" /etc/httpd/conf.d/wordpress.conf
+                sed -i "s/Require local/Require all granted/" /etc/httpd/conf.d/wordpress.conf
+                sed -i s/database_name_here/$db_name/ /etc/wordpress/wp-config.php
+                sed -i s/username_here/$db_user/ /etc/wordpress/wp-config.php
+                sed -i s/password_here/$db_password/ /etc/wordpress/wp-config.php
+                sed -i s/localhost/$db_host/ /etc/wordpress/wp-config.php
+
+                systemctl restart httpd.service
+              params:
+                $db_name: {get_param: database_name}
+                $db_user: {get_param: database_user}
+                $db_password: {get_attr: [database_password, value]}
+                $db_host: {get_attr: [db, first_address]}
+  web_server_scaleup_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: {get_resource: web_server_group}
+      cooldown: 60
+      scaling_adjustment: 1
+  web_server_scaledown_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: {get_resource: web_server_group}
+      cooldown: 60
+      scaling_adjustment: -1
+  cpu_alarm_high:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-up if the average CPU > 50% for 1 minute
+      meter_name: cpu_util
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 50
+      alarm_actions:
+        - {get_attr: [web_server_scaleup_policy, alarm_url]}
+      matching_metadata: {'metadata.user_metadata.groupname': {get_resource: web_server_group}}
+      comparison_operator: gt
+  cpu_alarm_low:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-down if the average CPU < 15% for 10 minutes
+      meter_name: cpu_util
+      statistic: avg
+      period: 600
+      evaluation_periods: 1
+      threshold: 15
+      alarm_actions:
+        - {get_attr: [web_server_scaledown_policy, alarm_url]}
+      matching_metadata: {'metadata.user_metadata.groupname': {get_resource: web_server_group}}
+      comparison_operator: lt
+  monitor:
+    type: OS::Neutron::HealthMonitor
+    properties:
+      type: TCP
+      delay: 3
+      max_retries: 5
+      timeout: 5
+  pool:
+    type: OS::Neutron::Pool
+    properties:
+      protocol: HTTP
+      monitors: [{get_resource: monitor}]
+      subnet_id: {get_param: subnet_id}
+      lb_method: ROUND_ROBIN
+      vip:
+        protocol_port: 80
+  lb:
+    type: OS::Neutron::LoadBalancer
+    properties:
+      protocol_port: 80
+      pool_id: {get_resource: pool}
