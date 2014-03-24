@@ -16,9 +16,9 @@ parameters:
     description: instance type for server
     type: string
     default: m1.small
-    constaints:
-      allowed_values: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
-      description: must be a valid instance type
+    constraints:
+      - allowed_values: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
+        description: must be a valid instance type
   user_name:
     description: user name for OpenShift login
     type: string
@@ -41,16 +41,13 @@ resources:
 
             yum -y install http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
             yum -y install http://yum.puppetlabs.com/el/6/products/x86_64/puppetlabs-release-6-10.noarch.rpm
-            yum -y install nodejs-nan augeas tar yum-utils bind
-
-            mkdir -p /etc/puppet/modules && cd /etc/puppet/modules
-            yumdownloader nodejs-bson
-            rpm -i nodejs-bson*.rpm --nodeps
+            yum -y install augeas
 
             augtool setm /files/etc/yum.repos.d/puppetlabs.repo/* exclude '*mcollective*\ activemq'
             augtool set /files/etc/sysconfig/network/HOSTNAME broker.$dns_prefix$
 
-            yum install -y puppet facter
+            yum install -y puppet facter tar bind
+            mkdir -p /etc/puppet/modules && cd /etc/puppet/modules
             puppet module install openshift/openshift_origin --version 3.0.1
 
             /usr/sbin/dnssec-keygen -a HMAC-MD5 -b 512 -n USER -r /dev/urandom -K /var/named $dns_prefix$
