@@ -184,7 +184,7 @@ resources:
 
   broker_wait_condition:
     type: AWS::CloudFormation::WaitCondition
-    DependsOn: broker_instance
+    depends_on: broker_instance
     properties:
       Handle:
         get_resource: broker_wait_handle
@@ -273,7 +273,7 @@ resources:
 
   node_wait_condition:
     type: AWS::CloudFormation::WaitCondition
-    DependsOn: node_instance
+    depends_on: node_instance
     properties:
       Handle:
         get_resource: node_wait_handle

@@ -3,7 +3,7 @@ description: Template which creates a Swift container ressource
 
 resources:
   SwiftContainerWebsite:
-    DeletionPolicy: "Delete"
+    deletion_policy: "Delete"
     type: OS::Swift::Container
     properties:
       X-Container-Read: ".r:*"

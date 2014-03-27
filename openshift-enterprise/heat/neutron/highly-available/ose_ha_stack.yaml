@@ -58,10 +58,10 @@ parameters:
     description: Name of an existing keypair to enable SSH access to the instances
     type: string
   domain:
-    Description: Your DNS domain
+    description: Your DNS domain
     type: string
   hosts_domain:
-    Description: Openshift hosts domain
+    description: Openshift hosts domain
     type: string
   broker_server_flavor:
     description: Flavor of broker server
@@ -245,7 +245,7 @@ parameters:
 resources:
   ose_broker_sec_grp:
     type: AWS::EC2::SecurityGroup
-    Properties:
+    properties:
       GroupDescription: broker firewall rules
       VpcId: { get_param: private_net_id }
       SecurityGroupIngress:
@@ -387,7 +387,7 @@ resources:
 ###
   broker1_instance:
     type: OS::Nova::Server
-    DependsOn: broker_wait_condition
+    depends_on: broker_wait_condition
     properties:
       name: ose_broker1
       image: { get_param: broker_image }
