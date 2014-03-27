@@ -1,0 +1,113 @@
+heat_template_version: 2013-05-23
+#
+# The demo is about similar function with ssh-copy-id.
+#
+# Say we have two virtual machine, server A and server B. Server B
+# wants to add its id_rsa.pub contents into authorized_keys of server
+# A. So that server B can talk with server A via ssh without password.
+#
+parameters:
+  key_name:
+    type: string
+    default: heat_key
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+    default: fedora-amd64
+resources:
+  key_add:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      inputs:
+        - name: id_rsa_pub
+        - name: user_name
+      outputs:
+        - name: hostname
+      group: script
+      config: |
+        #!/bin/bash
+        echo "${id_rsa_pub}" | su - $user_name -c 'tee -a .ssh/authorized_keys'
+        hostname > ${heat_outputs_path}.hostname
+  key_gen:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      inputs:
+        - name: user_name
+      outputs:
+        - name: id_rsa_pub
+      group: script
+      config: |
+        #!/bin/bash
+        su - ${user_name} << EOF > ${heat_outputs_path}.id_rsa_pub
+        test -f .ssh/id_rsa.pub || ssh-keygen -q -t rsa -N "" -f .ssh/id_rsa
+        cat .ssh/id_rsa.pub
+        EOF
+  key_test:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      inputs:
+        - name: user_name
+        - name: target
+      group: script
+      config: |
+        #!/bin/bash
+        su - ${user_name} << EOF
+        ssh -o StrictHostKeyChecking=no ${target} hostname
+        EOF
+  do_key_gen:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      input_values:
+        user_name: ec2-user
+      config:
+        get_resource: key_gen
+      server:
+        get_resource: server_b
+  do_key_add:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      input_values:
+        user_name: ec2-user
+        id_rsa_pub:
+          get_attr: [do_key_gen, id_rsa_pub]
+      config:
+        get_resource: key_add
+      server:
+        get_resource: server_a
+  do_key_test:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      input_values:
+        user_name: ec2-user
+        target:
+          get_attr: [do_key_add, hostname]
+      config:
+        get_resource: key_test
+      server:
+        get_resource: server_b
+  server_a:
+    type: OS::Nova::Server
+    properties:
+      image:
+        get_param: image
+      flavor:
+        get_param: flavor
+      key_name:
+        get_param: key_name
+      user_data_format: SOFTWARE_CONFIG
+  server_b:
+    type: OS::Nova::Server
+    properties:
+      image:
+        get_param: image
+      flavor:
+        get_param: flavor
+      key_name:
+        get_param: key_name
+      user_data_format: SOFTWARE_CONFIG
+outputs:
+  do_key_test_stdout:
+    value:
+      get_attr: [do_key_test, deploy_stdout]
