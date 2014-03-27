@@ -9,7 +9,7 @@ Parameters:
   UpstreamDNS: {Description: Upstream DNS server,
     Type: String, Default: 8.8.8.8}
   ConfInstallMethod: {Description: Installation method (yum rhsm rhn), Type: String, MinLength: '1',
-    MaxLength: '255', Default: yum, Allowed_Values: [yum, rhsm, rhn]}
+    MaxLength: '255', Default: yum, AllowedValues: [yum, rhsm, rhn]}
   ConfSMRegName: {Description: Subscription Manager registration username, Type: String, MinLength: '1',
     MaxLength: '255', Default: username}
   ConfSMRegPass: {Description: Subscription Manager registration password, Type: String, MinLength: '1',
@@ -28,8 +28,8 @@ Parameters:
     MaxLength: '255', Default: example.com}
   ConfJBossRepoBase: {Description: JBoss Repo Base, Type: String, MinLength: '1',
     MaxLength: '255', Default: example.com}
-  BrokerHostname: {Description: Broker hostname, Type: String, MinLenth: '1', Default: openshift.brokerinstance.novalocal}
-  NodeHostname: {Description: Broker hostname, Type: String, MinLenth: '1', Default: openshift.nodeinstance.novalocal}
+  BrokerHostname: {Description: Broker hostname, Type: String, MinLength: '1', Default: openshift.brokerinstance.novalocal}
+  NodeHostname: {Description: Broker hostname, Type: String, MinLength: '1', Default: openshift.nodeinstance.novalocal}
 Mappings:
   JeosImages:
     Broker: {Image: RHEL64-x86_64-broker}
