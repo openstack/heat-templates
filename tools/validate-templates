@@ -5,6 +5,9 @@ import subprocess
 import sys
 
 
+EXCLUDED_DIRS = ('contrib',)
+
+
 def main(args):
     if len(args) != 1:
         raise SystemExit("Takes one argument, the path to the templates")
@@ -12,6 +15,9 @@ def main(args):
     path = args[0]
     got_error = False
     for root, dirs, files in os.walk(path):
+        for excluded in EXCLUDED_DIRS:
+            if excluded in dirs:
+                dirs.remove(excluded)
         for name in files:
             if name.endswith((".yaml", ".template")):
                 got_error = validate(root, name)
