@@ -64,7 +64,7 @@
       "Default": "U10",
       "Description" : "Distribution of choice",
       "Type": "String",
-      "AllowedValues" : "U10"
+      "AllowedValues" : ["U10"]
     }
   },
 
