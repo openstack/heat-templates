@@ -48,10 +48,10 @@ parameters:
     description: Name of an existing keypair to enable SSH access to the instances
     type: string
   domain:
-    Description: Your DNS domain
+    description: Your DNS domain
     type: string
   hosts_domain:
-    Description: Openshift hosts domain
+    description: Openshift hosts domain
     type: string
   avail_zone:
     description: >
@@ -193,7 +193,7 @@ parameters:
 resources:
   ose_node_sec_grp:
     type: AWS::EC2::SecurityGroup
-    Properties:
+    properties:
       GroupDescription: Node firewall rules
       VpcId: { get_param: private_net_id }
       SecurityGroupIngress:

@@ -90,7 +90,7 @@ resources:
     # soon as it is available
     type: AWS::EC2::Instance
     # Have to use AWS::EC::Instance metadata syntax for now
-    Metadata:
+    metadata:
       AWS::CloudFormation::Init:
         config:
           packages:
