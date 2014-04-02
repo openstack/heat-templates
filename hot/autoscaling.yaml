@@ -68,6 +68,7 @@ resources:
           image: {get_param: image}
           key_name: {get_param: key}
           pool_id: {get_resource: pool}
+          metadata: {"metering.stack": {get_param: "OS::stack_id"}}
           user_data:
             str_replace:
               template: |
@@ -115,7 +116,7 @@ resources:
       threshold: 50
       alarm_actions:
         - {get_attr: [web_server_scaleup_policy, alarm_url]}
-      matching_metadata: {'metadata.user_metadata.groupname': {get_resource: web_server_group}}
+      matching_metadata: {'metadata.user_metadata.stack': {get_param: "OS::stack_id"}}
       comparison_operator: gt
   cpu_alarm_low:
     type: OS::Ceilometer::Alarm
@@ -128,7 +129,7 @@ resources:
       threshold: 15
       alarm_actions:
         - {get_attr: [web_server_scaledown_policy, alarm_url]}
-      matching_metadata: {'metadata.user_metadata.groupname': {get_resource: web_server_group}}
+      matching_metadata: {'metadata.user_metadata.stack': {get_param: "OS::stack_id"}}
       comparison_operator: lt
   monitor:
     type: OS::Neutron::HealthMonitor
