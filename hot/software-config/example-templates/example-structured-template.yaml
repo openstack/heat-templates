@@ -1,0 +1,69 @@
+heat_template_version: 2013-05-23
+description: >
+  This template demonstrates how to use OS::Heat::StructuredDeployment
+  to override substitute get_input placeholders defined in
+  OS::Heat::StructuredConfig config.
+
+  As there is no hook on the server to act on the configuration data,
+  these deployment resource will perform no actual configuration.
+parameters:
+  key_name:
+    type: string
+  flavor:
+    type: string
+  image:
+    type: string
+    default: fedora-software-config
+
+resources:
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  config:
+    type: OS::Heat::StructuredConfig
+    properties:
+      config:
+       config_value_foo: {get_input: foo}
+       config_value_bar: {get_input: bar}
+
+  deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      wait_for_signal: false
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        foo: fooooo
+        bar: baaaaa
+
+  other_deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      wait_for_signal: false
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        foo: fu
+        bar: barmy
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: SOFTWARE_CONFIG

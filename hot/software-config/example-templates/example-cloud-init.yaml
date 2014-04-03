@@ -9,6 +9,7 @@ parameters:
     type: string
   image:
     type: string
+    default: fedora-software-config
 
 resources:
   the_sg:
