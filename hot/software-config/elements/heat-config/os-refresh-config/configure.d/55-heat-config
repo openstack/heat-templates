@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+import json
+import logging
+import os
+import requests
+import subprocess
+import sys
+
+HOOKS_DIR = os.environ.get('HEAT_CONFIG_HOOKS',
+                           '/var/lib/heat-config/hooks')
+CONF_FILE = os.environ.get('HEAT_SHELL_CONFIG',
+                           '/var/run/heat-config/heat-config')
+
+
+def main(argv=sys.argv):
+    log = logging.getLogger('heat-config')
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(
+        logging.Formatter(
+            '[%(asctime)s] (%(name)s) [%(levelname)s] %(message)s'))
+    log.addHandler(handler)
+    log.setLevel('DEBUG')
+
+    if not os.path.exists(CONF_FILE):
+        log.error('No config file %s' % CONF_FILE)
+        return 1
+
+    try:
+        configs = json.load(open(CONF_FILE))
+    except ValueError:
+        pass
+    else:
+        for c in configs:
+            try:
+                invoke_hook(c, log)
+            except Exception as e:
+                log.exception(e)
+
+
+def invoke_hook(c, log):
+        # sanitise the group to get an alphanumeric hook file name
+        hook = "".join(
+            x for x in c['group'] if x == '-' or x == '_' or x.isalnum())
+        hook_path = os.path.join(HOOKS_DIR, hook)
+
+        signal_data = None
+        if not os.path.exists(hook_path):
+            log.warn('Skipping group %s with no hook script %s' % (
+                c['group'], hook_path))
+        else:
+            log.debug('Running %s' % hook_path)
+            subproc = subprocess.Popen([hook_path],
+                                       stdin=subprocess.PIPE,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
+            stdout, stderr = subproc.communicate(input=json.dumps(c))
+
+            log.info(stdout)
+            log.debug(stderr)
+
+            if subproc.returncode:
+                log.error("Error running %s. [%s]\n" % (
+                    hook_path, subproc.returncode))
+            else:
+                log.info('Completed %s' % hook_path)
+
+            try:
+                if stdout:
+                    signal_data = json.dumps(json.loads(stdout))
+            except ValueError:
+                signal_data = json.dumps({
+                    'deploy_stdout': stdout,
+                    'deploy_stderr': stderr,
+                    'deploy_status_code': subproc.returncode,
+                })
+
+        iv = dict((i['name'], i['value']) for i in c['inputs'])
+
+        if signal_data:
+            if 'deploy_signal_id' in iv:
+                sigurl = iv.get('deploy_signal_id')
+                log.debug('Signalling to %s with %s' % (sigurl, signal_data))
+                r = requests.post(sigurl, data=signal_data,
+                                  headers={'content-type': None})
+                log.debug('Response %s ' % r)
+            if 'deploy_auth_url' in iv:
+                from heatclient import client as heatclient
+                from keystoneclient.v3 import client as ksclient
+                ks = ksclient.Client(
+                    auth_url=iv['deploy_auth_url'],
+                    user_id=iv['deploy_user_id'],
+                    password=iv['deploy_password'],
+                    project_id=iv['deploy_project_id'])
+                endpoint = ks.service_catalog.url_for(
+                    service_type='orchestration', endpoint_type='publicURL')
+                log.debug('Signalling to %s' % endpoint)
+                heat = heatclient.Client(
+                    '1', endpoint, token=ks.auth_token)
+                r = heat.resources.signal(
+                    iv.get('deploy_stack_id'),
+                    iv.get('deploy_resource_name'),
+                    data=signal_data)
+                log.debug('Response %s ' % r)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
