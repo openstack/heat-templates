@@ -1,0 +1,7 @@
+#!/bin/bash
+set -x
+
+SCRIPTDIR=$(dirname $0)
+
+install-packages puppet
+install -D -g root -o root -m 0755 ${SCRIPTDIR}/hook-puppet.py /var/lib/heat-config/hooks/puppet
