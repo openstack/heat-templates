@@ -1,0 +1,98 @@
+heat_template_version: 2013-05-23
+parameters:
+  key_name:
+    type: string
+  flavor:
+    type: string
+  image:
+    type: string
+    default: fedora-software-config
+
+resources:
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  config:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: cfn-init
+      inputs:
+      - name: bar
+      config:
+        config:
+          files:
+            /tmp/foo:
+              content:
+                get_input: bar
+              mode: '000644'
+
+  check_tmp_foo:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      outputs:
+      - name: result
+      config: |
+        #!/bin/sh
+        echo -n "The file /tmp/foo contains `cat /tmp/foo` for server $deploy_server_id during $deploy_action" > $heat_outputs_path.result
+
+  deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      name: 10_deployment
+      signal_transport: NO_SIGNAL
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        bar: baaaaa
+
+  other_deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      name: 20_other_deployment
+      signal_transport: NO_SIGNAL
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        bar: barmy
+      actions:
+      - CREATE
+      - UPDATE
+      - SUSPEND
+      - RESUME
+
+  deploy_check_tmp_foo:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      name: 30_deploy_check_tmp_foo
+      config:
+        get_resource: check_tmp_foo
+      server:
+        get_resource: server
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: SOFTWARE_CONFIG
+
+outputs:
+  result:
+    value:
+      get_attr: [deploy_check_tmp_foo, result]
