@@ -12,9 +12,8 @@ if [ "${OSE_VERSION}" == "1.2" ]; then
 name=OpenShift Node
 baseurl=${DIB_CONF_REPO_BASE}/Node/x86_64/os/
 enabled=1
-gpgcheck=0
+gpgcheck=1
 priority=1
-sslverify=false
 
 YUM
 
@@ -23,9 +22,8 @@ YUM
 name=OpenShift JBossEAP
 baseurl=${DIB_CONF_REPO_BASE}/JBoss_EAP6_Cartridge/x86_64/os/
 enabled=1
-gpgcheck=0
+gpgcheck=1
 priority=1
-sslverify=false
 
 YUM
 
@@ -35,7 +33,7 @@ name=jbosseap
 baseurl=${DIB_CONF_JBOSS_REPO_BASE}/jbeap/6/os
 enabled=1
 priority=3
-gpgcheck=0
+gpgcheck=1
 
 YUM
 
@@ -45,7 +43,7 @@ name=jbossews
 baseurl=${DIB_CONF_JBOSS_REPO_BASE}/jbews/2/os
 enabled=1
 priority=3
-gpgcheck=0
+gpgcheck=1
 
 YUM
   fi
@@ -56,17 +54,15 @@ else
 name=OpenShift JBossEAP
 baseurl=${DIB_CONF_REPO_BASE}/RHOSE-JBOSSEAP-2.0/x86_64/os/
 enabled=1
-gpgcheck=0
+gpgcheck=1
 priority=10
-sslverify=false
 
 [openshift_node]
 name=OpenShift Node
 baseurl=${DIB_CONF_REPO_BASE}/RHOSE-NODE-2.0/x86_64/os/
 enabled=1
-gpgcheck=0
+gpgcheck=1
 priority=10
-sslverify=false
 YUM
     fi
 
@@ -77,7 +73,7 @@ name=jbosseap62
 baseurl=${DIB_CONF_JBOSS_REPO_BASE}
 enabled=1
 priority=30
-gpgcheck=0
+gpgcheck=1
 YUM
   fi
 fi

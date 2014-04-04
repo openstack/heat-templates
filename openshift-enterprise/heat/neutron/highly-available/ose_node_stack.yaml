@@ -109,7 +109,7 @@ parameters:
     type: string
     default: ""
   rh_reg_opts:
-    description: RHN options, e.g. --serverUrl=http://my.sat.server.com/XMLRPC
+    description: RHN options, e.g. --serverUrl=https://my.sat.server.com/XMLRPC
     type: string
     default: ""
   rhel_repo_base:

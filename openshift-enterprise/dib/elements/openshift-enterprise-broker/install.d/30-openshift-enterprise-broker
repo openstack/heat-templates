@@ -12,9 +12,8 @@ if [ "${OSE_VERSION}" == "1.2" ]; then
 name=OpenShift Client
 baseurl=${DIB_CONF_REPO_BASE}/Client/x86_64/os/
 enabled=1
-gpgcheck=0
+gpgcheck=1
 priority=1
-sslverify=false
 
 YUM
 
@@ -23,9 +22,8 @@ YUM
 name=OpenShift Infrastructure
 baseurl=${DIB_CONF_REPO_BASE}/Infrastructure/x86_64/os/
 enabled=1
-gpgcheck=0
+gpgcheck=1
 priority=1
-sslverify=false
 
 YUM
   fi
@@ -36,17 +34,15 @@ else
 name=OpenShift Client
 baseurl=${DIB_CONF_REPO_BASE}/RHOSE-CLIENT-2.0/x86_64/os/
 enabled=1
-gpgcheck=0
+gpgcheck=1
 priority=10
-sslverify=false
 
 [openshift_infrastructure]
 name=OpenShift Infrastructure
 baseurl=${DIB_CONF_REPO_BASE}/RHOSE-INFRA-2.0/x86_64/os/
 enabled=1
-gpgcheck=0
+gpgcheck=1
 priority=10
-sslverify=false
 
 YUM
   fi
