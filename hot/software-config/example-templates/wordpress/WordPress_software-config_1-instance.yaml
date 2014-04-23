@@ -1,0 +1,133 @@
+heat_template_version: 2013-05-23
+
+description: >
+  Heat WordPress template to deploy WordPress on a single instance using Heat's
+  software orchestration feature.
+
+  This template defines two SoftwareConfigs (one for the DB, one for WordPress)
+  which reference separate scripts. Both of those SoftwareConfigs are associated
+  to the same server via SoftwareDeployment definitions.
+  For software configuration to work, the used image has to be prepared using
+  image builder to contain the required elements as described in file
+  hot/software-config/elements/README.rst in the heat-templates github repo.
+
+  This template has been tested to work on Heat Icehouse using neutron network
+  and using a Fedora 20 image. For differing setups, adaptations may be
+  necessary.
+
+parameters:
+  key_name:
+    type: string
+    description : Name of a key pair to enable SSH access to instances.
+    default: default
+  flavor:
+    type: string
+    description: Flavor to use for the WordPress server.
+    constraints:
+      - custom_constraint: nova.flavor
+  image:
+    type: string
+    description: >
+      Name or ID of the image to use for the WordPress server.
+      Recommended values are fedora-20.i386 or fedora-20.x86_64.
+      Those images can be obtained from
+      http://cloud.fedoraproject.org/fedora-20.i386.qcow2 or from
+      http://cloud.fedoraproject.org/fedora-20.x86_64.qcow2 .
+      The used image also has to have elements for software config built in.
+    default: fedora-20.x86_64
+  db_name:
+    type: string
+    description: WordPress database name
+    default: wordpress
+    constraints:
+      - length: { min: 1, max: 64 }
+        description: db_name must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_name must begin with a letter and contain only alphanumeric
+          characters
+  db_username:
+    type: string
+    description: The WordPress database admin account username
+    default: admin
+    hidden: true
+    constraints:
+      - length: { min: 1, max: 16 }
+        description: db_username must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_username must begin with a letter and contain only alphanumeric
+          characters
+
+resources:
+  wordpress_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      inputs:
+        - name: db_name
+        - name: db_user
+        - name: db_password
+        - name: db_ipaddr
+      group: script
+      config: { get_file: wp_install.sh }
+
+  db_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      inputs:
+        - name: db_rootpassword
+        - name: db_name
+        - name: db_user
+        - name: db_password
+      group: script
+      config: { get_file: db_install.sh }
+
+  db_root_password:
+    type: OS::Heat::RandomString
+
+  db_password:
+    type: OS::Heat::RandomString
+
+  wordpress_deployment:
+    type: OS::Heat::SoftwareDeployment
+    depends_on: db_deployment
+    properties:
+      config:
+        get_resource: wordpress_config
+      server:
+        get_resource: wordpress_instance
+      input_values:
+        db_name: { get_param: db_name }
+        db_user: { get_param: db_username }
+        db_password: { get_attr: [ db_password, value ] }
+        db_ipaddr: { get_attr: [ wordpress_instance, networks, private, 0 ] }
+
+  db_deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: db_config
+      server:
+        get_resource: wordpress_instance
+      input_values:
+        db_rootpassword: { get_attr: [ db_root_password, value ] }
+        db_name: { get_param: db_name }
+        db_user: { get_param: db_username }
+        db_password: { get_attr: [ db_password, value ] }
+
+  wordpress_instance:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      user_data_format: SOFTWARE_CONFIG
+
+outputs:
+  WebsiteURL:
+    description: URL for Wordpress wiki
+    value:
+      str_replace:
+        template: http://host/wordpress
+        params:
+          host: { get_attr: [wordpress_instance, networks, private, 0] }
