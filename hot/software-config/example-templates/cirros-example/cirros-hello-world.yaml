@@ -1,0 +1,52 @@
+heat_template_version: 2013-05-23
+
+description: >
+  This template demonstrates a minimal SoftwareDeployment example
+
+parameters:
+  key_name:
+    type: string
+    default: stack_key
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+
+resources:
+  sc:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      inputs:
+        - name: message
+          default: 'NONE'
+      outputs:
+        - name: file_content
+      group: script
+      config: |
+        #!/bin/sh
+        echo "${message}" > /hello
+        cat /hello > ${heat_outputs_path}.file_content
+
+  sd:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config: {get_resource: sc}
+      server: {get_resource: server}
+      signal_transport: HEAT_SIGNAL
+      input_values:
+        message: 'Hello, world!'
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      user_data_format: SOFTWARE_CONFIG
+      software_config_transport: POLL_SERVER_HEAT
+
+outputs:
+  deploy_output:
+    value:
+      get_attr: [sd, file_content]

@@ -1,0 +1,92 @@
+#!/bin/sh
+# Simple hook script to run Heat SoftwareDeployments in Cirros images
+
+# FIXME: need to create a directory under var with appropriate permissions
+TMPDIR="/tmp"
+
+# Extract the os-collect-config json from the user-data
+grep "^{" /var/run/cirros/datasource/data/user-data | grep os-collect-config > ${TMPDIR}/oscc_user_data.json
+mkdir -p ${TMPDIR}/oscc_user_data_out
+json2fstree ${TMPDIR}/oscc_user_data_out ${TMPDIR}/oscc_user_data.json
+
+# Load credentials from the decoded data
+OSC_DATA_PATH=${TMPDIR}/oscc_user_data_out/os-collect-config/heat
+PASSWORD=$(cat $OSC_DATA_PATH/password)
+USER_ID=$(cat $OSC_DATA_PATH/user_id)
+AUTH_URL=$(cat $OSC_DATA_PATH/auth_url)
+PROJECT_ID=$(cat $OSC_DATA_PATH/project_id)
+
+# Get a token and de-jsonify the response
+# FIXME currently this only works with v2 keystone
+V2_JSON='{"auth": {"tenantId": "'$PROJECT_ID'", "passwordCredentials": {"userId": "'$USER_ID'", "password": "'$PASSWORD'"}}}'
+curl -i -d "$V2_JSON" -H "Content-type: application/json" $AUTH_URL/tokens | grep "^{" > ${TMPDIR}/token_json.json
+mkdir -p ${TMPDIR}/token_data_out
+json2fstree ${TMPDIR}/token_data_out ${TMPDIR}/token_json.json
+TOKEN=$(cat ${TMPDIR}/token_data_out/access/token/id)
+
+# Locate the heat API endpoint from the token response
+SC_DIR=$(grep -r orchestration ${TMPDIR}/token_data_out/access/serviceCatalog/ | sed "s/\/type:orchestration//")
+SC_PUBURL=$(find $SC_DIR -name publicURL)
+SC_ENDPOINT=$(cat $SC_PUBURL)
+
+# Get resource metadata and decode it with json2fstree
+STACK_ID=$(cat $OSC_DATA_PATH/stack_id)
+RESOURCE_NAME=$(cat $OSC_DATA_PATH/resource_name)
+curl -i -X GET -H "X-Auth-Token:$TOKEN" $SC_ENDPOINT/stacks/$STACK_ID/resources/$RESOURCE_NAME/metadata | grep "^{" > ${TMPDIR}/resource_metadata.json
+mkdir -p ${TMPDIR}/resource_metadata_out
+json2fstree ${TMPDIR}/resource_metadata_out ${TMPDIR}/resource_metadata.json
+
+# Iterate over the configs and run them (ignores inputs and outputs atm)
+CONFIGS=$(find ${TMPDIR}/resource_metadata_out/metadata/deployments -name config)
+for config in $CONFIGS
+do
+  echo "Processing config $config"
+  # Create output directory and set variable
+  DEPLOY_DIR=$(dirname $config)
+  DEPLOY_TYPE=$(cat $DEPLOY_DIR/group)
+  if [ $DEPLOY_TYPE != 'script' ];
+  then
+    echo "Skipping config $config, $DEPLOY_TYPE not script"
+    continue
+  fi
+  OUTPUT_PREFIX=/tmp/heat_deploy/outputs/$(basename $DEPLOY_DIR)
+  mkdir -p /tmp/heat_deploy/outputs
+  export heat_outputs_path="$OUTPUT_PREFIX"
+
+  # Iterate over inputs and set them in the environment
+  DEPLOY_RESOURCE_INPUT=$(grep -r deploy_resource_name $DEPLOY_DIR/inputs | sed "s/name:deploy_resource_name//")
+  CONFIG_INPUTS=""
+  for input_dir in $DEPLOY_DIR/inputs/*
+  do
+    if [ -d $input_dir ]
+    then
+      name=$(cat $input_dir/name)
+      value=$(cat $input_dir/value)
+      echo "Exporting input $name=$value for deployment"
+      export $name="$value"
+      CONFIG_INPUTS="$CONFIG_INPUTS $name"
+    fi
+  done
+
+  # Run the config, capture stdout/stderr and the return code
+  sh $config 1> ${OUTPUT_PREFIX}.deploy_stdout 2> ${OUTPUT_PREFIX}.deploy_stderr
+  echo $? > ${OUTPUT_PREFIX}.deploy_status_code
+
+  # Signal completion
+  # FIXME: we're reusing the credentials associated with the server, in theory
+  # we should get another token using user associated with the deployment.
+  # Also we don't catch any errors
+  SIGNAL_DATA=""
+  for output_path in $OUTPUT_PREFIX.*
+  do
+    output=${output_path#$OUTPUT_PREFIX.}
+    echo "Got output $output"
+    SIGNAL_DATA="${SIGNAL_DATA}, \"$output\": \"$(cat $output_path)\""
+  done
+  echo "SIGNAL_DATA=$SIGNAL_DATA"
+  SIGNAL_DATA_JSON="{${SIGNAL_DATA#", "}}"
+  curl -i -X POST -d "${SIGNAL_DATA_JSON}" -H 'Content-Type: application/json' -H "X-Auth-Token:$TOKEN" $SC_ENDPOINT/stacks/$STACK_ID/resources/$deploy_resource_name/signal
+
+  # Clean the environment
+  unset $CONFIG_INPUTS
+done
