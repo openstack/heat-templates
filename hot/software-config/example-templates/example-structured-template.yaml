@@ -37,7 +37,7 @@ resources:
   deployment:
     type: OS::Heat::StructuredDeployment
     properties:
-      wait_for_signal: false
+      signal_transport: NO_SIGNAL
       config:
         get_resource: config
       server:
@@ -49,7 +49,7 @@ resources:
   other_deployment:
     type: OS::Heat::StructuredDeployment
     properties:
-      wait_for_signal: false
+      signal_transport: NO_SIGNAL
       config:
         get_resource: config
       server:
