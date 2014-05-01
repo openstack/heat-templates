@@ -20,14 +20,14 @@ def main(args):
                 dirs.remove(excluded)
         for name in files:
             if name.endswith((".yaml", ".template")):
-                got_error = validate(root, name)
+                got_error = validate(root, name) or got_error
     sys.exit(int(got_error))
 
 
 def validate(base, name):
     basename, ext = os.path.splitext(name)
     if basename.endswith("_env"):
-        return
+        return False
     args = ["heat", "template-validate", "-f", os.path.join(base, name)]
     base_env = "%s_env%s" % (basename, ext)
     env = os.path.join(base, base_env)
