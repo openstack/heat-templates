@@ -50,7 +50,7 @@ parameters:
     hidden: true
     constraints:
       - length: { min: 1, max: 16 }
-        description: db_username must be between 1 and 64 characters
+        description: db_username must be between 1 and 16 characters
       - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
         description: >
           db_username must begin with a letter and contain only alphanumeric
@@ -63,7 +63,7 @@ parameters:
     hidden: true
     constraints:
       - length: { min: 1, max: 41 }
-        description: db_username must be between 1 and 64 characters
+        description: db_password must be between 1 and 41 characters
       - allowed_pattern: '[a-zA-Z0-9]*'
         description: db_password must contain only alphanumeric characters
 
@@ -74,9 +74,9 @@ parameters:
     hidden: true
     constraints:
       - length: { min: 1, max: 41 }
-        description: db_username must be between 1 and 64 characters
+        description: db_root_password must be between 1 and 41 characters
       - allowed_pattern: '[a-zA-Z0-9]*'
-        description: db_password must contain only alphanumeric characters
+        description: db_root_password must contain only alphanumeric characters
 
 
 resources:
