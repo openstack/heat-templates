@@ -236,7 +236,7 @@ resources:
               VALIDATOR_ARGS="--oo-version=${CONF_OSE_VERSION} --role=broker --fix-all"
               ./oo-admin-yum-validator ${VALIDATOR_ARGS} || ./oo-admin-yum-validator ${VALIDATOR_ARGS}
             popd
-            wget https://raw.github.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            wget https://raw.githubusercontent.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
             chmod +x ./openshift.sh
             ./openshift.sh 2>&1 | tee /tmp/openshift.out
             echo "${CONF_NODE_HOSTNAME%.${PREFIX}}                      A       ${CONF_NODE_IP_ADDR}" >> /var/named/dynamic/${PREFIX}.db
@@ -323,7 +323,7 @@ resources:
               VALIDATOR_ARGS="--oo-version=${P_YUM_VALIDATOR_VERSION} --role=node-eap --fix-all"
               ./oo-admin-yum-validator ${VALIDATOR_ARGS} || ./oo-admin-yum-validator ${VALIDATOR_ARGS}
             popd
-            wget https://raw.github.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
+            wget https://raw.githubusercontent.com/openshift/openshift-extras/enterprise-${CONF_OSE_VERSION}/enterprise/install-scripts/generic/openshift.sh
             chmod +x ./openshift.sh
             ./openshift.sh 2>&1 | tee /tmp/openshift.out
             setenforce 1

@@ -287,7 +287,7 @@ resources:
             export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
 
             # configure OSE
-            curl -O https://raw.github.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
+            curl -O https://raw.githubusercontent.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
             chmod +x ./openshift.sh
             ./openshift.sh 2>&1 | tee /tmp/openshift.out
             setenforce 1

@@ -208,7 +208,7 @@ Resources:
             - '
 
               '
-            - rm -f /root/openshift.sh;wget https://raw.github.com/openshift/openshift-extras/enterprise-1.2/enterprise/install-scripts/generic/openshift.sh
+            - rm -f /root/openshift.sh;wget https://raw.githubusercontent.com/openshift/openshift-extras/enterprise-1.2/enterprise/install-scripts/generic/openshift.sh
             - '
 
               '
@@ -369,7 +369,7 @@ Resources:
             - '
 
               '
-            - rm -f /root/openshift.sh;wget https://raw.github.com/openshift/openshift-extras/enterprise-1.2/enterprise/install-scripts/generic/openshift.sh
+            - rm -f /root/openshift.sh;wget https://raw.githubusercontent.com/openshift/openshift-extras/enterprise-1.2/enterprise/install-scripts/generic/openshift.sh
             - '
 
               '

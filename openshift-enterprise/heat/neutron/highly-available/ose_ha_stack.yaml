@@ -431,7 +431,7 @@ resources:
             export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
             export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
 
-            curl -O https://raw.github.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
+            curl -O https://raw.githubusercontent.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
             chmod +x ./openshift.sh
             ./openshift.sh 2>&1 | tee /tmp/openshift.out
             sed -i '/type master/a \
@@ -536,7 +536,7 @@ resources:
             export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
             export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
 
-            curl -O https://raw.github.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
+            curl -O https://raw.githubusercontent.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
             chmod +x ./openshift.sh
             ./openshift.sh 2>&1 | tee /tmp/openshift.out
             setenforce 1
@@ -626,7 +626,7 @@ resources:
             export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
             export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
 
-            curl -O https://raw.github.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
+            curl -O https://raw.githubusercontent.com/openshift/openshift-extras/enterprise-P_OSE_VERSION/enterprise/install-scripts/generic/openshift.sh -k
             chmod +x ./openshift.sh
             ./openshift.sh 2>&1 | tee /tmp/openshift.out
             setenforce 1
