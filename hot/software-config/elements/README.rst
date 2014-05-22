@@ -28,7 +28,7 @@ with the following:
   git clone https://git.openstack.org/openstack/heat-templates.git
   export ELEMENTS_PATH=tripleo-image-elements/elements:heat-templates/hot/software-config/elements
   diskimage-builder/bin/disk-image-create vm \
-    fedora \
+    fedora selinux-permissive \
     heat-config \
     os-collect-config \
     os-refresh-config \
