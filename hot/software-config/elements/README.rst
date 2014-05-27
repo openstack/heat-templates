@@ -33,6 +33,7 @@ with the following:
     os-collect-config \
     os-refresh-config \
     os-apply-config \
+    heat-config-ansible \
     heat-config-cfn-init \
     heat-config-puppet \
     heat-config-script \
