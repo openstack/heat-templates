@@ -1,0 +1,89 @@
+heat_template_version: 2013-05-23
+
+description: >
+  This is a very simple template that illustrates the basic features
+  of OS::Heat::AutoScalingGroup and demonstrates that these features
+  are available even when the scaled resource is a nested stack.  By
+  virtue of its simplicity this example should be usable in many
+  contexts.  In particular, this example does not require Neutron nor
+  a load balancer nor any particular support for software in the VMs.
+  In fact, the VMs in this example do not actually do anything.  This
+  example does no automatic scaling, but does discuss manual scaling.
+  For a more complete example, see autoscaling.yaml.
+
+parameters:
+  key_name:
+    type: string
+    description: Name of an existing key pair to use for the instances
+    constraints:
+      - custom_constraint: nova.keypair
+        description: Must name a public key (pair) known to Nova
+  flavor:
+    type: string
+    description: Flavor for the instances to be created
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+        description: Must be a flavor known to Nova
+  image:
+    type: string
+    description: >
+      Name or ID of the image to use for the instances.
+      You can get the default from
+      http://cloud.fedoraproject.org/fedora-20.x86_64.qcow2
+      There is also
+      http://cloud.fedoraproject.org/fedora-20.i386.qcow2
+      Any image should work since this template
+      does not ask the VMs to do anything.
+    constraints:
+      - custom_constraint: glance.image
+        description: Must identify an image known to Glance
+  network:
+    type: string
+    description: The network for the VM
+    default: private
+
+resources:
+  asg:
+    type: OS::Heat::AutoScalingGroup
+    properties:
+      resource:
+        type: vm_with_cinder.yaml
+        properties:
+            key_name: { get_param: key_name }
+            image: { get_param: image }
+            flavor: { get_param: flavor }
+            network: { get_param: network }
+      min_size: 1
+      desired_capacity: 3
+      max_size: 5
+
+  scale_up_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: {get_resource: asg}
+      cooldown: 60
+      scaling_adjustment: 1
+
+  scale_dn_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: {get_resource: asg}
+      cooldown: 60
+      scaling_adjustment: '-1'
+
+outputs:
+  scale_up_url:
+    description: >
+      This URL is the webhook to scale up the group.  You can invoke
+      the scale-up operation by doing an HTTP POST to this URL; no
+      body nor extra headers are needed.
+    value: {get_attr: [scale_up_policy, alarm_url]}
+  scale_dn_url:
+    description: >
+      This URL is the webhook to scale down the group.  You can invoke
+      the scale-down operation by doing an HTTP POST to this URL; no
+      body nor extra headers are needed.
+    value: {get_attr: [scale_dn_policy, alarm_url]}
