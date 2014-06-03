@@ -43,6 +43,7 @@ resources:
       network_id: { get_param: private_net_id }
       fixed_ips:
         - subnet_id: { get_param: private_subnet_id }
+      security_groups: [{ get_resource: server_security_group }]
 
   server1_floating_ip:
     type: OS::Neutron::FloatingIP
@@ -66,12 +67,26 @@ resources:
       network_id: { get_param: private_net_id }
       fixed_ips:
         - subnet_id: { get_param: private_subnet_id }
+      security_groups: [{ get_resource: server_security_group }]
 
   server2_floating_ip:
     type: OS::Neutron::FloatingIP
     properties:
       floating_network_id: { get_param: public_net_id }
       port_id: { get_resource: server2_port }
+
+  server_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: Add security group rules for server
+      name: security-group
+      rules:
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: icmp
 
 outputs:
   server1_private_ip:
