@@ -64,7 +64,7 @@
       "Default": "F17",
       "Description" : "Distribution of choice",
       "Type": "String",
-      "AllowedValues" : [ "F18", "F17", "U10", "RHEL-6.1", "RHEL-6.2", "RHEL-6.3" ]
+      "AllowedValues" : [ "F17" ]
     }
   },
 
@@ -77,12 +77,7 @@
       "m1.xlarge"   : { "Arch" : "64" }
     },
     "DistroArch2AMI": {
-      "F18"      : { "32" : "F18-i386-gold", "64" : "F18-x86_64-gold" },
       "F17"      : { "32" : "F17-i386-gold", "64" : "F17-x86_64-gold" },
-      "U10"      : { "32" : "U10-i386-gold", "64" : "U10-x86_64-gold" },
-      "RHEL-6.1" : { "32" : "rhel61-i386-gold", "64" : "rhel61-x86_64-gold" },
-      "RHEL-6.2" : { "32" : "rhel62-i386-gold", "64" : "rhel62-x86_64-gold" },
-      "RHEL-6.3" : { "32" : "rhel63-i386-gold", "64" : "rhel63-x86_64-gold" }
     }
   },
 
