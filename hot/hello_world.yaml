@@ -1,55 +1,54 @@
-# This is a hello world HOT template just defining a single compute instance
+# This is a hello world template that defines a single compute instance using HOT syntax.
 heat_template_version: 2013-05-23
 
 description: >
-  Hello world HOT template that just defines a single compute instance.
-  Contains just base features to verify base HOT support.
+  A hello world template that defines a single compute instance.
+  Contains only base features in order to verify support of HOT syntax.
 
 parameters:
-  KeyName:
+  key_name:
     type: string
-    description: Name of an existing key pair to use for the instance
-  InstanceType:
+    description: Name of an existing key pair to use for the server
+  image:
     type: string
-    description: Instance type for the instance to be created
+    description: ID of the image to use for the server
+  flavor:
+    type: string
+    description: Flavor of server to be created
     default: m1.small
     constraints:
       - allowed_values: [m1.tiny, m1.small, m1.large]
-        description: Value must be one of 'm1.tiny', 'm1.small' or 'm1.large'
-  ImageId:
-    type: string
-    description: ID of the image to use for the instance
-  # parameters below are not used in template, but are for verifying parameter
-  # validation support in HOT
+        description: Must be one of 'm1.tiny', 'm1.small', or 'm1.large'
+  # The following parameters are only used to verify
+  # validation support using HOT syntax.
   db_password:
     type: string
     description: Database password
     hidden: true
     constraints:
       - length: { min: 6, max: 8 }
-        description: Password length must be between 6 and 8 characters
+        description: Must be between 6 and 8 characters
       - allowed_pattern: "[a-zA-Z0-9]+"
-        description: Password must consist of characters and numbers only
+        description: Must consist of letters and numbers
       - allowed_pattern: "[A-Z]+[a-zA-Z0-9]*"
-        description: Password must start with an uppercase character
+        description: Must start with an uppercase letter
   db_port:
     type: number
     description: Database port number
     default: 50000
     constraints:
       - range: { min: 40000, max: 60000 }
-        description: Port number must be between 40000 and 60000
+        description: Must be between 40000 and 60000
 
 resources:
-  my_instance:
-    # Use an AWS resource type since this exists; so why use other name here?
-    type: AWS::EC2::Instance
+  my_server:
+    type: OS::Nova::Server
     properties:
-      KeyName: { get_param: KeyName }
-      ImageId: { get_param: ImageId }
-      InstanceType: { get_param: InstanceType }
+      key_name: { get_param: key_name }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
 
 outputs:
-  instance_ip:
-    description: The IP address of the deployed instance
-    value: { get_attr: [my_instance, PublicIp] }
+  server_ip:
+    description: IP address of the deployed server
+    value: { get_attr: [my_server, networks, public, 0] }
