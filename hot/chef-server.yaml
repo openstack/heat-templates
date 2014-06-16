@@ -120,7 +120,7 @@ resources:
             elif [ "$(grep -i ubuntu /etc/lsb-release)" ];then
               install_apt_packages
             else
-              echo "The OS has detection failed."
+              echo "The OS detection has failed."
               exit 1
             fi
 
