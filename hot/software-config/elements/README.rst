@@ -35,6 +35,7 @@ with the following:
     os-apply-config \
     heat-config-cfn-init \
     heat-config-puppet \
+    heat-config-salt \
     heat-config-script \
     -o fedora-software-config.qcow2
   glance image-create --disk-format qcow2 --container-format bare --name fedora-software-config < \
