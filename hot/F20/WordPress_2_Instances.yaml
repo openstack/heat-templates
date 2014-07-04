@@ -12,7 +12,7 @@ parameters:
   key_name:
     type: string
     description : Name of a KeyPair to enable SSH access to the instance
-    default: test_key
+    default: demokey
 
   instance_type:
     type: string
@@ -29,8 +29,18 @@ parameters:
       Recommended values are fedora-20.i386 or fedora-20.x86_64;
       get them from http://cloud.fedoraproject.org/fedora-20.i386.qcow2
       or http://cloud.fedoraproject.org/fedora-20.x86_64.qcow2 .
-    default: fedora-20.x86_64
-
+    default: Centos-64.x86_64-cloud-heat
+  
+  public_net_id:
+    type: string
+    description: ID of public network for which floating IP addresses will be allocated  
+  private_net_id:
+    type: string
+    description: ID of private network into which servers get deployed
+  private_subnet_id:
+    type: string
+    description: ID of private sub network into which servers get deployed
+  
   db_name:
     type: string
     description: WordPress database name
@@ -78,7 +88,6 @@ parameters:
       - allowed_pattern: '[a-zA-Z0-9]*'
         description: db_root_password must contain only alphanumeric characters
 
-
 resources:
   DatabaseServer:
     type: OS::Nova::Server
@@ -91,17 +100,14 @@ resources:
           template: |
             #!/bin/bash -v
 
-            yum -y install mariadb mariadb-server
-            touch /var/log/mariadb/mariadb.log
-            chown mysql.mysql /var/log/mariadb/mariadb.log
-            systemctl start mariadb.service
+            yum -y install mysql mysql-server
+            service mysqld start
 
             # Setup MySQL root password and create a user
             mysqladmin -u root password db_rootpassword
             cat << EOF | mysql -u root --password=db_rootpassword
             CREATE DATABASE db_name;
-            GRANT ALL PRIVILEGES ON db_name.* TO "db_user"@"%"
-            IDENTIFIED BY "db_password";
+            GRANT ALL PRIVILEGES ON db_name.* TO "db_user"@"%" IDENTIFIED BY "db_password";
             FLUSH PRIVILEGES;
             EXIT
             EOF
@@ -110,6 +116,14 @@ resources:
             db_name: { get_param: db_name }
             db_user: { get_param: db_username }
             db_password: { get_param: db_password }
+      networks:
+        - port: { get_resource: DatabaseServer_port }
+  DatabaseServer_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
 
   WebServer:
     type: OS::Nova::Server
@@ -123,22 +137,33 @@ resources:
             #!/bin/bash -v
 
             yum -y install httpd wordpress
-
+            echo "db ip address: $db_ipaddr" >> /tmp/db.txt
             sed -i "/Deny from All/d" /etc/httpd/conf.d/wordpress.conf
             sed -i "s/Require local/Require all granted/" /etc/httpd/conf.d/wordpress.conf
             sed -i s/database_name_here/db_name/ /etc/wordpress/wp-config.php
             sed -i s/username_here/db_user/      /etc/wordpress/wp-config.php
             sed -i s/password_here/db_password/  /etc/wordpress/wp-config.php
-            sed -i s/localhost/db_ipaddr/        /etc/wordpress/wp-config.php
-            setenforce 0 # Otherwise net traffic with DB is disabled
-            systemctl start httpd.service
+            sed -i s/localhost/$db_ipaddr/        /etc/wordpress/wp-config.php
+            service httpd start
           params:
             db_rootpassword: { get_param: db_root_password }
             db_name: { get_param: db_name }
             db_user: { get_param: db_username }
             db_password: { get_param: db_password }
-            db_ipaddr: { get_attr: [DatabaseServer, networks, private, 0] }
-
+            $db_ipaddr: { get_attr: [DatabaseServer, first_address ] }
+      networks:
+        - port: { get_resource: WebServer_port }
+  WebServer_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+  WebServer_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: WebServer_port }
 outputs:
   WebsiteURL:
     description: URL for Wordpress wiki
