@@ -48,6 +48,14 @@ def invoke_hook(c, log):
             log.warn('Skipping group %s with no hook script %s' % (
                 c['group'], hook_path))
         else:
+            # Sanitize input values (bug 1333992). Convert all String
+            # inputs to strings if they're not already
+            hot_inputs = c.get('inputs', [])
+            for hot_input in hot_inputs:
+                if hot_input.get('type', None) == 'String' and \
+                        not isinstance(hot_input['value'], basestring):
+                    hot_input['value'] = str(hot_input['value'])
+
             log.debug('Running %s' % hook_path)
             subproc = subprocess.Popen([hook_path],
                                        stdin=subprocess.PIPE,
