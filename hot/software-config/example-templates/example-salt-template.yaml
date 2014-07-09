@@ -1,0 +1,110 @@
+heat_template_version: 2013-05-23
+parameters:
+  key_name:
+    type: string
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+    default: fedora-software-config
+
+resources:
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: salt
+      inputs:
+      - name: pkg-redhat
+      - name: pkg-debian
+      outputs:
+      - name: out
+      config:
+        get_file: config-scripts/example-salt-state.sls
+
+  structured_config:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: salt
+      inputs:
+      - name: pkg-redhat
+      - name: svc-redhat
+      config:
+        inline_sls:
+          pkg.installed:
+            - name: {get_input: pkg-redhat}
+          service.running:
+            - name: {get_input: svc-redhat}
+            - require:
+              - pkg: {get_input: pkg-redhat}
+
+  deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        pkg-redhat: httpd
+        pkg-debian: apache2
+
+  other_deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        pkg-redhat: mariadb-server
+        pkg-debian: mysql-server
+
+  structured_deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      config:
+        get_resource: structured_config
+      server:
+        get_resource: server
+      input_values:
+        pkg-redhat: mariadb-server
+        svc-redhat: mysqld
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: SOFTWARE_CONFIG
+
+outputs:
+  status_code_deployment:
+    value:
+      get_attr: [deployment, deploy_status_code]
+  status_code_other_deployment:
+    value:
+      get_attr: [other_deployment, deploy_status_code]
+  status_code_structured_deployment:
+    value:
+      get_attr: [structured_deployment, deploy_status_code]
+  stdout:
+    value:
+      get_attr: [deployment, deploy_stdout]
+  stderr:
+    value:
+      get_attr: [deployment, deploy_stderr]

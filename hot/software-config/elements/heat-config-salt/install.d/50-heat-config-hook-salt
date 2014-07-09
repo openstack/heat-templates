@@ -1,0 +1,8 @@
+#!/bin/bash
+set -x
+
+SCRIPTDIR=$(dirname $0)
+
+install-packages salt-minion
+
+install -D -g root -o root -m 0755 ${SCRIPTDIR}/hook-salt.py /var/lib/heat-config/hooks/salt
