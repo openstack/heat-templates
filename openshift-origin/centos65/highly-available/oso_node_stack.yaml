@@ -1,0 +1,244 @@
+heat_template_version: 2013-05-23
+description: >
+  Template (HOT) for deploying an OpenShift node with attached cinder volume
+  with floating IP. May be used stand-alone for scaling out nodes or as part of
+  the HA nested stack.
+parameter_groups:
+- label: General parameters
+  description: General OpenShift parameters
+  parameters:
+  - broker1_hostname
+  - broker1_floating_ip
+  - node_hostname
+  - load_bal_hostname
+  - node_image
+  - node_server_flavor
+- label: Networking parameters
+  description: Networking-related parameters
+  parameters:
+  - domain
+  - hosts_domain
+  - named_hostname
+  - named_ip
+  - replicants
+  - cartridges
+  - public_net_id
+  - private_net_id
+  - private_subnet_id
+- label: Credentials
+  description: >
+    Username and password parameters for OpenShift and dependent service
+  parameters:
+  - mcollective_user
+  - mcollective_pass
+  - activemq_admin_pass
+  - activemq_user_pass
+parameters:
+  key_name:
+    description: Name of an existing keypair to enable SSH access to the instances
+    type: string
+  domain:
+    description: Your DNS domain
+    type: string
+  hosts_domain:
+    description: Openshift hosts domain
+    type: string
+  avail_zone:
+    description: >
+      Availability zone to ensure distribution of brokers and nodes
+    type: string
+    default: nova
+  node_server_flavor:
+    description: Flavor of node servers
+    type: string
+    default: m1.medium
+  node_vol_size:
+    description: Node cinder volume size (GB)
+    type: number
+    default: 12
+  broker1_hostname:
+    description: Broker 1 hostname
+    type: string
+    default: broker1
+  broker1_floating_ip:
+    description: Broker 1 floating ip
+    type: string
+  node_hostname:
+    description: Node hostname
+    type: string
+    default: node
+  load_bal_hostname:
+    description: Load balancer hostname
+    type: string
+    default: broker
+  node_image:
+    description: Node image name
+    type: string
+    default: RHEL65-x86_64-node
+  openshift_extra_repo_base:
+    description: OSE Extra Repository Base URL
+    type: string
+    default: ""
+  openshift_repo_base:
+    description: OSE Repository Base URL
+    type: string
+    default: ""
+  jboss_repo_base:
+    description: JBoss Repository Base URL
+    type: string
+    default: ""
+  named_hostname:
+    description: named server hostname
+    type: string
+    default: broker1
+  named_ip:
+    description: named server IP address
+    type: string
+    default: ""
+  upstream_dns_ip:
+    description: Upstream DNS IP address for zone transfer
+    type: string
+    default: ""
+  replicants:
+    description: >
+      Comma-separated list (no spaces) of broker hosts (FQDN) running ActiveMQ and MongoDB
+    type: string
+  cartridges:
+    description: >
+      Cartridges to install. "all" for all cartridges; "standard" for all cartridges except for JBossEWS or JBossEAP
+    type: string
+    default: "cron,diy,haproxy,mysql,nodejs,perl,php,postgresql,python,ruby"
+  public_net_id:
+    type: string
+    description: >
+      ID of public network for which floating IP addresses will be allocated
+  private_net_id:
+    type: string
+    description: ID of private network into which servers get deployed
+  private_subnet_id:
+    type: string
+    description: ID of private sub network into which servers get deployed
+  mcollective_user:
+    description: MCollective username
+    type: string
+    default: mcollective
+  mcollective_pass:
+    description: MCollective password
+    type: string
+    hidden: true
+  activemq_admin_pass:
+    description: ActiveMQ admin user password
+    type: string
+    hidden: true
+  activemq_user_pass:
+    description: ActiveMQ user password
+    type: string
+    hidden: true
+
+resources:
+  oso_node_sec_grp:
+    type: AWS::EC2::SecurityGroup
+    properties:
+      GroupDescription: Node firewall rules
+      SecurityGroupIngress:
+      - {IpProtocol: tcp, FromPort: '22', ToPort: '22', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: udp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '53', ToPort: '53', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '80', ToPort: '80', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '443', ToPort: '443', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '8000', ToPort: '8000', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '8443', ToPort: '8443', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '2303', ToPort: '2308', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '35531', ToPort: '65535', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '27017', ToPort: '27017', CidrIp: 0.0.0.0/0}
+
+  node_port:
+    type: OS::Neutron::Port
+    properties:
+      security_groups: [{ get_resource: oso_node_sec_grp }]
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+
+  node_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: node_port }
+
+###
+# Node
+###
+  node_instance:
+    type: OS::Nova::Server
+    properties:
+      name: oso_node
+      image: { get_param: node_image }
+      flavor: { get_param: node_server_flavor }
+      availability_zone: { get_param: avail_zone }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: node_port }
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -x
+
+            export CONF_BROKER_IP_ADDR=P_BROKER_FLOATING_IP
+            export CONF_NODE_IP_ADDR=P_NODE_FLOATING_IP
+            export CONF_DOMAIN=P_DOMAIN
+            export CONF_BROKER_HOSTNAME=P_LOAD_BAL_HOSTNAME
+            export CONF_NODE_HOSTNAME=P_NODE_HOSTNAME
+            export CONF_NAMED_HOSTNAME=P_NAMED_HOSTNAME
+            export CONF_NAMED_IP_ADDR=P_NAMED_IP
+            export CONF_DATASTORE_REPLICANTS=P_REPLICANTS
+            export CONF_ACTIVEMQ_REPLICANTS=P_REPLICANTS
+            export CONF_CARTRIDGES=P_CONF_CARTRIDGES
+            export CONF_INSTALL_METHOD='osoyum'
+            export CONF_OSE_REPOS_BASE=P_CONF_OSE_REPOS_BASE
+            export CONF_OSE_EXTRA_REPO_BASE=P_CONF_OSE_EXTRA_REPOS_BASE
+            export CONF_JBOSS_REPO_BASE=P_CONF_JBOSS_REPO_BASE
+            export CONF_INSTALL_COMPONENTS=node
+            export CONF_ACTIONS=do_all_actions
+            export CONF_MCOLLECTIVE_USER=P_CONF_MCOLLECTIVE_USER
+            export CONF_MCOLLECTIVE_PASSWORD=P_CONF_MCOLLECTIVE_PASSWORD
+            export CONF_ACTIVEMQ_ADMIN_PASSWORD=P_CONF_ACTIVEMQ_ADMIN_PASSWORD
+            export CONF_ACTIVEMQ_AMQ_USER_PASSWORD=P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD
+
+            while [ ! -f openshift.sh ]; do
+              echo "Attempting to fetch installer script"
+              curl -O https://raw.githubusercontent.com/jpeeler/openshift-extras/enterprise-2.0/enterprise/install-scripts/generic/openshift.sh -k
+              return=$?
+              echo "Attempt resulted in $result"
+              sleep 5
+            done
+
+            chmod +x ./openshift.sh
+            ./openshift.sh 2>&1 | tee /tmp/openshift.out
+            setenforce 1
+            cd /etc/init.d
+            for i in `ls cloud-*`; do chkconfig $i off; done
+
+            reboot
+          params:
+            P_BROKER_FLOATING_IP: { get_param: broker1_floating_ip }
+            P_NODE_FLOATING_IP: { get_attr: [ node_floating_ip, floating_ip_address ] }
+            P_DOMAIN: { get_param: domain }
+            P_HOSTS_DOMAIN: { get_param: hosts_domain }
+            P_LOAD_BAL_HOSTNAME: { get_param: load_bal_hostname }
+            P_NODE_HOSTNAME: { get_param: node_hostname }
+            P_NAMED_HOSTNAME: { get_param: named_hostname }
+            P_NAMED_IP: { get_param: broker1_floating_ip }
+            P_REPLICANTS: { get_param: replicants }
+            P_CONF_CARTRIDGES: { get_param: cartridges }
+            P_CONF_OSE_REPOS_BASE: { get_param: openshift_repo_base}
+            P_CONF_OSE_EXTRA_REPOS_BASE: { get_param: openshift_extra_repo_base}
+            P_CONF_JBOSS_REPO_BASE: { get_param: jboss_repo_base}
+            P_CONF_MCOLLECTIVE_USER: { get_param: mcollective_user }
+            P_CONF_MCOLLECTIVE_PASSWORD: { get_param: mcollective_pass }
+            P_CONF_ACTIVEMQ_ADMIN_PASSWORD: { get_param: activemq_admin_pass }
+            P_CONF_ACTIVEMQ_AMQ_USER_PASSWORD: { get_param: activemq_user_pass }
+
+outputs:
+  node_floating_ip:
+    value: { get_attr: [ node_floating_ip, floating_ip_address ] }

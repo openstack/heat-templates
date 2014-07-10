@@ -1,0 +1,19 @@
+parameters:
+  # existing OpenStack keypair
+  key_name: mykey
+  domain: example.com
+  hosts_domain: example.com
+  broker1_floating_ip: 10.0.0.1
+  # list of HA broker set
+  replicants: broker1.example.com,broker2.example.com,broker3.example.com
+  # Name of glance image. Using prepped images will greatly reduce deploy time.
+  node_image: RHEL65-x86_64-node
+  activemq_admin_pass: password
+  activemq_user_pass: password
+  mcollective_pass: password
+  mongo_broker_pass: password
+  openshift_pass1: password
+  # Use 'neutron net-list' and 'neutron subnet-list' and replace these values
+  private_net_id: ec6c8237-1368-42c2-af6a-2c5a6b41951b
+  public_net_id: c5882794-fa7d-46b2-b90a-e37e47fabdf8
+  private_subnet_id: 8977e24c-32c6-4fb1-ae9f-6f70c16ecf0d
