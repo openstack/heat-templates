@@ -20,4 +20,4 @@ parameters:
   public_net_id: c5882794-fa7d-46b2-b90a-e37e47fabdf8
   private_subnet_id: 8977e24c-32c6-4fb1-ae9f-6f70c16ecf0d
 resource_registry:
-  OpenShift::Node::Server: oso_node_stack.yaml
+  OpenShift::Node::Server: oso_node.yaml
