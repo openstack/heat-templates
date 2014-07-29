@@ -1,29 +1,33 @@
-# This is a hello world HOT template just defining a single compute instance
+#
+# This is a hello world HOT template just defining a single compute
+# server.
+#
 heat_template_version: 2013-05-23
 
 description: >
-  Hello world HOT template that just defines a single compute instance.
+  Hello world HOT template that just defines a single server.
   Contains just base features to verify base HOT support.
 
 parameters:
-  KeyName:
+  key_name:
     type: string
-    description: Name of an existing key pair to use for the instance
-  InstanceType:
+    description: Name of an existing key pair to use for the server
+    constraints:
+      - custom_constraint: nova.keypair
+  flavor:
     type: string
-    description: Instance type for the instance to be created
+    description: Flavor for the server to be created
     default: m1.small
     constraints:
-      - allowed_values: [m1.tiny, m1.small, m1.large]
-        description: Value must be one of 'm1.tiny', 'm1.small' or 'm1.large'
-  ImageId:
+      - custom_constraint: nova.flavor
+  image:
     type: string
-    description: ID of the image to use for the instance
-  # parameters below are not used in template, but are for verifying parameter
-  # validation support in HOT
-  db_password:
+    description: Image ID or image name to use for the server
+    constraints:
+      - custom_constraint: glance.image
+  admin_pass:
     type: string
-    description: Database password
+    description: Admin password
     hidden: true
     constraints:
       - length: { min: 6, max: 8 }
@@ -41,15 +45,22 @@ parameters:
         description: Port number must be between 40000 and 60000
 
 resources:
-  my_instance:
-    # Use an AWS resource type since this exists; so why use other name here?
-    type: AWS::EC2::Instance
+  server:
+    type: OS::Nova::Server
     properties:
-      KeyName: { get_param: KeyName }
-      ImageId: { get_param: ImageId }
-      InstanceType: { get_param: InstanceType }
+      key_name: { get_param: key_name }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      admin_pass: { get_param: admin_pass }
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash
+            echo db_port
+          params:
+            db_port: { get_param: db_port }
 
 outputs:
-  instance_ip:
-    description: The IP address of the deployed instance
-    value: { get_attr: [my_instance, PublicIp] }
+  server_networks:
+    description: The networks of the deployed server
+    value: { get_attr: [server, networks] }
