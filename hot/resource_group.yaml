@@ -1,0 +1,24 @@
+heat_template_version: 2013-05-23
+
+resources:
+  random_group:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: 2
+      resource_def:
+        type: OS::Heat::RandomString
+
+outputs:
+  # Note for RandomString the resource ID is set to the random string
+  # value, for other resources the ID returned will be the uuid of the
+  # actual resource
+  resource1_id:
+    value: {get_attr: [random_group, resource.0]}
+  resource2_id:
+    value: {get_attr: [random_group, resource.1]}
+  # The last part of the resource.0.value specifies the attribute of the
+  # nested resource to access, e.g in this case 'value'
+  resource1_value:
+    value: {get_attr: [random_group, resource.0.value]}
+  resource2_value:
+    value: {get_attr: [random_group, resource.1.value]}
