@@ -1,0 +1,493 @@
+heat_template_version: 2013-05-23
+
+description: Template for setting up an OpenShift Origin environment
+
+parameters:
+  prefix:
+    description: Your DNS Prefix
+    type: string
+    default: example.com
+  upstream_dns:
+    description: Upstream DNS server
+    type: string
+    default: 8.8.8.8
+  upstream_ntp:
+    description: Upstream NTP server
+    type: string
+    default: clock.redhat.com
+  broker_flavor:
+    description: Flavor of Broker instance
+    type: string
+    default: m1.medium
+  node_flavor:
+    description: Flavor of Node instance
+    type: string
+    default: m1.medium
+  broker_hostname:
+    description: Hostname of Broker instance
+    type: string
+    default: brokerinstance
+  node_hostname:
+    description: Hostname of Node instance
+    type: string
+    default: nodeinstance
+  username:
+    description: Username for accessing OpenShift Origin
+    type: string
+    default: openshift
+  password:
+    description: Password for accessing OpenShift Origin
+    type: string
+    default: password
+  public_net_id:
+    description: External network ID
+    type: string
+  private_network_name:
+    description: Name of the private network wich will be created
+    type: string
+    default: OpenShift-Network
+  private_network_cidr:
+    description: Private network address (CIDR format)
+    type: string
+    default: 10.0.0.0/8
+  private_network_gateway:
+    description: Private network gateway
+    type: string
+    default: 10.0.0.1
+  private_network_dns:
+    description: Private network DNS
+    type: string
+    default: 8.8.8.8
+  private_network_pool_start:
+    description: Private network pool start
+    type: string
+    default: 10.0.0.2
+  private_network_pool_end:
+    description: Private network pool end
+    type: string
+    default: 10.255.255.254
+  dev_mode:
+    description: Sets development mode and extra logging.
+    type: string
+    default: false
+  puppet_module_url:
+    description: Sets the URL to pull the OpenShift Origin Puppet module from.
+    type: string
+    default: https://github.com/openshift/puppet-openshift_origin.git
+  puppet_module_branch:
+    description: Sets the repo branch to pull the OpenShift Origin Puppet module from.
+    type: string
+    default: master
+  public_ssh_key:
+    description: Public key that will be used for SSH connection to instances
+    type: string
+  ssh_key_name:
+    description: SSHKey name
+    type: string
+    default: OpenshiftSSHKey
+  image_broker_name:
+    description: Name of the image you have created for the broker with diskimage-builder
+    type: string
+    default: F19-x86_64-openshift-origin-broker
+  image_node_name:
+    description: Name of the image you have created for the node with diskimage-builder
+    type: string
+    default: F19-x86_64-openshift-origin-node
+  openshift_version:
+    description: Version of openshift puppet module, leave the default value if you want to use a production version
+    type: string
+    constraints:
+      - allowed_values:
+        - git checkout 722687c
+        - git checkout master
+    default: git checkout 722687c
+  stdlib_version:
+    description: Version of stdlib puppet module, leave the default value if you want to use a production version
+    type: string
+    constraints:
+      - allowed_values:
+        - puppetlabs/stdlib --version 4.3.2
+        - puppetlabs/stdlib
+    default: puppetlabs/stdlib --version 4.3.2
+  ntp_version:
+    description: Version of ntp puppet module, leave the default value if you want to use a production version
+    type: string
+    constraints:
+      - allowed_values:
+        - puppetlabs/ntp --version 3.1.2
+        - puppetlabs/ntp
+    default: puppetlabs/ntp --version 3.1.2
+  concat_version:
+    description: Version of concat puppet module, leave the default value if you want to use a production version
+    type: string
+    constraints:
+      - allowed_values:
+        - puppetlabs-concat --version 1.0.4
+        - puppetlabs-concat
+    default: puppetlabs-concat --version 1.0.4
+  lokkit_version:
+    description: Version of lokkit puppet module, leave the default value if you want to use a production version
+    type: string
+    constraints:
+      - allowed_values:
+        - rharrison-lokkit --version 0.5.0
+        - rharrison-lokkit
+    default: rharrison-lokkit --version 0.5.0
+  selinux_types_version:
+    description: Version of selinux_types puppet module, leave the default value if you want to use a production version
+    type: string
+    constraints:
+      - allowed_values:
+        - blentz-selinux_types --version 0.1.0
+        - blentz-selinux_types
+    default: blentz-selinux_types --version 0.1.0
+  haproxy_version:
+    description: Version of haproxy puppet module, leave the default value if you want to use a production version
+    type: string
+    constraints:
+      - allowed_values:
+        - puppetlabs/haproxy --version 1.0.0
+        - puppetlabs/haproxy
+    default: puppetlabs/haproxy --version 1.0.0
+  keepalived_version:
+    description: Version of keepalived puppet module, leave the default value if you want to use a production version
+    type: string
+    constraints:
+      - allowed_values:
+        - arioch/keepalived --version 0.1.0
+        - arioch/keepalived
+    default: arioch/keepalived --version 0.1.0
+  sysctl_version:
+    description: Version of sysctl puppet module, leave the default value if you want to use a production version
+    type: string
+    constraints:
+      - allowed_values:
+        - duritong-sysctl --version 0.0.4
+        - duritong-sysctl
+    default: duritong-sysctl --version 0.0.4
+
+resources:
+    openshift_origin_security_group:
+      type: OS::Neutron::SecurityGroup
+      properties:
+        description: OpenShift Origin Firewall Rules
+        rules: [
+          {
+            "remote_ip_prefix": 0.0.0.0/0,
+            "protocol": icmp
+          },
+          {
+            "remote_ip_prefix": 0.0.0.0/0,
+            "protocol": tcp,
+            "port_range_min": 22,
+            "port_range_max": 22
+          },
+          {
+            "remote_ip_prefix": 0.0.0.0/0,
+            "protocol": udp,
+            "port_range_min": 53,
+            "port_range_max": 53
+          },
+          {
+            "remote_ip_prefix": 0.0.0.0/0,
+            "protocol": tcp,
+            "port_range_min": 80,
+            "port_range_max": 80
+          },
+          {
+            "remote_ip_prefix": 0.0.0.0/0,
+            "protocol": tcp,
+            "port_range_min": 443,
+            "port_range_max": 443
+          },
+          {
+            "remote_ip_prefix": 0.0.0.0/0,
+            "protocol": tcp,
+            "port_range_min": 8443,
+            "port_range_max": 8443
+          },
+          {
+            "remote_ip_prefix": 0.0.0.0/0,
+            "protocol": tcp,
+            "port_range_min": 8000,
+            "port_range_max": 8000
+          },
+          {
+            "remote_ip_prefix": 0.0.0.0/0,
+            "protocol": tcp,
+            "port_range_min": 8080,
+            "port_range_max": 8080
+          },
+          {
+            "remote_ip_prefix": 0.0.0.0/0,
+            "protocol": tcp,
+            "port_range_min": 61613,
+            "port_range_max": 61613
+          }
+        ]
+
+    ssh_key:
+      type: OS::Nova::KeyPair
+      properties:
+        name: {get_param: ssh_key_name}
+        public_key: {get_param: public_ssh_key}
+
+    private_network:
+      type: OS::Neutron::Net
+      properties:
+        name: {get_param: private_network_name}
+
+    private_sub_network:
+      type: OS::Neutron::Subnet
+      properties:
+        network_id: {get_resource: private_network}
+        cidr: {get_param: private_network_cidr}
+        gateway_ip: {get_param: private_network_gateway}
+        dns_nameservers: [ {get_param: private_network_dns} ]
+        allocation_pools: [{
+          "start": {get_param: private_network_pool_start},
+          "end": {get_param: private_network_pool_end}
+        }]
+
+    router:
+     type: OS::Neutron::Router
+
+    router_gateway:
+      type: OS::Neutron::RouterGateway
+      properties:
+        router_id: {get_resource: router}
+        network_id: {get_param: public_net_id}
+
+    router_interface:
+      type: OS::Neutron::RouterInterface
+      properties:
+        router_id: {get_resource: router}
+        subnet_id: {get_resource: private_sub_network}
+
+    broker_port:
+      type: OS::Neutron::Port
+      properties:
+        network_id: {get_resource: private_network}
+        fixed_ips: [
+          subnet_id: {get_resource: private_sub_network}
+        ]
+        security_groups: [{get_resource: openshift_origin_security_group}]
+
+    broker_floating_ip:
+      type: OS::Neutron::FloatingIP
+      properties:
+        floating_network_id: {get_param: public_net_id}
+        port_id: {get_resource: broker_port}
+
+    broker_wait_handle:
+      type: AWS::CloudFormation::WaitConditionHandle
+
+    broker_wait_condition:
+      type: AWS::CloudFormation::WaitCondition
+      depends_on: broker_instance
+      properties:
+        Handle: {get_resource: broker_wait_handle}
+        Timeout: 1800
+
+    broker_user_data:
+      type: OS::Heat::SoftwareConfig
+      properties:
+        group: ungrouped
+        config:
+          str_replace:
+            template: |
+              #!/bin/bash -x
+              /usr/sbin/dnssec-keygen -a HMAC-MD5 -b 512 -n USER -r /dev/urandom -K /var/named $Prefix
+              export DNS_SEC_KEY=`cat /var/named/K$Prefix.*.key  | awk '{print $8}'`
+              export PREFIX=$Prefix
+              export UPSTREAM_DNS=$UpstreamDNS
+              export UPSTREAM_NTP=$UpstreamNTP
+              export BROKER_WAIT_HANDLE="$BrokerWaitHandle"
+              export HOSTNAME=$BrokerHostname
+              export USERNAME=$Username
+              export PASSWORD=$Password
+              export DEV_MODE=$DevMode
+              export PUPPET_MODULE_URL=$PuppetURL
+              export PUPPET_MODULE_BRANCH=$PuppetBranch
+              cat << EOF > /root/configure.pp
+              \$my_hostname="${HOSTNAME}.${PREFIX}"
+              exec { "set hostname":
+                command => "/bin/hostname \${my_hostname} ; echo \${my_hostname} > /etc/hostname"
+              }
+              class { 'openshift_origin' :
+                roles                    => ['broker','nameserver','msgserver','datastore'],
+                bind_key                 => '${DNS_SEC_KEY}',
+                domain                   => '${PREFIX}',
+                register_host_with_nameserver => true,
+                conf_nameserver_upstream_dns  => ['${UPSTREAM_DNS}'],
+                ntp_servers              => ['${UPSTREAM_NTP} iburst'],
+                broker_hostname          => \$my_hostname,
+                nameserver_hostname      => \$my_hostname,
+                datastore_hostname       => \$my_hostname,
+                msgserver_hostname       => \$my_hostname,
+                broker_auth_plugin       => 'htpasswd',
+                openshift_user1          => '${USERNAME}',
+                openshift_password1      => '${PASSWORD}',
+                development_mode         => ${DEV_MODE},
+              }
+              EOF
+              mkdir -p /etc/puppet/modules
+              git clone -b ${PUPPET_MODULE_BRANCH} ${PUPPET_MODULE_URL} /etc/puppet/modules/openshift_origin
+              cd /etc/puppet/modules/openshift_origin
+              $OpenShiftVersion
+              puppet module install $StdlibVersion
+              puppet module install $NtpVersion
+              puppet module install $ConcatVersion
+              puppet module install $LokkitVersion
+              puppet module install $SelinuxVersion
+              puppet module install $HaproxyVersion
+              puppet module install $KeepalivedVersion
+              puppet apply --verbose /root/configure.pp | tee /var/log/configure_openshift.log
+              setenforce 0
+              /opt/aws/bin/cfn-signal -e 0 --data "${DNS_SEC_KEY}" -r 'Broker setup complete' ${BROKER_WAIT_HANDLE}
+              chkconfig activemq on
+              service activemq start
+              setenforce 1
+            params:
+              $Prefix: {get_param: prefix}
+              $UpstreamDNS: {get_param: upstream_dns}
+              $UpstreamNTP: {get_param: upstream_ntp}
+              $BrokerWaitHandle: {get_resource: broker_wait_handle}
+              $BrokerHostname: {get_param: broker_hostname}
+              $Username: {get_param: username}
+              $Password: {get_param: password}
+              $DevMode: {get_param: dev_mode}
+              $PuppetURL: {get_param: puppet_module_url}
+              $PuppetBranch: {get_param: puppet_module_branch}
+              $OpenShiftVersion: {get_param: openshift_version}
+              $StdlibVersion: {get_param: stdlib_version}
+              $NtpVersion: {get_param: ntp_version}
+              $ConcatVersion: {get_param: concat_version}
+              $LokkitVersion: {get_param: lokkit_version}
+              $SelinuxVersion: {get_param: selinux_types_version}
+              $HaproxyVersion: {get_param: haproxy_version}
+              $KeepalivedVersion: {get_param: keepalived_version}
+
+    broker_instance:
+      type: OS::Nova::Server
+      properties:
+        image: {get_param: image_broker_name}
+        flavor: {get_param: broker_flavor}
+        key_name: {get_resource: ssh_key}
+        networks: [
+          port: {get_resource: broker_port}
+        ]
+        user_data: {get_resource: broker_user_data}
+        user_data_format: RAW
+
+    node_port:
+      type: OS::Neutron::Port
+      properties:
+        network_id:  {get_resource: private_network}
+        fixed_ips: [
+          subnet_id:  {get_resource: private_sub_network}
+        ]
+        security_groups: [{get_resource: openshift_origin_security_group}]
+
+    node_floating_ip:
+      type: OS::Neutron::FloatingIP
+      properties:
+        floating_network_id:  {get_param: public_net_id}
+        port_id:  {get_resource: node_port}
+
+    node_wait_handle:
+      type: AWS::CloudFormation::WaitConditionHandle
+
+    node_wait_condition:
+      type: AWS::CloudFormation::WaitCondition
+      depends_on: node_instance
+      properties:
+        Handle: {get_resource: node_wait_handle}
+        Timeout: 1800
+
+    node_user_data:
+      type: OS::Heat::SoftwareConfig
+      properties:
+        group: ungrouped
+        config:
+          str_replace:
+            template: |
+              #!/bin/bash -x
+              export DNS_SEC_KEY=`python -c 'print $BrokerWaitConditionData["00000"]'`
+              export BROKER_IP=$BrokerIP
+              export NODE_FLOATING_IP=$NodeFloatingIP
+              export PREFIX=$Prefix
+              export UPSTREAM_DNS=$UpstreamDNS
+              export UPSTREAM_NTP=$UpstreamNTP
+              export NODE_WAIT_HANDLE="$NodeWaitHandle"
+              export HOSTNAME=$NodeHostname
+              export DEV_MODE=$DevMode
+              export PUPPET_MODULE_URL=$PuppetURL
+              export PUPPET_MODULE_BRANCH=$PuppetBranch
+              cat << EOF > /root/configure.pp
+              \$my_hostname="${HOSTNAME}.${PREFIX}"
+              exec { "set hostname":
+                command => "/bin/hostname \${my_hostname} ; echo \${my_hostname} > /etc/hostname"
+              }
+              class { 'openshift_origin' :
+                roles                    => ['node'],
+                bind_key                 => '${DNS_SEC_KEY}',
+                nameserver_ip_addr       => '${BROKER_IP}',
+                domain                   => '${PREFIX}',
+                register_host_with_nameserver => true,
+                broker_hostname          => '${BROKER_IP}',
+                msgserver_hostname       => '${BROKER_IP}',
+                ntp_servers              => ['${UPSTREAM_NTP} iburst'],
+                node_hostname            => \$my_hostname,
+                install_method           => 'yum',
+                jenkins_repo_base        => 'http://pkg.jenkins-ci.org/redhat',
+                development_mode         => ${DEV_MODE},
+                node_ip_addr             => '${NODE_FLOATING_IP}',
+              }
+              EOF
+              mkdir -p /etc/puppet/modules
+              git clone -b ${PUPPET_MODULE_BRANCH} ${PUPPET_MODULE_URL} /etc/puppet/modules/openshift_origin
+              cd /etc/puppet/modules/openshift_origin
+              $OpenShiftVersion
+              puppet module install $StdlibVersion
+              puppet module install $NtpVersion
+              puppet module install $SysctlVersion
+              puppet module install $LokkitVersion
+              puppet module install $HaproxyVersion
+              puppet module install $KeepalivedVersion
+              puppet apply --verbose /root/configure.pp | tee /var/log/configure_openshift.log
+              setenforce 0
+              /opt/aws/bin/cfn-signal -e 0 -r 'Node setup complete' ${NODE_WAIT_HANDLE}
+              setenforce 1
+            params:
+              $BrokerWaitConditionData: {get_attr: [broker_wait_condition, Data]}
+              $BrokerIP: {get_attr: [broker_instance, first_address]}
+              $NodeFloatingIP: {get_attr: [node_floating_ip, floating_ip_address]}
+              $Prefix: {get_param: prefix}
+              $UpstreamDNS: {get_param: upstream_dns}
+              $UpstreamNTP: {get_param: upstream_ntp}
+              $NodeWaitHandle: {get_resource: node_wait_handle}
+              $NodeHostname: {get_param: node_hostname}
+              $DevMode: {get_param: dev_mode}
+              $PuppetURL: {get_param: puppet_module_url}
+              $PuppetBranch: {get_param: puppet_module_branch}
+              $OpenShiftVersion: {get_param: openshift_version}
+              $StdlibVersion: {get_param: stdlib_version}
+              $NtpVersion: {get_param: ntp_version}
+              $SysctlVersion: {get_param: sysctl_version}
+              $LokkitVersion: {get_param: lokkit_version}
+              $SelinuxVersion: {get_param: selinux_types_version}
+              $HaproxyVersion: {get_param: haproxy_version}
+              $KeepalivedVersion: {get_param: keepalived_version}
+
+    node_instance:
+      type: OS::Nova::Server
+      properties:
+        image: {get_param: image_node_name}
+        flavor:  {get_param: node_flavor}
+        key_name: {get_resource: ssh_key}
+        networks: [
+          port:  {get_resource: node_port}
+        ]
+        user_data: {get_resource: node_user_data}
+        user_data_format: RAW
