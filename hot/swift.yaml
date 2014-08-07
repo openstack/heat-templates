@@ -1,5 +1,5 @@
 heat_template_version: 2013-05-23
-description: Template which creates a Swift container ressource
+description: Template which creates a Swift container resource
 
 resources:
   SwiftContainerWebsite:
