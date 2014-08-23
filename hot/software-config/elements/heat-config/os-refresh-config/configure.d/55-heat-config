@@ -74,19 +74,20 @@ def invoke_hook(c, log):
 
             try:
                 if stdout:
-                    signal_data = json.dumps(json.loads(stdout))
+                    signal_data = json.loads(stdout)
             except ValueError:
-                signal_data = json.dumps({
+                signal_data = {
                     'deploy_stdout': stdout,
                     'deploy_stderr': stderr,
                     'deploy_status_code': subproc.returncode,
-                })
+                }
 
         iv = dict((i['name'], i['value']) for i in c['inputs'])
 
         if signal_data:
             if 'deploy_signal_id' in iv:
                 sigurl = iv.get('deploy_signal_id')
+                signal_data = json.dumps(signal_data)
                 log.debug('Signalling to %s with %s' % (sigurl, signal_data))
                 r = requests.post(sigurl, data=signal_data,
                                   headers={'content-type': None})
