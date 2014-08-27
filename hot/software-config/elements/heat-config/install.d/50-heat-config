@@ -1,7 +1,6 @@
 #!/bin/bash
 set -eux
 
-install-packages python-pip
 pip install python-heatclient
 
 SCRIPTDIR=$(dirname $0)
