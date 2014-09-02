@@ -7,9 +7,7 @@
       "KeyName": {
         "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
         "Type": "String",
-        "MinLength": "1",
-        "MaxLength": "64",
-        "AllowedPattern": "[-_ a-zA-Z0-9]*"
+        "Default": "SSHKey"
       },
       "Prefix": {
         "Description": "Your DNS Prefix",
@@ -41,13 +39,13 @@
       "BrokerHostname": {
         "Description": "Hostname of Broker instance",
         "Type": "String",
-        "Default": "openshift.brokerinstance.novalocal",
+        "Default": "brokerinstance",
         "MinLength": "1"
       },
       "NodeHostname": {
         "Description": "Hostname of Node instance",
         "Type": "String",
-        "Default": "openshift.nodeinstance.novalocal",
+        "Default": "nodeinstance",
         "MinLength": "1"
       },
       "Username": {
@@ -60,13 +58,39 @@
         "Type": "String",
         "Default": "password"
       },
-      "NetID": {
-        "Description": "ID of Neutron network into which servers get deployed",
+      "PublicNetID": {
+        "Description": "External  network ID",
          "Type": "String"
       },
-      "SubnetID": {
-        "Description": "ID of Neutron subnet into which servers get deployed",
-        "Type": "String"
+      "PrivateNetworkName": {
+        "Description": "Name of the private network wich will be created",
+        "Type": "String",
+        "Default": "OpenShift-Network"
+      },
+      "PrivateNetworkCidr": {
+        "Description": "Private network address (CIDR format)",
+        "Type": "String",
+        "Default": "10.0.0.0/8"
+      },
+      "PrivateNetworkGateway": {
+        "Description": "Private network gateway",
+        "Type": "String",
+        "Default": "10.0.0.1"
+      },
+      "PrivateNetworkDNS": {
+        "Description": "Private network DNS",
+        "Type": "String",
+        "Default": "8.8.8.8"
+      },
+      "PrivateNetworkPoolStart": {
+        "Description": "Private network pool start",
+        "Type": "String",
+        "Default": "10.0.0.2"
+      },
+      "PrivateNetworkPoolEnd": {
+        "Description": "Private network pool end",
+        "Type": "String",
+        "Default": "10.255.255.254"
       },
       "DevMode": {
         "Description": "Sets development mode and extra logging.",
@@ -148,14 +172,63 @@
         }
       },
 
+      "PrivateNetwork":{
+        "Type": "OS::Neutron::Net",
+        "Properties": {
+          "name": { "Ref": "PrivateNetworkName" }
+        }
+      },
+
+      "PrivateSubNetwork":{
+        "Type": "OS::Neutron::Subnet",
+        "Properties": {
+          "network_id": { "Ref": "PrivateNetwork" },
+          "cidr": { "Ref": "PrivateNetworkCidr" },
+          "gateway_ip": { "Ref": "PrivateNetworkGateway" },
+          "dns_nameservers": [{ "Ref": "PrivateNetworkDNS" }],
+          "allocation_pools": [{
+            "start": {"Ref": "PrivateNetworkPoolStart"},
+            "end": {"Ref": "PrivateNetworkPoolEnd"}
+          }]
+        }
+      },
+
+      "Router":{
+        "Type": "OS::Neutron::Router"
+      },
+
+      "RouterGateway":{
+        "Type": "OS::Neutron::RouterGateway",
+        "Properties": {
+          "router_id": { "Ref": "Router" },
+          "network_id": { "Ref": "PublicNetID" }
+        }
+      },
+
+      "RouterInterface":{
+        "Type": "OS::Neutron::RouterInterface",
+        "Properties": {
+          "router_id": { "Ref": "Router" },
+          "subnet_id": { "Ref": "PrivateSubNetwork" }
+        }
+      },
+
       "BrokerPort": {
         "Type": "OS::Neutron::Port",
         "Properties": {
-          "network_id": { "Ref": "NetID" },
+          "network_id": { "Ref": "PrivateNetwork" },
           "fixed_ips": [{
-            "subnet_id": { "Ref": "SubnetID" }
+            "subnet_id": { "Ref": "PrivateSubNetwork" }
           }],
           "security_groups": [{ "Ref": "OpenShiftOriginSecurityGroup" }]
+        }
+      },
+
+      "BrokerFloatingIP": {
+        "Type": "OS::Neutron::FloatingIP",
+        "Properties": {
+          "floating_network_id": { "Ref": "PublicNetID" },
+          "port_id": { "Ref": "BrokerPort" }
         }
       },
 
@@ -205,31 +278,37 @@
                       "  command => \"/bin/hostname \\${my_hostname} ; echo \\${my_hostname} > /etc/hostname\"\n",
                       "}\n",
                       "class { 'openshift_origin' :\n",
-                      "  roles                         => ['broker','nameserver','msgserver','datastore'],\n",
-                      "  bind_key                      => '${DNS_SEC_KEY}',\n",
-                      "  domain                        => '${PREFIX}',\n",
+                      "  roles                    => ['broker','nameserver','msgserver','datastore'],\n",
+                      "  bind_key                 => '${DNS_SEC_KEY}',\n",
+                      "  domain                   => '${PREFIX}',\n",
                       "  register_host_with_nameserver => true,\n",
                       "  conf_nameserver_upstream_dns  => ['${UPSTREAM_DNS}'],\n",
-                      "  ntp_servers                   => ['${UPSTREAM_NTP}'],\n",
-                      "  broker_hostname               => \\$my_hostname,\n",
-                      "  nameserver_hostname           => \\$my_hostname,\n",
-                      "  datastore_hostname            => \\$my_hostname,\n",
-                      "  msgserver_hostname            => \\$my_hostname,\n",
-                      "  broker_auth_plugin            => 'htpasswd',\n",
-                      "  openshift_user1               => '${USERNAME}',\n",
-                      "  openshift_password1           => '${PASSWORD}',\n",
-                      "  development_mode              => ${DEV_MODE},\n",
+                      "  ntp_servers              => ['${UPSTREAM_NTP}'],\n",
+                      "  broker_hostname          => \\$my_hostname,\n",
+                      "  nameserver_hostname      => \\$my_hostname,\n",
+                      "  datastore_hostname       => \\$my_hostname,\n",
+                      "  msgserver_hostname       => \\$my_hostname,\n",
+                      "  broker_auth_plugin       => 'htpasswd',\n",
+                      "  openshift_user1          => '${USERNAME}',\n",
+                      "  openshift_password1      => '${PASSWORD}',\n",
+                      "  development_mode         => ${DEV_MODE},\n",
                       "}\n",
                       "EOF\n",
                       "mkdir -p /etc/puppet/modules\n",
                       "git clone -b ${PUPPET_MODULE_BRANCH} ${PUPPET_MODULE_URL} /etc/puppet/modules/openshift_origin", "\n",
-                      "puppet module install rharrison/lokkit", "\n",
-                      "puppet module install puppetlabs/ntp", "\n",
                       "puppet module install puppetlabs/stdlib", "\n",
-                      "puppet module install blentz/selinux_types", "\n",
-                      "puppet module install duritong/sysctl", "\n",
-                      "puppet apply -v -d /root/configure.pp | tee /var/log/configure_openshift.log", "\n",
-                      "/opt/aws/bin/cfn-signal -e 0 --data \"${DNS_SEC_KEY}\" -r \"Broker setup complete\" \"${BROKER_WAIT_HANDLE}\"\n"
+                      "puppet module install puppetlabs/ntp", "\n",
+                      "puppet module install puppetlabs-concat", "\n",
+                      "puppet module install rharrison-lokkit", "\n",
+                      "puppet module install blentz-selinux_types", "\n",
+                      "puppet module install puppetlabs/haproxy", "\n",
+                      "puppet module install arioch/keepalived", "\n",
+                      "puppet apply --verbose /root/configure.pp | tee /var/log/configure_openshift.log", "\n",
+                      "setenforce 0", "\n",
+                      "/opt/aws/bin/cfn-signal -e 0 --data \"${DNS_SEC_KEY}\" -r \"Broker setup complete\" \"${BROKER_WAIT_HANDLE}\"\n",
+                      "chkconfig activemq on", "\n",
+                      "service activemq start", "\n",
+                      "setenforce 1", "\n"
                   ]
               ]
             }
@@ -240,11 +319,19 @@
       "NodePort": {
         "Type": "OS::Neutron::Port",
         "Properties": {
-          "network_id": { "Ref": "NetID" },
+          "network_id": { "Ref": "PrivateNetwork" },
           "fixed_ips": [{
-            "subnet_id": { "Ref": "SubnetID" }
+            "subnet_id": { "Ref": "PrivateSubNetwork" }
           }],
           "security_groups": [{ "Ref": "OpenShiftOriginSecurityGroup" }]
+        }
+      },
+
+      "NodeFloatingIP": {
+        "Type": "OS::Neutron::FloatingIP",
+        "Properties": {
+          "floating_network_id": { "Ref": "PublicNetID" },
+          "port_id": { "Ref": "NodePort" }
         }
       },
 
@@ -279,6 +366,7 @@
                     "#!/bin/bash -x\n",
                     "export DNS_SEC_KEY=\"`python -c 'print ",{ "Fn::GetAtt": [ "BrokerWaitCondition", "Data" ] },"[\"00000\"]'`\"\n",
                     "export BROKER_IP=", { "Fn::GetAtt": [ "BrokerInstance", "first_address" ] }, "\n",
+                    "export NODE_FLOATING_IP=", { "Fn::GetAtt": [ "NodeFloatingIP", "floating_ip_address" ] }, "\n",
                     "export PREFIX=", { "Ref": "Prefix" }, "\n",
                     "export UPSTREAM_DNS=", { "Ref": "UpstreamDNS" }, "\n",
                     "export UPSTREAM_NTP=", { "Ref": "UpstreamNTP" }, "\n",
@@ -293,30 +381,33 @@
                       "  command => \"/bin/hostname \\${my_hostname} ; echo \\${my_hostname} > /etc/hostname\"\n",
                       "}\n",
                       "class { 'openshift_origin' :\n",
-                      "  roles                         => ['node'],\n",
-                      "  bind_key                      => '${DNS_SEC_KEY}',\n",
-                      "  nameserver_ip_addr            => '${BROKER_IP}',\n",
-                      "  domain                        => '${PREFIX}',\n",
+                      "  roles                    => ['node'],\n",
+                      "  bind_key                 => '${DNS_SEC_KEY}',\n",
+                      "  nameserver_ip_addr       => '${BROKER_IP}',\n",
+                      "  domain                   => '${PREFIX}',\n",
                       "  register_host_with_nameserver => true,\n",
-                      "  broker_hostname               => '${BROKER_IP}',\n",
-                      "  msgserver_hostname            => '${BROKER_IP}',\n",
-                      "  ntp_servers                   => ['${UPSTREAM_NTP}'],\n",
-                      "  node_hostname                 => \\$my_hostname,\n",
-                      "  install_method                => 'yum',\n",
-                      "  jenkins_repo_base             => 'http://pkg.jenkins-ci.org/redhat',\n",
-                      "  install_cartridges            => ['php', 'mysql'],\n",
-                      "  development_mode              => ${DEV_MODE},\n",
+                      "  broker_hostname          => '${BROKER_IP}',\n",
+                      "  msgserver_hostname       => '${BROKER_IP}',\n",
+                      "  ntp_servers              => ['${UPSTREAM_NTP}'],\n",
+                      "  node_hostname            => \\$my_hostname,\n",
+                      "  install_method           => 'yum',\n",
+                      "  jenkins_repo_base        => 'http://pkg.jenkins-ci.org/redhat',\n",
+                      "  development_mode         => ${DEV_MODE},\n",
+                      "  node_ip_addr             => '${NODE_FLOATING_IP}',\n",
                       "}\n",
                       "EOF\n",
                       "mkdir -p /etc/puppet/modules\n",
                       "git clone -b ${PUPPET_MODULE_BRANCH} ${PUPPET_MODULE_URL} /etc/puppet/modules/openshift_origin", "\n",
-                      "puppet module install rharrison/lokkit", "\n",
-                      "puppet module install puppetlabs/ntp", "\n",
                       "puppet module install puppetlabs/stdlib", "\n",
-                      "puppet module install blentz/selinux_types", "\n",
-                      "puppet module install duritong/sysctl", "\n",
-                      "puppet apply -v -d /root/configure.pp | tee /var/log/configure_openshift.log", "\n",
-                      "/opt/aws/bin/cfn-signal -e 0 -r \"Node setup complete\" \"${NODE_WAIT_HANDLE}\"\n"
+                      "puppet module install puppetlabs/ntp", "\n",
+                      "puppet module install duritong-sysctl", "\n",
+                      "puppet module install rharrison-lokkit", "\n",
+                      "puppet module install puppetlabs/haproxy", "\n",
+                      "puppet module install arioch/keepalived", "\n",
+                      "puppet apply --verbose /root/configure.pp | tee /var/log/configure_openshift.log", "\n",
+                      "setenforce 0", "\n",
+                      "/opt/aws/bin/cfn-signal -e 0 -r \"Node setup complete\" \"${NODE_WAIT_HANDLE}\"\n",
+                      "setenforce 1", "\n"
                   ]
               ]
             }
@@ -327,12 +418,9 @@
 
     "Outputs" : {
     "OpenShiftConsole" : {
-      "Value" : { "Fn::Join" : ["", ["https://", { "Fn::GetAtt" : [ "BrokerInstance", "first_address" ]}, "/console"]] },
-      "Description" : "URL for OpenShift Origin cConsole"
-    },
-    "NameServerEntry" : {
-      "Value" : { "Fn::Join" : ["", ["nameserver ", { "Fn::GetAtt" : [ "BrokerInstance", "first_address" ]}]] },
-      "Description" : "Entry to insert into /etc/resolv.conf for application host names to resolve"
+      "Value" : { "Fn::Join" : ["", ["https://", { "Fn::GetAtt" : [ "BrokerFloatingIP", "floating_ip_address" ]}, "/console"]] },
+      "Description" : "URL for OpenShift Origin Console"
     }
   }
 }
+

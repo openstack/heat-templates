@@ -3,11 +3,13 @@ OpenShift Origin Templates
 ==========================
 
 This directory contains files for deploying OpenShift Origin to an OpenStack environment via Heat.
-The template has been tested with the OpenStack Icehouse-2 release.
 
-It includes the following files:
+The templates has been tested with the OpenStack Icehouse 2014.1 release.
 
-* `OpenShift.template` - heat template for launching OpenShift Origin with a single broker instance and a single node instance
+It includes the following folders:
+
+* `hot-template` - heat templates in HOT format for launching OpenShift Origin
+* `aws-template` - heat templates in AWS format for launching OpenShift Origin
 * `elements` - diskimage-builder elements to build images
 
 To build with diskimage-builder, do the following in the parent directory of heat-templates::
