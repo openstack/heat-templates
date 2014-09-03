@@ -1,0 +1,79 @@
+heat_template_version: 2013-05-23
+
+description: >
+  HOT template to demonstrate usage of the Heat native waitcondition resources
+  This is expected to work with any image containing curl and something which
+  runs the raw user-data script, e.g cirros or some image containing cloud-init
+
+parameters:
+  key_name:
+    type: string
+    description: Name of keypair to assign to server
+    default: stack_key
+  image:
+    type: string
+    description: Name of image to use for server
+    default: cirros-0.3.2-x86_64-disk
+  flavor:
+    type: string
+    description: Flavor to use for server
+    default: m1.tiny
+  timeout:
+    type: number
+    description: Timeout for WaitCondition, depends on your image and environment
+    default: 300
+
+resources:
+  wait_condition:
+    type: OS::Heat::WaitCondition
+    properties:
+      handle: {get_resource: wait_handle}
+      # Note, count of 5 vs 6 is due to duplicate signal ID 5 sent below
+      count: 5
+      timeout: {get_param: timeout}
+
+  wait_handle:
+    type: OS::Heat::WaitConditionHandle
+
+  instance1:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/sh
+            # Below are some examples of the various ways signals
+            # can be sent to the Handle resource
+
+            # Simple success signal
+            wc_notify --data-binary '{"status": "SUCCESS"}'
+
+            # Or you optionally can specify any of the additional fields
+            wc_notify --data-binary '{"status": "SUCCESS", "reason": "signal2"}'
+            wc_notify --data-binary '{"status": "SUCCESS", "reason": "signal3", "data": "data3"}'
+            wc_notify --data-binary '{"status": "SUCCESS", "reason": "signal4", "data": "data4"}'
+
+            # If you require control of the ID, you can pass it.
+            # The ID should be unique, unless you intend for duplicate
+            # signals to overrite each other.  The following two calls
+            # do the exact same thing, and will be treated as one signal
+            # (You can prove this by changing count above to 7)
+            wc_notify --data-binary '{"status": "SUCCESS", "id": "5"}'
+            wc_notify --data-binary '{"status": "SUCCESS", "id": "5"}'
+
+            # Example of sending a failure signal, optionally
+            # reason, id, and data can be specified as above
+            # wc_notify --data-binary '{"status": "FAILURE"}'
+
+          params:
+            wc_notify: { get_attr: ['wait_handle', 'curl_cli'] }
+
+outputs:
+  curl_cli:
+    value: { get_attr: ['wait_handle', 'curl_cli'] }
+  wc_data:
+    value: { get_attr: ['wait_condition', 'data'] }
