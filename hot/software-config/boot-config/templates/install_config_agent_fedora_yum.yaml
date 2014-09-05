@@ -1,0 +1,39 @@
+heat_template_version: 2014-10-16
+
+resources:
+
+  install_config_agent_yum:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config: {get_file: fragments/install_config_agent_yum.sh}
+
+  configure_config_agent:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          params:
+            $heat_config_script: {get_file: ../../elements/heat-config/os-refresh-config/configure.d/55-heat-config}
+            $hook_script: {get_file: ../../elements/heat-config-script/install.d/hook-script.py}
+            $heat_config_notify: {get_file: ../../elements/heat-config/bin/heat-config-notify}
+          template: {get_file: fragments/configure_config_agent.sh}
+
+  start_config_agent:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config: {get_file: fragments/start_config_agent.sh}
+
+  install_config_agent:
+    type: "OS::Heat::MultipartMime"
+    properties:
+      parts:
+      - config: {get_resource: install_config_agent_yum}
+      - config: {get_resource: configure_config_agent}
+      - config: {get_resource: start_config_agent}
+
+outputs:
+  config:
+    value: {get_resource: install_config_agent}

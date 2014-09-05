@@ -1,0 +1,7 @@
+# Installs software-config agent on boot for fedora with yum
+
+parameters:
+  image: Fedora-x86_64-20-20140618-sda
+
+resource_registry:
+  "Heat::InstallConfigAgent": templates/install_config_agent_fedora_yum.yaml

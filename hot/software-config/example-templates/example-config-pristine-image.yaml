@@ -1,0 +1,122 @@
+heat_template_version: 2014-10-16
+description: >
+  A template which demonstrates doing boot-time installation of the required
+  files for script based software deployments.
+  This template expects to be created with an environment which defines
+  the resource type Heat::InstallConfigAgent such as
+  ../boot-config/fedora_pip_env.yaml
+parameters:
+  key_name:
+    type: string
+    default: heat_key
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+  private_net:
+    type: string
+    default: private
+  public_net:
+    type: string
+    default: public
+
+resources:
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      inputs:
+      - name: foo
+      - name: bar
+      outputs:
+      - name: result
+      config: |
+        #!/bin/sh -x
+        echo "Writing to /tmp/$bar"
+        echo $foo > /tmp/$bar
+        echo -n "The file /tmp/$bar contains `cat /tmp/$bar` for server $deploy_server_id during $deploy_action" > $heat_outputs_path.result
+        echo "Written to /tmp/$bar"
+        echo "Output to stderr" 1>&2
+
+  deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        foo: fooooo
+        bar: baaaaa
+
+  other_deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        foo: fu
+        bar: barmy
+      actions:
+      - CREATE
+      - UPDATE
+      - SUSPEND
+      - RESUME
+
+  boot_config:
+    type: Heat::InstallConfigAgent
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      networks:
+      - network: {get_param: private_net}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: SOFTWARE_CONFIG
+      user_data: {get_attr: [boot_config, config]}
+
+  server_floating_ip_assoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: {get_resource: floating_ip}
+      port_id: {get_attr: [server, addresses, {get_param: private_net}, 0, port]}
+
+  floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: {get_param: public_net}
+
+outputs:
+  result:
+    value:
+      get_attr: [deployment, result]
+  stdout:
+    value:
+      get_attr: [deployment, deploy_stdout]
+  stderr:
+    value:
+      get_attr: [deployment, deploy_stderr]
+  status_code:
+    value:
+      get_attr: [deployment, deploy_status_code]
+  other_result:
+    value:
+      get_attr: [other_deployment, result]
