@@ -1,0 +1,74 @@
+heat_template_version: 2013-05-23
+
+description: >
+  Deploys a new Active Directory forest domain controller.
+
+parameters:
+  key_name:
+    description: Name of an existing keypair to encrypt the Admin password
+    type: string
+
+  flavor:
+    description: Id or name of an existing flavor
+    type: string
+    default: m1.small
+
+  image:
+    default: Windows Server 2012 R2 Std Eval
+    description: Id or name of an existing Windows image
+    type: string
+
+  network:
+    type: string
+    description: Id or name of an existing network
+
+  domain_name:
+    default: cloudbase.local
+    description: The domain name
+    type: string
+    constraints:
+      - length: { min: 3, max: 256 }
+      - allowed_pattern: "[A-Za-z0-9]+(?=[\\.\\-][a-zA-Z0-9])*\\.[a-zA-z09]+"
+        description : must be a valid DNS name.
+
+  domain_netbios_name:
+    default: cloudbase
+    description: The Netbios domain name
+    type: string
+    constraints:
+      - length: { min: 1, max: 15 }
+      - allowed_pattern: "[a-zA-Z][a-zA-Z0-9]*"
+        description: must begin with a letter and contain only alphanumeric characters.
+
+  safe_mode_administrator_password:
+    description: The safe mode administration password
+    type: string
+    hidden: true
+    constraints:
+      - length: { min: 8, max: 64 }
+      - allowed_pattern: "(?=^.{6,255}$)((?=.*\\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*"
+        description: must contain letters numbers and symbols
+
+resources:
+  dc_init:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          template: { get_file: ActiveDirectoryDomainController.ps1 }
+          params:
+            safe_mode_administrator_password: { get_param: safe_mode_administrator_password }
+            domain_name: { get_param: domain_name }
+            domain_netbios_name: { get_param: domain_netbios_name }
+
+  dc:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - network: { get_param: network }
+      user_data_format: RAW
+      user_data: { get_resource: dc_init }
