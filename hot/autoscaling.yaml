@@ -24,6 +24,9 @@ parameters:
     type: string
     description: Name of the wordpress user
     default: wordpress
+  external_network_id:
+    type: string
+    description: UUID of a Neutron external network
 resources:
   database_password:
     type: OS::Heat::RandomString
@@ -153,6 +156,14 @@ resources:
       protocol_port: 80
       pool_id: {get_resource: pool}
 
+  # assign a floating ip address to the load balancer
+  # pool.
+  lb_floating:
+    type: "OS::Neutron::FloatingIP"
+    properties:
+      floating_network_id: {get_param: external_network_id}
+      port_id: {get_attr: [pool, vip, port_id]}
+
 outputs:
   scale_up_url:
     description: >
@@ -169,6 +180,15 @@ outputs:
   pool_ip_address:
     value: {get_attr: [pool, vip, address]}
     description: The IP address of the load balancing pool
+  website_url:
+    value:
+      str_replace:
+        template: http://host/wordpress/
+        params:
+          host: { get_attr: [lb_floating, floating_ip_address] }
+    description: >
+      This URL is the "external" URL that can be used to access the
+      Wordpress site.
   ceilometer_query:
     value:
       str_replace:
