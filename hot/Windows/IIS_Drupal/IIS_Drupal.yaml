@@ -1,0 +1,186 @@
+heat_template_version: 2013-05-23
+
+description: >
+  It deploys a Drupal web site on Internet Information Services
+  with PHP configured. It has a local database on SQL Server Express
+
+parameters:
+  key_name:
+    type: string
+    description: Name of an existing key pair used to encrypt Admin password.
+
+  flavor:
+    type: string
+    description: ID or name of an existing flavor to be used for the instance.
+    default: m1.small
+
+  image:
+    type: string
+    description: ID or name of an existing valid Windows Server image.
+
+  public_network_id:
+    type: string
+    description: >
+      ID of an existing public network where a floating IP will be allocated.
+
+  private_network_id:
+    type: string
+    description: ID of an existing private network.
+
+  sa_password:
+    type: string
+    description: SQL Server Express system administrator password.
+    hidden: true
+    constraints:
+      - length: { min: 8 }
+        description: SA password must be at least 8 characters long.
+      - allowed_pattern: '(?=^.{6,255}$)((?=.*\\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*'
+        description: >
+          SA password must contain uppercase and lowercase letters, numbers,
+          non-alphanumeric characters and it must not contain whitespaces.
+
+  drupal_admin_username:
+    type: string
+    description: Drupal admin user name.
+    default: cloudbase
+    constraints:
+      - length: { min: 4, max: 16 }
+        description: >
+          Drupal admin user name must be between 4 and 16 characters long.
+      - allowed_pattern: '^[a-zA-Z0-9]+$'
+        description: >
+          Drupal admin user name must contain only alphanumeric characters.
+
+  drupal_admin_password:
+    type: string
+    description: Drupal admin user password.
+    hidden: true
+    constraints:
+      - length: { min: 8 }
+        description: >
+          Drupal admin user password must be at least 8 characters long.
+      - allowed_pattern: '^[\S]+$'
+        description: Drupal admin user password must not contain whitespaces.
+
+  drupal_admin_email:
+    type: string
+    description: Drupal administrator email.
+    constraints:
+      - length: { min: 1 }
+        description: Drupal admin email must not be empty.
+      - allowed_pattern: '^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,4}$'
+        description: Drupal admin email must be a valid email address.
+
+  drupal_site_name:
+    type: string
+    description: Drupal site name.
+    default: My Drupal IIS website created with Heat
+    constraints:
+      - length: { min: 1 }
+        description: Drupal site name must not be empty.
+      - allowed_pattern: '^(?!.*["\r\n\f]).*$'
+        description: >
+          Drupal site name must not contain double quotes and any
+          whitespace character (excepting spaces and tabs).
+
+  max_timeout:
+    type: number
+    default: 3600
+    description: >
+      The maximum allowed time (seconds) for the instalation to finish.
+
+resources:
+  iis_drupal:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: server_port }
+      user_data_format: RAW
+      user_data: { get_resource: iis_drupal_init }
+
+  iis_drupal_wait_condition:
+    type: OS::Heat::WaitCondition
+    depends_on: iis_drupal_wait_condition_handle
+    properties:
+      handle: { get_resource: iis_drupal_wait_condition_handle }
+      count: 1
+      timeout: { get_param: max_timeout }
+
+  iis_drupal_wait_condition_handle:
+    type: OS::Heat::WaitConditionHandle
+
+  server_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: private_network_id }
+
+  server_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_network_id }
+      port_id: { get_resource: server_port }
+
+  utils_module:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: Common/heat-powershell-utils.psm1 }
+
+  iis_drupal_module:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: IIS_Drupal.psm1 }
+
+  iis_drupal_main:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          template: { get_file: IIS_Drupal.ps1 }
+          params:
+            sa_password: { get_param: sa_password }
+            admin_username: { get_param: drupal_admin_username }
+            admin_password: { get_param: drupal_admin_password }
+            admin_email: { get_param: drupal_admin_email }
+            website_name: { get_param: drupal_site_name }
+            wait_handle_endpoint:
+              { get_attr: [iis_drupal_wait_condition_handle, endpoint] }
+            wait_handle_token:
+              { get_attr: [iis_drupal_wait_condition_handle, token] }
+
+  iis_drupal_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        [
+          {
+            filename: "heat-powershell-utils.psm1",
+            subtype: "x-cfninitdata",
+            config: { get_resource: utils_module }
+          },
+          {
+            filename: "IIS_Drupal.psm1",
+            subtype: "x-cfninitdata",
+            config: { get_resource: iis_drupal_module }
+          },
+          {
+            filename: "cfn-userdata",
+            subtype: "x-cfninitdata",
+            config: { get_resource: iis_drupal_main }
+          }
+        ]
+
+outputs:
+  drupal_url:
+    description: URL where you can access the Drupal web site
+    value:
+      str_replace:
+        template: >
+          URL: http://host
+        params:
+          host: { get_attr: [ server_floating_ip, floating_ip_address ] }
