@@ -1,0 +1,74 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "This is a very simple template that illustrates the basic features of an AWS::AutoScaling::AutoScalingGroup.  By virtue of its simplicity this example should be usable in many contexts.  In particular, this example does not require Neutron nor any particular support for software in the VMs.  In fact, the VMs in this example do not actually do anything.  This example does no automatic scaling, but does discuss manual scaling.  For a more complete example, see autoscaling.yaml.",
+
+  "Parameters" : {
+    "KeyName" : {
+      "Type" : "String",
+      "Description" : "Name of an existing key pair to use for the instances"
+    },
+    "Flavor" : {
+      "Type" : "String",
+      "Description" : "Flavor for the instances to be created",
+      "Default" : "m1.small"
+    },
+    "Image" : {
+      "Type" : "String",
+      "Description" : "Name or ID of the image to use for the instances. You can get Fedora 20 images with cloud-init from http://cloud.fedoraproject.org/fedora-20.x86_64.qcow2 . There is also http://cloud.fedoraproject.org/fedora-20.i386.qcow2 . Any image should work since this template does not ask the VMs to do anything."
+    }
+  },
+
+  "Resources" : {
+    "ASG" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "AvailabilityZones" : {"Fn::GetAZs": ""},
+        "LaunchConfigurationName" : {"Ref": "LaunchConfig"},
+        "MinSize" : 1,
+        "DesiredCapacity" : 3,
+        "MaxSize" : 5
+      }
+    },
+
+    "LaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "ImageId" : {"Ref": "Image"},
+        "InstanceType" : {"Ref": "Flavor"},
+        "KeyName" : { "Ref": "KeyName" }
+      }
+    },
+
+    "ScaleUpPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType": "ChangeInCapacity",
+        "AutoScalingGroupName" : {"Ref": "ASG"},
+        "Cooldown": 60,
+        "ScalingAdjustment": 1
+      }
+    },
+
+    "ScaleDnPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : {"Ref": "ASG"},
+        "Cooldown": 60,
+        "ScalingAdjustment": -1
+      }
+    }
+  },
+
+  "Outputs" : {
+    "scale_up_url" : {
+        "Description" : "This URL is the webhook to scale up the group.  You can invoke the scale-up operation by doing an HTTP POST to this URL; no body nor extra headers are needed.",
+        "Value" : {"Fn::GetAtt": ["ScaleUpPolicy", "AlarmUrl"]}
+    },
+    "scale_dn_url" : {
+        "Description" : "This URL is the webhook to scale down the group.  You can invoke the scale-dwon operation by doing an HTTP POST to this URL; no body nor extra headers are needed.",
+        "Value" : {"Fn::GetAtt": ["ScaleDnPolicy", "AlarmUrl"]}
+    }
+  }
+}
