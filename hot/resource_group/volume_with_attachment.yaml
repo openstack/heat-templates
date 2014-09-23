@@ -1,0 +1,26 @@
+heat_template_version: 2013-05-23
+
+parameters:
+  volume_size:
+    type: number
+    description: Size of volume to attach to instance
+    default: 1
+    constraints:
+      - range: {min: 1, max: 10}
+
+  instance_id:
+    type: string
+    description: Server to attach volume to
+
+resources:
+  volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size }
+      description: Volume for stack
+
+  volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: volume }
+      instance_uuid: { get_param: instance_id}
