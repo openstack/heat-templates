@@ -1,0 +1,173 @@
+heat_template_version: 2013-05-23
+
+description: >
+  Deploys a Microsoft SQL Server instance.
+
+parameters:
+  key_name:
+    description: Name of an existing keypair to encrypt the Admin password
+    type: string
+
+  flavor:
+    description: Id or name of an existing flavor
+    type: string
+    default: m1.small
+
+  image:
+    description: Id or name of an existing Windows image
+    type: string
+
+  public_network_id:
+    type: string
+    description: >
+      ID of an existing public network where a floating IP will be
+      allocated.
+
+  private_network_id:
+    type: string
+    description: Id of an existing private network
+
+  mssql_service_username:
+    type: string
+    default: mssqluser
+    description: >
+      The username under which the mssql service runs
+
+  mssql_service_user_password:
+    type: string
+    hidden: true
+    constraints:
+      - length: { min: 8, max: 64 }
+      - allowed_pattern: "(?=^.{6,255}$)((?=.*\\d)(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[^A-Za-z0-9])(?=.*[a-z])|(?=.*[^A-Za-z0-9])(?=.*[A-Z])(?=.*[a-z])|(?=.*\\d)(?=.*[A-Z])(?=.*[^A-Za-z0-9]))^.*"
+    description: >
+      The password of the user under which the mssql service runs
+
+  mssql_sa_password:
+    type: string
+    hidden: true
+    description: >
+      The password of the sa mssql user
+
+  mssql_features:
+    type: string
+    default: >
+      SQLENGINE,ADV_SSMS
+    description: >
+      The mssql features to be installed
+
+  mssql_instance:
+    type: string
+    default: mssql
+    description: >
+      The mssql instance name
+
+  mssql_iso_unc_path:
+    type: string
+    description: >
+      The mssql iso file UNC path. It can be a local path or a network path.
+
+  mssql_max_timeout:
+    type: number
+    default: 3600
+    description: >
+      The maximum allowed time for the mssql instalation to finish.
+
+resources:
+  server_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: private_network_id }
+
+  server_floating_ip:
+    type: OS::Neutron::FloatingIP
+    depends_on: server_port
+    properties:
+      floating_network_id: { get_param: public_network_id }
+      port_id: { get_resource: server_port }
+
+  utils_module:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: heat-powershell-utils.psm1 }
+
+  mssql_module:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: MSSQL.psm1 }
+
+  mssql_main:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          template: { get_file: MSSQL.ps1 }
+          params:
+            mssql-service-username:
+              { get_param: mssql_service_username }
+            mssql-service-user-password:
+              { get_param: mssql_service_user_password }
+            mssql-sa-password:
+              { get_param: mssql_sa_password }
+            mssql-features:
+              { get_param: mssql_features }
+            mssql-instance-name:
+             { get_param: mssql_instance }
+            mssql_iso_unc_path:
+             { get_param: mssql_iso_unc_path }
+            mssql_wait_condition_endpoint:
+             { get_attr: [ mssql_wait_condition_handle, endpoint ] }
+            mssql_wait_condition_token:
+             { get_attr: [ mssql_wait_condition_handle, token ] }
+
+  mssql_init:
+    type: OS::Heat::MultipartMime
+    depends_on: mssql_wait_condition_handle
+    properties:
+      parts:
+        [ {
+            filename: "heat-powershell-utils.psm1",
+            subtype: "x-cfninitdata",
+            config: { get_resource: utils_module }
+          },
+          {
+            filename: "MSSQL.psm1",
+            subtype: "x-cfninitdata",
+            config: { get_resource: mssql_module }
+          },
+          {
+            filename: "cfn-userdata",
+            subtype: "x-cfninitdata",
+            config: { get_resource: mssql_main }
+          }
+        ]
+
+  mssql:
+    type: OS::Nova::Server
+    depends_on: [ server_port, mssql_init ]
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: server_port }
+      user_data_format: RAW
+      user_data: { get_resource: mssql_init }
+
+  mssql_wait_condition:
+    type: OS::Heat::WaitCondition
+    depends_on: mssql_wait_condition_handle
+    properties:
+      count: 1
+      handle: { get_resource: mssql_wait_condition_handle }
+      timeout: { get_param: mssql_max_timeout }
+
+  mssql_wait_condition_handle:
+    type: OS::Heat::WaitConditionHandle
+
+outputs:
+  mssql_server_public_ip:
+    description: The MSSQL public IP address
+    value: { get_attr: [ server_floating_ip, floating_ip_address ] }
