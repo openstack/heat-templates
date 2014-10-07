@@ -1,0 +1,87 @@
+heat_template_version: 2013-05-23
+
+description: >
+  This is a simple HOT example to demonstrate and test the use of a
+  SoftwareComponent resource in a Heat stack. The sample will just write some
+  text to a file and update an output attribute of the corresponding
+  SoftwareDeployment resource so it can be verified which action of the
+  SoftwareComponent (and corresponding script) got last run.
+
+parameters:
+  image:
+    type: string
+    description: The image to be used for the server.
+    constraints:
+      - custom_constraint: glance.image
+  flavor:
+    type: string
+    description: The flavor to be used for the server.
+    constraints:
+      - custom_constraint: nova.flavor
+  key_name:
+    type: string
+    description: An ssh keypair name used for accessing the server.
+    constraints:
+      - custom_constraint: nova.keypair
+
+resources:
+  sw_component:
+    type: OS::Heat::SoftwareComponent
+    properties:
+      configs:
+        # Note: The scripts below are almost the same but this example is to
+        # illustrate that one can specify different scripts per lifecycle
+        # action. On the instance, a text file will be updated with slightly
+        # different text by each action invokation. In the stack, the
+        # 'last_action' attribute will show the name of the last invoked
+        # action.
+        - actions: [CREATE]
+          config: |
+            #!/bin/bash
+            msg="CREATE invoked at `date +"%d/%m/%Y %H:%M:%S:%N"`"
+            echo $msg >> /tmp/sw-component-actions
+            echo "CREATE" > $heat_outputs_path.last_action
+          tool: script
+        - actions: [UPDATE]
+          config: |
+            #!/bin/bash
+            msg="UPDATE invoked at `date +"%d/%m/%Y %H:%M:%S:%N"`"
+            echo $msg >> /tmp/sw-component-actions
+            echo "UPDATE" > $heat_outputs_path.last_action
+        - actions: [SUSPEND]
+          config: |
+            #!/bin/bash
+            msg="SUSPEND invoked at `date +"%d/%m/%Y %H:%M:%S:%N"`"
+            echo $msg >> /tmp/sw-component-actions
+            echo "SUSPEND" > $heat_outputs_path.last_action
+        - actions: [RESUME]
+          config: |
+            #!/bin/bash
+            msg="RESUME invoked at `date +"%d/%m/%Y %H:%M:%S:%N"`"
+            echo $msg >> /tmp/sw-component-actions
+            echo "RESUME" > $heat_outputs_path.last_action
+      outputs:
+        - name: last_action
+
+  sw_deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config: { get_resource: sw_component }
+      server: { get_resource: server }
+      signal_transport: HEAT_SIGNAL
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      user_data_format: SOFTWARE_CONFIG
+      software_config_transport: POLL_SERVER_HEAT
+
+outputs:
+  server_ip:
+    value: { get_attr: [ server, networks, private, 0 ] }
+  sw_component_last_action:
+    value: { get_attr: [ sw_deployment, last_action ] }
+
