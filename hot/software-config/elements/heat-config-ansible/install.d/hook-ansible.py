@@ -1,4 +1,17 @@
 #!/usr/bin/env python
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 import json
 import logging
 import os
@@ -33,29 +46,37 @@ def main(argv=sys.argv):
 
     variables = {}
     for input in c['inputs']:
-        variables[input['name']] = input.get('value','')
+        variables[input['name']] = input.get('value', '')
 
     fn = os.path.join(WORKING_DIR, '%s_playbook.yaml' % c['id'])
     vars_filename = os.path.join(WORKING_DIR, '%s_variables.json' % c['id'])
     heat_outputs_path = os.path.join(OUTPUTS_DIR, c['id'])
     variables['heat_outputs_path'] = heat_outputs_path
 
-    config_text = c.get('config','')
+    config_text = c.get('config', '')
     if not config_text:
         log.warn("No 'config' input found, nothing to do.")
         return
     #Write 'variables' to file
-    with os.fdopen(os.open(vars_filename, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as var_file:
+    with os.fdopen(os.open(
+            vars_filename, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as var_file:
         json.dump(variables, var_file)
     #Write the executable, 'config', to file
     with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as f:
-        f.write(c.get('config',''))
+        f.write(c.get('config', ''))
 
-    cmd = ['ansible-playbook','-i','localhost,', fn, '--extra-vars','@%s' % vars_filename]
+    cmd = [
+        'ansible-playbook',
+        '-i',
+        'localhost,',
+        fn,
+        '--extra-vars',
+        '@%s' % vars_filename
+    ]
     log.debug('Running %s' % (' '.join(cmd),))
     try:
         subproc = subprocess.Popen([cmd], stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, env=env)
+                                   stderr=subprocess.PIPE)
     except OSError:
         log.warn("ansible not installed yet")
         return
@@ -67,7 +88,8 @@ def main(argv=sys.argv):
     if stderr:
         log.info(stderr)
 
-    #TODO: Test if ansible returns any non-zero return codes in success.
+    # TODO(stevebaker): Test if ansible returns any non-zero
+    # return codes in success.
     if subproc.returncode:
         log.error("Error running %s. [%s]\n" % (fn, subproc.returncode))
     else:
