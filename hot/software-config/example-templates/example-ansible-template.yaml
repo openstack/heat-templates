@@ -1,0 +1,89 @@
+heat_template_version: 2013-05-23
+parameters:
+  key_name:
+    type: string
+    default: test_key
+  flavor:
+    type: string
+    default: m1.heat
+  image:
+    type: string
+    default: fedora-software-config
+
+resources:
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ansible
+      inputs:
+      - name: foo
+      - name: bar
+      outputs:
+      - name: result
+      config:
+        get_file: config-scripts/example-ansible-template.ansible
+
+  deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        foo: fooooo
+        bar: baaaaa
+
+  other_deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+      input_values:
+        foo: fu
+        bar: barmy
+      actions:
+      - CREATE
+      - UPDATE
+      - SUSPEND
+      - RESUME
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: SOFTWARE_CONFIG
+
+outputs:
+  result:
+    value:
+      get_attr: [deployment, result]
+  stdout:
+    value:
+      get_attr: [deployment, deploy_stdout]
+  stderr:
+    value:
+      get_attr: [deployment, deploy_stderr]
+  status_code:
+    value:
+      get_attr: [deployment, deploy_status_code]
+  other_result:
+    value:
+      get_attr: [other_deployment, result]

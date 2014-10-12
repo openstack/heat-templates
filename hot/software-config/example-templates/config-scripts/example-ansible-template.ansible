@@ -1,0 +1,11 @@
+---
+- name: Hello Ansible - quick start
+  connection: local
+  hosts: localhost
+
+  tasks:
+    - name: Hello touch_file
+      shell: echo {{ foo }} >> /tmp/{{ bar }}
+
+    - name: Hello echo
+      shell: echo "The file /tmp/{{ bar }} contains {{ foo }}" >> {{ heat_outputs_path }}.result
