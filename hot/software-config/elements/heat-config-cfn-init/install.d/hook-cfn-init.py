@@ -13,22 +13,69 @@
 #    under the License.
 
 import json
+import logging
+import os
+import subprocess
 import sys
 
-from heat_cfntools.cfntools import cfn_helper
+
+# Ideally this path would be /var/lib/heat-cfntools/cfn-init-data
+# but this is where all boot metadata is stored
+LAST_METADATA_DIR = os.environ.get('HEAT_CFN_INIT_LAST_METADATA_DIR',
+                                   '/var/cache/heat-cfntools')
 
 
-def main(argv=sys.argv):
-    c = json.load(sys.stdin)
+CFN_INIT_CMD = os.environ.get('HEAT_CFN_INIT_CMD',
+                              '/opt/aws/bin/cfn-init')
+
+
+def main(argv=sys.argv, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
+    log = logging.getLogger('heat-config')
+    handler = logging.StreamHandler(stderr)
+    handler.setFormatter(
+        logging.Formatter(
+            '[%(asctime)s] (%(name)s) [%(levelname)s] %(message)s'))
+    log.addHandler(handler)
+    log.setLevel('DEBUG')
+
+    c = json.load(stdin)
 
     config = c.get('config', {})
     if not isinstance(config, dict):
         config = json.loads(config)
     meta = {'AWS::CloudFormation::Init': config}
 
-    metadata = cfn_helper.Metadata(None, None)
-    metadata.retrieve(meta_str=json.dumps(meta))
-    metadata.cfn_init()
+    if not os.path.isdir(LAST_METADATA_DIR):
+        os.makedirs(LAST_METADATA_DIR, 0o700)
+
+    fn = os.path.join(LAST_METADATA_DIR, 'last_metadata')
+    with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o700), 'w') as f:
+        json.dump(meta, f)
+
+    log.debug('Running %s' % CFN_INIT_CMD)
+    subproc = subprocess.Popen([CFN_INIT_CMD], stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    cstdout, cstderr = subproc.communicate()
+
+    if cstdout:
+        log.info(cstdout)
+    if cstderr:
+        log.info(cstderr)
+
+    if subproc.returncode:
+        log.error("Error running %s. [%s]\n" % (
+            CFN_INIT_CMD, subproc.returncode))
+    else:
+        log.info('Completed %s' % CFN_INIT_CMD)
+
+    response = {
+        'deploy_stdout': cstdout,
+        'deploy_stderr': cstderr,
+        'deploy_status_code': subproc.returncode,
+    }
+
+    json.dump(response, stdout)
+
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    sys.exit(main())
