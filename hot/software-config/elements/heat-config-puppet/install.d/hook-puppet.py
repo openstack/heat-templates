@@ -22,6 +22,7 @@ WORKING_DIR = os.environ.get('HEAT_PUPPET_WORKING',
                              '/var/lib/heat-config/heat-config-puppet')
 OUTPUTS_DIR = os.environ.get('HEAT_PUPPET_OUTPUTS',
                              '/var/run/heat-config/heat-config-puppet')
+PUPPET_CMD = os.environ.get('HEAT_PUPPET_CMD', 'puppet')
 
 
 def prepare_dir(path):
@@ -62,7 +63,7 @@ def main(argv=sys.argv):
     with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o700), 'w') as f:
         f.write(c.get('config', ''))
 
-    cmd = ['puppet', 'apply', '--detailed-exitcodes', fn]
+    cmd = [PUPPET_CMD, 'apply', '--detailed-exitcodes', fn]
     log.debug('Running %s %s' % (env_debug, ' '.join(cmd)))
     try:
         subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
