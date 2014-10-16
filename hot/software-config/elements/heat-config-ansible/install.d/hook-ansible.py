@@ -63,7 +63,7 @@ def main(argv=sys.argv):
         json.dump(variables, var_file)
     #Write the executable, 'config', to file
     with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as f:
-        f.write(c.get('config', ''))
+        f.write(c.get('config', '').encode('utf-8'))
 
     cmd = [
         'ansible-playbook',

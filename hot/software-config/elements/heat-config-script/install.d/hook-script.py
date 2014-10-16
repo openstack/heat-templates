@@ -55,7 +55,7 @@ def main(argv=sys.argv):
     env['heat_outputs_path'] = heat_outputs_path
 
     with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o700), 'w') as f:
-        f.write(c.get('config', ''))
+        f.write(c.get('config', '').encode('utf-8'))
 
     log.debug('Running %s' % fn)
     subproc = subprocess.Popen([fn], stdout=subprocess.PIPE,

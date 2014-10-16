@@ -61,7 +61,7 @@ def main(argv=sys.argv):
     env.update(facts)
 
     with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o700), 'w') as f:
-        f.write(c.get('config', ''))
+        f.write(c.get('config', '').encode('utf-8'))
 
     cmd = [PUPPET_CMD, 'apply', '--detailed-exitcodes', fn]
     log.debug('Running %s %s' % (env_debug, ' '.join(cmd)))
