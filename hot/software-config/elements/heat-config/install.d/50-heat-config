@@ -1,7 +1,5 @@
 #!/bin/bash
 set -eux
 
-pip install python-heatclient
-
 SCRIPTDIR=$(dirname $0)
 install -D -g root -o root -m 0600 ${SCRIPTDIR}/heat-config /var/run/heat-config/heat-config
