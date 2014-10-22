@@ -15,8 +15,7 @@ repository. These elements will build an image which uses
 invoke a hook with the supplied configuration data, and return any outputs back
 to heat.
 
-When building an image, the heat-config element is required, along with the elements
-for the hooks which enable the preferred configuration methods.
+When building an image only the elements for the preferred configuration methods are required. The heat-config element is automatically included as a dependency.
 
 An example fedora based image containing all hooks can be built and uploaded to glance
 with the following:
@@ -31,7 +30,6 @@ with the following:
   export ELEMENTS_PATH=tripleo-image-elements/elements:heat-templates/hot/software-config/elements
   diskimage-builder/bin/disk-image-create vm \
     fedora selinux-permissive \
-    heat-config \
     os-collect-config \
     os-refresh-config \
     os-apply-config \
