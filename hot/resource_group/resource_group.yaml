@@ -22,3 +22,6 @@ outputs:
     value: {get_attr: [random_group, resource.0.value]}
   resource2_value:
     value: {get_attr: [random_group, resource.1.value]}
+  # You can also get a list of all values in the group
+  all_values:
+    value: {get_attr: [random_group, value]}
