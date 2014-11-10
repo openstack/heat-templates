@@ -49,7 +49,8 @@ def main(argv=sys.argv, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
         os.makedirs(LAST_METADATA_DIR, 0o700)
 
     fn = os.path.join(LAST_METADATA_DIR, 'last_metadata')
-    with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o700), 'w') as f:
+    with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o700),
+                   'w') as f:
         json.dump(meta, f)
 
     log.debug('Running %s' % CFN_INIT_CMD)
