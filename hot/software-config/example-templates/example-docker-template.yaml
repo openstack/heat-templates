@@ -1,0 +1,96 @@
+heat_template_version: 2013-05-23
+parameters:
+  key_name:
+    type: string
+    default: heat_key
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+    default: fedora-software-config
+
+resources:
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: docker
+      config:
+        get_file: config-scripts/example-container-config.yaml
+
+  inline_config:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: docker
+      config:
+        version: v1beta2
+        containers:
+          - name: apache_container
+            image: fedora/apache
+            command: [/run-apache.sh]
+            workingDir:
+            volumeMounts:
+              - name: test_volume
+                mountPath: /log
+                readOnly: true
+            ports:
+              - name: http_port
+                containerPort: 80
+                hostPort: 8000
+                protocol: tcp
+            env:
+              - name: GOPATH
+                value: /usr/bin
+        volumes:
+          - name: test_volume
+
+  deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+
+  inline_deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      config:
+        get_resource: inline_config
+      server:
+        get_resource: server
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: SOFTWARE_CONFIG
+
+outputs:
+  status_code_deployment:
+    value:
+      get_attr: [deployment, deploy_status_code]
+  stdout:
+    value:
+      get_attr: [deployment, deploy_stdout]
+  stderr:
+    value:
+      get_attr: [deployment, deploy_stderr]
+  status_code_inline_deployment:
+    value:
+      get_attr: [inline_deployment, deploy_status_code]
