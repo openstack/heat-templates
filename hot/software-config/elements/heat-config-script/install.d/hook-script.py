@@ -47,7 +47,11 @@ def main(argv=sys.argv):
     env = os.environ.copy()
     for input in c['inputs']:
         input_name = input['name']
-        env[input_name] = input.get('value', '')
+        value = input.get('value', '')
+        if isinstance(value, dict) or isinstance(value, list):
+            env[input_name] = json.dumps(value)
+        else:
+            env[input_name] = value
         log.info('%s=%s' % (input_name, env[input_name]))
 
     fn = os.path.join(WORKING_DIR, c['id'])
