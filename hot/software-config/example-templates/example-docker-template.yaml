@@ -58,6 +58,7 @@ resources:
   deployment:
     type: OS::Heat::SoftwareDeployment
     properties:
+      name: test_deployment
       config:
         get_resource: config
       server:
@@ -66,6 +67,7 @@ resources:
   inline_deployment:
     type: OS::Heat::SoftwareDeployment
     properties:
+      name: test_inline_deployment
       config:
         get_resource: inline_config
       server:
