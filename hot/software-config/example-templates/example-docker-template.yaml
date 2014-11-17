@@ -27,7 +27,7 @@ resources:
     properties:
       group: docker
       config:
-        get_file: config-scripts/example-container-config.yaml
+        get_file: config-scripts/example-container-config.pod
 
   inline_config:
     type: OS::Heat::StructuredConfig
