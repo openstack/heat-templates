@@ -145,6 +145,7 @@ def main(argv=sys.argv):
 
     client = get_client()
     pod_name = c.get('name')
+    input_values = dict((i['name'], i['value']) for i in c['inputs'])
 
     config = c.get('config')
     log.debug('Received Config %s' % config)
@@ -159,11 +160,19 @@ def main(argv=sys.argv):
 
     remove_all_containers_for_pod(client, pod_name)
 
-    mount_external_volumes(volumes)
-
+    pod_state = 0
     stdout, stderr = {}, {}
 
-    pod_state = 0
+    if input_values.get('deploy_action') == 'DELETE':
+        response = {
+            'deploy_stdout': stdout,
+            'deploy_stderr': stderr,
+            'deploy_status_code': 0,
+        }
+        json.dump(response, sys.stdout)
+        return
+
+    mount_external_volumes(volumes)
 
     for container in containers:
         image = container.get('image')
