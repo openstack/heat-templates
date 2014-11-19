@@ -22,7 +22,7 @@ import yaml
 
 
 DOCKER_BASE_URL = os.environ.get('DOCKER_HOST',
-                                 'unix://var/run/docker.sock')
+                                 'unix:///var/run/docker.sock')
 
 
 def is_running(client, container_id):
@@ -42,7 +42,7 @@ def build_container_name(pod_name, container_name):
     return pod_name + '.' + container_name
 
 
-def remove_all_containters_for_pod(client, pod_name):
+def remove_all_containers_for_pod(client, pod_name):
     containers = client.containers(all=True)
     for x in containers:
         if pod_name in x['Names'][0]:
@@ -126,7 +126,7 @@ def make_port_bindings(client, container_id, ports):
 
 
 def update_pod_state(pod_state, is_container_running):
-    if pod_state != 1 and is_container_running:
+    if pod_state == 0 and is_container_running:
         return 0  # pod without error
     else:
         return 1  # pod with error
@@ -157,13 +157,13 @@ def main(argv=sys.argv):
     containers = yaml_config.get('containers')
     volumes = yaml_config.get('volumes')
 
-    remove_all_containters_for_pod(client, pod_name)
+    remove_all_containers_for_pod(client, pod_name)
 
     mount_external_volumes(volumes)
 
     stdout, stderr = {}, {}
 
-    pod_state = -1
+    pod_state = 0
 
     for container in containers:
         image = container.get('image')
@@ -221,15 +221,13 @@ def main(argv=sys.argv):
             else:
                 stderr[image] = ex
             pod_state = update_pod_state(pod_state, False)
-            remove_all_containters_for_pod(pod_name)
+            remove_all_containers_for_pod(client, pod_name)
 
-    response = {}
-
-    response.update({
+    response = {
         'deploy_stdout': stdout,
         'deploy_stderr': stderr,
         'deploy_status_code': pod_state,
-    })
+    }
     json.dump(response, sys.stdout)
 
 
