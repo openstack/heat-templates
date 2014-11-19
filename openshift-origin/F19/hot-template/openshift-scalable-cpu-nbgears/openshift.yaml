@@ -94,7 +94,7 @@ parameters:
     description: Password of your Openstack account
     type: string
     default: network
-  node_instance_group_template_repo_address:
+  asg_template_repo_address:
     description: Repository address of the NodeInstanceGroup Template
     type: string
   public_ssh_key:
@@ -423,7 +423,7 @@ resources:
         user_data: {get_resource: broker_user_data}
         user_data_format: RAW
 
-    node_instance_group:
+    asg:
       type: OS::Heat::AutoScalingGroup
       depends_on:
        - router_gateway
@@ -432,9 +432,9 @@ resources:
         min_size: 1
         max_size: 4
         resource:
-          type: {get_param: node_instance_group_template_repo_address}
+          type: {get_param: asg_template_repo_address}
           properties:
-            metadata: {"metering.group": "node_instance_group"}
+            metadata: {"metering.group": "asg"}
             private_network: {get_resource: private_network}
             private_sub_network: {get_resource: private_sub_network}
             ssh_key: {get_resource: ssh_key}
@@ -446,7 +446,7 @@ resources:
       type: OS::Heat::ScalingPolicy
       properties:
         adjustment_type: change_in_capacity
-        auto_scaling_group_id: {get_resource: node_instance_group}
+        auto_scaling_group_id: {get_resource: asg}
         cooldown: 60
         scaling_adjustment: 1
 
@@ -454,7 +454,7 @@ resources:
       type: OS::Heat::ScalingPolicy
       properties:
         adjustment_type: change_in_capacity
-        auto_scaling_group_id: {get_resource: node_instance_group}
+        auto_scaling_group_id: {get_resource: asg}
         cooldown: 60
         scaling_adjustment: -1
 
@@ -470,7 +470,7 @@ resources:
         alarm_actions:
           - {get_attr: [scale_up_policy, alarm_url]}
         comparison_operator: gt
-        matching_metadata: {'metadata.user_metadata.group': 'node_instance_group'}
+        matching_metadata: {'metadata.user_metadata.group': 'asg'}
 
     cpu_alarm_low:
       type: OS::Ceilometer::Alarm
@@ -484,7 +484,7 @@ resources:
         alarm_actions:
           - {get_attr: [scale_down_policy, alarm_url]}
         comparison_operator: lt
-        matching_metadata: {'metadata.user_metadata.group': 'node_instance_group'}
+        matching_metadata: {'metadata.user_metadata.group': 'asg'}
 
     gears_alarm_high:
       type: OS::Ceilometer::Alarm
