@@ -18,7 +18,11 @@ import logging
 import os
 import sys
 
-import docker
+try:
+    import docker
+except ImportError:
+    docker = None
+
 import yaml
 
 
@@ -142,7 +146,7 @@ def update_pod_state(pod_state, is_container_running):
 
 def configure_logging():
     log = logging.getLogger('heat-config')
-    log.setLevel('DEBUG')
+    log.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
         '[%(asctime)s] (%(name)s) [%(levelname)s] %(message)s')
 
@@ -154,23 +158,23 @@ def configure_logging():
     deploy_stdout = cStringIO.StringIO()
     handler = logging.StreamHandler(deploy_stdout)
     handler.setFormatter(formatter)
-    handler.setLevel('DEBUG')
+    handler.setLevel(logging.DEBUG)
     log.addHandler(handler)
 
     deploy_stderr = cStringIO.StringIO()
     handler = logging.StreamHandler(deploy_stderr)
     handler.setFormatter(formatter)
-    handler.setLevel('DEBUG')
+    handler.setLevel(logging.WARN)
     log.addHandler(handler)
 
     return log, deploy_stdout, deploy_stderr
 
 
-def main(argv=sys.argv):
+def main(argv=sys.argv, sys_stdin=sys.stdin, sys_stdout=sys.stdout):
     (log, deploy_stdout, deploy_stderr) = configure_logging()
     client = get_client(log)
 
-    c = json.load(sys.stdin)
+    c = json.load(sys_stdin)
 
     pod_name = c.get('name')
     input_values = dict((i['name'], i['value']) for i in c['inputs'])
@@ -182,8 +186,8 @@ def main(argv=sys.argv):
     else:
         yaml_config = yaml.load(config)
 
-    containers = yaml_config.get('containers')
-    volumes = yaml_config.get('volumes')
+    containers = yaml_config.get('containers', [])
+    volumes = yaml_config.get('volumes', [])
 
     remove_all_containers_for_pod(client, log, pod_name)
 
@@ -196,7 +200,7 @@ def main(argv=sys.argv):
             'deploy_stderr': deploy_stderr.getvalue(),
             'deploy_status_code': 0,
         }
-        json.dump(response, sys.stdout)
+        json.dump(response, sys_stdout)
         return
 
     mount_external_volumes(log, volumes)
@@ -260,7 +264,7 @@ def main(argv=sys.argv):
         'deploy_stderr': deploy_stderr.getvalue(),
         'deploy_status_code': pod_state,
     }
-    json.dump(response, sys.stdout)
+    json.dump(response, sys_stdout)
 
 
 if __name__ == '__main__':
