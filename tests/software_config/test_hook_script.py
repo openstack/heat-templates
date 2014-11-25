@@ -41,7 +41,9 @@ class HookScriptTest(common.RunScriptTest):
             'group': 'script',
             'inputs': [
                 {'name': 'foo', 'value': 'bar'},
-                {'name': 'another', 'value': 'input'}
+                {'name': 'another', 'value': 'input'},
+                {'name': 'a_dict', 'value': '{"key": "value"}'},
+                {'name': 'a_list', 'value': '["v1", 12]'},
             ],
             'outputs': [
                 {'name': 'first_output'},
@@ -93,6 +95,8 @@ class HookScriptTest(common.RunScriptTest):
         self.assertEqual([script], state['args'])
         self.assertEqual('bar', state['env']['foo'])
         self.assertEqual('input', state['env']['another'])
+        self.assertEqual('{"key": "value"}', state['env']['a_dict'])
+        self.assertEqual('["v1", 12]', state['env']['a_list'])
         self.assertEqual(self.outputs_dir.join('1234'),
                          state['env']['heat_outputs_path'])
 
@@ -123,5 +127,7 @@ class HookScriptTest(common.RunScriptTest):
         self.assertEqual([script], state['args'])
         self.assertEqual('bar', state['env']['foo'])
         self.assertEqual('input', state['env']['another'])
+        self.assertEqual('{"key": "value"}', state['env']['a_dict'])
+        self.assertEqual('["v1", 12]', state['env']['a_list'])
         self.assertEqual(self.outputs_dir.join('1234'),
                          state['env']['heat_outputs_path'])
