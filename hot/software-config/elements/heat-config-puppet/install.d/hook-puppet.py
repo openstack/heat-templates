@@ -23,6 +23,8 @@ WORKING_DIR = os.environ.get('HEAT_PUPPET_WORKING',
 OUTPUTS_DIR = os.environ.get('HEAT_PUPPET_OUTPUTS',
                              '/var/run/heat-config/heat-config-puppet')
 PUPPET_CMD = os.environ.get('HEAT_PUPPET_CMD', 'puppet')
+HIERA_DATADIR = os.environ.get('HEAT_PUPPET_HIERA_DATADIR',
+                               '/etc/puppet/hieradata')
 
 
 def prepare_dir(path):
@@ -45,11 +47,29 @@ def main(argv=sys.argv):
 
     c = json.load(sys.stdin)
 
+    use_hiera = c['options'].get('enable_hiera', False)
+    use_facter = c['options'].get('enable_facter', True)
+
     facts = {}
+    hiera = {}
+
     for input in c['inputs']:
         input_name = input['name']
-        fact_name = 'FACTER_%s' % input_name
-        facts[fact_name] = input.get('value', '')
+        input_value = input.get('value', '')
+        if use_facter:
+            fact_name = 'FACTER_%s' % input_name
+            facts[fact_name] = input_value
+        if use_hiera:
+            hiera[input_name] = input_value
+
+    if use_hiera:
+        prepare_dir(HIERA_DATADIR)
+        hiera_data = os.path.join(HIERA_DATADIR,
+                                  'heat_config_%s.json' % c['name'])
+        with os.fdopen(os.open(hiera_data, os.O_CREAT | os.O_WRONLY, 0o600),
+                       'w') as hiera_file:
+            hiera_file.write(json.dumps(hiera).encode('utf8'))
+        facts['FACTER_deploy_config_name'] = c['name']
 
     fn = os.path.join(WORKING_DIR, '%s.pp' % c['id'])
     heat_outputs_path = os.path.join(OUTPUTS_DIR, c['id'])
