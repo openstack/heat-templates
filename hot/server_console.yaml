@@ -1,8 +1,8 @@
 heat_template_version: 2013-05-23
 
 description: |
-The heat template is used to demo the 'console_urls' attribute
-of OS::Nova::Server.
+  The heat template is used to demo the 'console_urls' attribute
+  of OS::Nova::Server.
 
 parameters:
   image:
