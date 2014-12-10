@@ -11,6 +11,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import json
 import os
 import tempfile
@@ -28,6 +29,7 @@ class HeatConfigTest(common.RunScriptTest):
 
     data = [
         {
+            'id': '1111',
             'group': 'chef',
             'inputs': [{
                 'name': 'deploy_signal_id',
@@ -35,19 +37,23 @@ class HeatConfigTest(common.RunScriptTest):
             }],
             'config': 'one'
         }, {
+            'id': '2222',
             'group': 'cfn-init',
             'inputs': [],
             'config': 'two'
         }, {
+            'id': '3333',
             'group': 'salt',
             'inputs': [{'name': 'foo', 'value': 'bar'}],
             'outputs': [{'name': 'foo'}],
             'config': 'three'
         }, {
+            'id': '4444',
             'group': 'puppet',
             'inputs': [],
             'config': 'four'
         }, {
+            'id': '5555',
             'group': 'script',
             'inputs': [{
                 'name': 'deploy_status_code', 'value': '-1'
@@ -59,6 +65,7 @@ class HeatConfigTest(common.RunScriptTest):
             }],
             'config': 'five'
         }, {
+            'id': '6666',
             'group': 'no-such-hook',
             'inputs': [],
             'config': 'six'
@@ -105,6 +112,7 @@ class HeatConfigTest(common.RunScriptTest):
             'heat-config/os-refresh-config/configure.d/55-heat-config')
 
         self.hooks_dir = self.useFixture(fixtures.TempDir())
+        self.deployed_dir = self.useFixture(fixtures.TempDir())
 
         with open(self.fake_hook_path) as f:
             fake_hook = f.read()
@@ -123,16 +131,13 @@ class HeatConfigTest(common.RunScriptTest):
         config_file.flush()
         return config_file
 
-    @requests_mock.Mocker(kw='mock_request')
-    def test_run_heat_config(self, mock_request):
-        mock_request.register_uri('POST', 'mock://192.0.2.2/foo')
-        mock_request.register_uri('POST', 'mock://192.0.2.3/foo')
-
-        with self.write_config_file(self.data) as config_file:
+    def run_heat_config(self, data):
+        with self.write_config_file(data) as config_file:
 
             env = os.environ.copy()
             env.update({
                 'HEAT_CONFIG_HOOKS': self.hooks_dir.join(),
+                'HEAT_CONFIG_DEPLOYED': self.deployed_dir.join(),
                 'HEAT_SHELL_CONFIG': config_file.name
             })
             returncode, stdout, stderr = self.run_cmd(
@@ -140,22 +145,35 @@ class HeatConfigTest(common.RunScriptTest):
 
             self.assertEqual(0, returncode, stderr)
 
+    def test_hooks_exist(self):
+        self.assertThat(
+            self.hooks_dir.join('no-such-hook'),
+            matchers.Not(matchers.FileExists()))
+
+        for hook in self.fake_hooks:
+            hook_path = self.hooks_dir.join(hook)
+            self.assertThat(hook_path, matchers.FileExists())
+
+    @requests_mock.Mocker(kw='mock_request')
+    def test_run_heat_config(self, mock_request):
+        mock_request.register_uri('POST', 'mock://192.0.2.2/foo')
+        mock_request.register_uri('POST', 'mock://192.0.2.3/foo')
+
+        self.run_heat_config(self.data)
+
         for config in self.data:
             hook = config['group']
-            hook_path = self.hooks_dir.join(hook)
             stdin_path = self.hooks_dir.join('%s.stdin' % hook)
             stdout_path = self.hooks_dir.join('%s.stdout' % hook)
+            deployed_file = self.deployed_dir.join('%s.json' % config['id'])
 
             if hook == 'no-such-hook':
-                self.assertThat(
-                    hook_path, matchers.Not(matchers.FileExists()))
                 self.assertThat(
                     stdin_path, matchers.Not(matchers.FileExists()))
                 self.assertThat(
                     stdout_path, matchers.Not(matchers.FileExists()))
                 continue
 
-            self.assertThat(hook_path, matchers.FileExists())
             self.assertThat(stdin_path, matchers.FileExists())
             self.assertThat(stdout_path, matchers.FileExists())
 
@@ -163,5 +181,45 @@ class HeatConfigTest(common.RunScriptTest):
             self.assertEqual(config,
                              self.json_from_file(stdin_path))
 
+            # parsed stdin should match the written deployed file
+            self.assertEqual(config,
+                             self.json_from_file(deployed_file))
+
             self.assertEqual(self.outputs[hook],
                              self.json_from_file(stdout_path))
+
+            # clean up files in preperation for second run
+            os.remove(stdin_path)
+            os.remove(stdout_path)
+
+        # run again with no changes, assert no new files
+        self.run_heat_config(self.data)
+        for config in self.data:
+            hook = config['group']
+            stdin_path = self.hooks_dir.join('%s.stdin' % hook)
+            stdout_path = self.hooks_dir.join('%s.stdout' % hook)
+
+            self.assertThat(
+                stdin_path, matchers.Not(matchers.FileExists()))
+            self.assertThat(
+                stdout_path, matchers.Not(matchers.FileExists()))
+
+        # run again changing the puppet config
+        data = copy.deepcopy(self.data)
+        for config in data:
+            if config['id'] == '4444':
+                config['id'] = '44444444'
+        self.run_heat_config(data)
+        for config in self.data:
+            hook = config['group']
+            stdin_path = self.hooks_dir.join('%s.stdin' % hook)
+            stdout_path = self.hooks_dir.join('%s.stdout' % hook)
+
+            if hook == 'puppet':
+                self.assertThat(stdin_path, matchers.FileExists())
+                self.assertThat(stdout_path, matchers.FileExists())
+            else:
+                self.assertThat(
+                    stdin_path, matchers.Not(matchers.FileExists()))
+                self.assertThat(
+                    stdout_path, matchers.Not(matchers.FileExists()))

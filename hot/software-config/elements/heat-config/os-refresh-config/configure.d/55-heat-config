@@ -24,6 +24,8 @@ HOOKS_DIR = os.environ.get('HEAT_CONFIG_HOOKS',
                            '/var/lib/heat-config/hooks')
 CONF_FILE = os.environ.get('HEAT_SHELL_CONFIG',
                            '/var/run/heat-config/heat-config')
+DEPLOYED_DIR = os.environ.get('HEAT_CONFIG_DEPLOYED',
+                              '/var/run/heat-config/deployed')
 
 
 def main(argv=sys.argv):
@@ -38,6 +40,9 @@ def main(argv=sys.argv):
     if not os.path.exists(CONF_FILE):
         log.error('No config file %s' % CONF_FILE)
         return 1
+
+    if not os.path.isdir(DEPLOYED_DIR):
+        os.makedirs(DEPLOYED_DIR, 0o700)
 
     try:
         configs = json.load(open(CONF_FILE))
@@ -82,6 +87,14 @@ def invoke_hook(c, log):
                      ' for deploy action %s' % (group, action))
             return
 
+    # check to see if this config is already deployed
+    deployed_path = os.path.join(DEPLOYED_DIR, '%s.json' % c['id'])
+
+    if os.path.exists(deployed_path):
+        log.warn('Skipping config %s, already deployed' % c['id'])
+        log.warn('To force-deploy, rm %s' % deployed_path)
+        return
+
     # sanitise the group to get an alphanumeric hook file name
     hook = "".join(
         x for x in c['group'] if x == '-' or x == '_' or x.isalnum())
@@ -92,7 +105,14 @@ def invoke_hook(c, log):
         log.warn('Skipping group %s with no hook script %s' % (
             c['group'], hook_path))
     else:
-        log.debug('Running %s' % hook_path)
+
+        # write out config, which indicates it is deployed regardless of
+        # subsequent hook success
+        with os.fdopen(os.open(
+                deployed_path, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as f:
+            json.dump(c, f, indent=2)
+
+        log.debug('Running %s < %s' % (hook_path, deployed_path))
         subproc = subprocess.Popen([hook_path],
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,
