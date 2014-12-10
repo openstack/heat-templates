@@ -155,9 +155,9 @@ class HeatConfigTest(common.RunScriptTest):
                     stdout_path, matchers.Not(matchers.FileExists()))
                 continue
 
-            self.assertTrue(hook_path, matchers.FileExists())
-            self.assertTrue(stdin_path, matchers.FileExists())
-            self.assertTrue(stdout_path, matchers.FileExists())
+            self.assertThat(hook_path, matchers.FileExists())
+            self.assertThat(stdin_path, matchers.FileExists())
+            self.assertThat(stdout_path, matchers.FileExists())
 
             # parsed stdin should match the config item
             self.assertEqual(config,
