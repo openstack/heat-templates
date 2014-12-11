@@ -17,7 +17,6 @@ import os
 import tempfile
 
 import fixtures
-import requests_mock
 from testtools import matchers
 
 from tests.software_config import common
@@ -154,10 +153,7 @@ class HeatConfigTest(common.RunScriptTest):
             hook_path = self.hooks_dir.join(hook)
             self.assertThat(hook_path, matchers.FileExists())
 
-    @requests_mock.Mocker(kw='mock_request')
-    def test_run_heat_config(self, mock_request):
-        mock_request.register_uri('POST', 'mock://192.0.2.2/foo')
-        mock_request.register_uri('POST', 'mock://192.0.2.3/foo')
+    def test_run_heat_config(self):
 
         self.run_heat_config(self.data)
 

@@ -1,0 +1,98 @@
+#!/usr/bin/env python
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import json
+import logging
+import os
+import sys
+
+import requests
+
+try:
+    from heatclient import client as heatclient
+except ImportError:
+    heatclient = None
+
+try:
+    from keystoneclient.v3 import client as ksclient
+except ImportError:
+    ksclient = None
+
+
+def init_logging():
+    log = logging.getLogger('heat-config-notify')
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(
+        logging.Formatter(
+            '[%(asctime)s] (%(name)s) [%(levelname)s] %(message)s'))
+    log.addHandler(handler)
+    log.setLevel('DEBUG')
+
+
+def main(argv=sys.argv, stdin=sys.stdin):
+
+    log = init_logging()
+    usage = ('Usage:\n  heat-config-notify /path/to/config.json '
+             '< /path/to/signal_data.json')
+
+    if len(argv) < 2:
+        log.error(usage)
+        return 1
+
+    try:
+        signal_data = json.load(stdin)
+    except ValueError:
+        log.warn('No valid json found on stdin')
+        signal_data = {}
+
+    conf_file = argv[1]
+    if not os.path.exists(conf_file):
+        log.error('No config file %s' % conf_file)
+        log.error(usage)
+        return 1
+
+    c = json.load(open(conf_file))
+
+    iv = dict((i['name'], i['value']) for i in c['inputs'])
+
+    if 'deploy_signal_id' in iv:
+        sigurl = iv.get('deploy_signal_id')
+        signal_data = json.dumps(signal_data)
+        log.debug('Signalling to %s' % sigurl)
+        r = requests.post(sigurl, data=signal_data,
+                          headers={'content-type': None})
+        log.debug('Response %s ' % r)
+
+    if 'deploy_auth_url' in iv:
+        ks = ksclient.Client(
+            auth_url=iv['deploy_auth_url'],
+            user_id=iv['deploy_user_id'],
+            password=iv['deploy_password'],
+            project_id=iv['deploy_project_id'])
+        endpoint = ks.service_catalog.url_for(
+            service_type='orchestration', endpoint_type='publicURL')
+        log.debug('Signalling to %s' % endpoint)
+        heat = heatclient.Client(
+            '1', endpoint, token=ks.auth_token)
+        r = heat.resources.signal(
+            iv.get('deploy_stack_id'),
+            iv.get('deploy_resource_name'),
+            data=signal_data)
+        log.debug('Response %s ' % r)
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv, sys.stdin))
