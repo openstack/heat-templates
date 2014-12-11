@@ -1,3 +1,9 @@
 A hook which invokes ``puppet apply`` on the provided configuration.
-Config inputs are passed in as facts, and output values are read from written-out
-files.
+
+Config inputs are passed in as facts and/or using hiera, and output values
+are read from written-out files.
+
+Hook Options:
+-------------
+  use_facter: default True. Set to True to pass puppet inputs via Facter
+  use_hiera: default False. Set to True to pass puppet inputs via Hiera
