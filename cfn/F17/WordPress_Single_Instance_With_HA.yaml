@@ -73,7 +73,7 @@ Resources:
       EvaluationPeriods: '1'
       Threshold: '2'
       AlarmActions:
-      - {Ref: WebServerRestartPolicy}
+      - Fn::GetAtt: [WebServerRestartPolicy, AlarmUrl]
       ComparisonOperator: GreaterThanThreshold
   WikiDatabase:
     Type: AWS::EC2::Instance
@@ -133,9 +133,7 @@ Resources:
                 - - '#!/bin/sh
 
                     '
-                  - '/opt/aws/bin/cfn-push-stats --watch '
-                  - {Ref: HttpFailureAlarm}
-                  - ' --service-failure
+                  - '/opt/aws/bin/cfn-push-stats --service-failure
 
                     '
               mode: '000700'
