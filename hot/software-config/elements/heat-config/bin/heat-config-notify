@@ -38,6 +38,7 @@ def init_logging():
             '[%(asctime)s] (%(name)s) [%(levelname)s] %(message)s'))
     log.addHandler(handler)
     log.setLevel('DEBUG')
+    return log
 
 
 def main(argv=sys.argv, stdin=sys.stdin):
