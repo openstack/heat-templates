@@ -1,0 +1,1 @@
+../../hot/software-config/elements/heat-config/bin/heat-config-notify
