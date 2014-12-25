@@ -44,7 +44,7 @@ parameters:
     default: private
 
 resources:
-  my_asg:
+  asg:
     type: OS::Heat::AutoScalingGroup
     properties:
       resource:
@@ -62,7 +62,7 @@ resources:
     type: OS::Heat::ScalingPolicy
     properties:
       adjustment_type: change_in_capacity
-      auto_scaling_group_id: {get_resource: my_asg}
+      auto_scaling_group_id: {get_resource: asg}
       cooldown: 60
       scaling_adjustment: 1
 
@@ -70,7 +70,7 @@ resources:
     type: OS::Heat::ScalingPolicy
     properties:
       adjustment_type: change_in_capacity
-      auto_scaling_group_id: {get_resource: my_asg}
+      auto_scaling_group_id: {get_resource: asg}
       cooldown: 60
       scaling_adjustment: '-1'
 

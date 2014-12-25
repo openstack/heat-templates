@@ -59,7 +59,7 @@ resources:
             $db_name: {get_param: database_name}
             $db_user: {get_param: database_user}
             $db_password: {get_attr: [database_password, value]}
-  web_server_group:
+  asg:
     type: OS::Heat::AutoScalingGroup
     properties:
       min_size: 1
@@ -98,14 +98,14 @@ resources:
     type: OS::Heat::ScalingPolicy
     properties:
       adjustment_type: change_in_capacity
-      auto_scaling_group_id: {get_resource: web_server_group}
+      auto_scaling_group_id: {get_resource: asg}
       cooldown: 60
       scaling_adjustment: 1
   web_server_scaledown_policy:
     type: OS::Heat::ScalingPolicy
     properties:
       adjustment_type: change_in_capacity
-      auto_scaling_group_id: {get_resource: web_server_group}
+      auto_scaling_group_id: {get_resource: asg}
       cooldown: 60
       scaling_adjustment: -1
   cpu_alarm_high:
