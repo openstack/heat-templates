@@ -1,0 +1,75 @@
+heat_template_version: 2013-05-23
+parameters:
+  key_name:
+    type: string
+    default: heat_key
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+    default: fedora-software-config
+
+resources:
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+      - protocol: tcp
+        port_range_min: 8080
+        port_range_max: 8080
+
+  kubelet_config:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: kubelet
+      options:
+        images_timeout: 600
+        containers_timeout: 120
+        poll_period: 10
+      config:
+        version: v1beta2
+        containers:
+          - name: simple-echo
+            image: busybox
+            command: ['nc', '-p', '8080', '-l', '-l', '-e', 'echo', 'hello world!']
+            ports:
+              - name: nc-echo
+                hostPort: 8080
+                containerPort: 8080
+
+  kubelet_deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      name: kubelet_deployment
+      config:
+        get_resource: kubelet_config
+      server:
+        get_resource: server
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: SOFTWARE_CONFIG
+
+outputs:
+  status_code_deployment:
+    value:
+      get_attr: [kubelet_deployment, deploy_status_code]
+  stdout:
+    value:
+      get_attr: [kubelet_deployment, deploy_stdout]
+  stderr:
+    value:
+      get_attr: [kubelet_deployment, deploy_stderr]

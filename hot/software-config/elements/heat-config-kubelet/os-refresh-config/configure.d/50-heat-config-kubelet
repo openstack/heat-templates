@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import glob
+import json
+import logging
+import os
+import subprocess
+import sys
+
+import requests
+
+MANIFESTS_DIR = os.environ.get('HEAT_KUBELET_MANIFESTS',
+                               '/var/lib/heat-config/heat-config-kubelet'
+                               '/kubelet-manifests')
+CONF_FILE = os.environ.get('HEAT_SHELL_CONFIG',
+                           '/var/run/heat-config/heat-config')
+
+
+def main(argv=sys.argv):
+    log = logging.getLogger('heat-config')
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(
+        logging.Formatter(
+            '[%(asctime)s] (%(name)s) [%(levelname)s] %(message)s'))
+    log.addHandler(handler)
+    log.setLevel('DEBUG')
+
+    if not os.path.exists(CONF_FILE):
+        log.error('No config file %s' % CONF_FILE)
+        return 1
+
+    if not os.path.isdir(MANIFESTS_DIR):
+        os.makedirs(MANIFESTS_DIR, 0o700)
+
+    for f in glob.glob('%s/*.json'):
+        os.remove(f)
+
+    try:
+        configs = json.load(open(CONF_FILE))
+    except ValueError:
+        pass
+    else:
+        for c in configs:
+            try:
+                write_manifest(c)
+            except Exception as e:
+                log.exception(e)
+
+
+def write_manifest(c):
+    group = c.get('group')
+    if group != 'kubelet':
+        return
+
+    fn = os.path.join(MANIFESTS_DIR, '%s.json' % c['id'])
+    with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as f:
+        json.dump(c['config'], f, indent=2)
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

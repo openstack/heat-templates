@@ -36,6 +36,7 @@ with the following:
     heat-config-ansible \
     heat-config-cfn-init \
     heat-config-docker-compose \
+    heat-config-kubelet \
     heat-config-puppet \
     heat-config-salt \
     heat-config-script \
