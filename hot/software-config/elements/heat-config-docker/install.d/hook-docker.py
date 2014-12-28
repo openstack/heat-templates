@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import cStringIO
 import json
 import logging
 import os
@@ -42,10 +43,12 @@ def build_container_name(pod_name, container_name):
     return pod_name + '.' + container_name
 
 
-def remove_all_containers_for_pod(client, pod_name):
+def remove_all_containers_for_pod(client, log, pod_name):
+    log.debug('Removing all containers from %s' % pod_name)
     containers = client.containers(all=True)
     for x in containers:
         if pod_name in x['Names'][0]:
+            log.debug('Removing container %s' % x['Id'])
             remove_container(client, x['Id'])
 
 
@@ -53,18 +56,22 @@ def get_container_info(client, container):
     return client.inspect_container(container)
 
 
-def pull_image(client, image):
+def pull_image(client, log, image):
     try:
+        log.debug('Inspecting image %s' % image)
         client.inspect_image(image)
     except Exception:
+        log.debug('Pulling image %s' % image)
         client.pull(image, tag=None)
 
 
-def get_client():
+def get_client(log):
     kwargs = {}
     kwargs['base_url'] = DOCKER_BASE_URL
+    log.debug('Connecting to %s' % DOCKER_BASE_URL)
     client = docker.Client(**kwargs)
     client._version = client.version()['ApiVersion']
+    log.debug('Connected to version %s' % client._version)
     return client
 
 
@@ -104,11 +111,12 @@ def get_path(root_dir, vol_name):
     return root_dir + vol_name
 
 
-def mount_external_volumes(volumes):
+def mount_external_volumes(log, volumes):
     root_dir = '/'
     for vol in volumes:
         vol_path = get_path(root_dir, vol['name'])
         if not os.path.exists(vol_path):
+            log.debug('Creating mount path %s' % vol_path)
             os.makedirs(vol_path)
 
 
@@ -132,23 +140,42 @@ def update_pod_state(pod_state, is_container_running):
         return 1  # pod with error
 
 
-def main(argv=sys.argv):
+def configure_logging():
     log = logging.getLogger('heat-config')
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(
-        logging.Formatter(
-            '[%(asctime)s] (%(name)s) [%(levelname)s] %(message)s'))
-    log.addHandler(handler)
     log.setLevel('DEBUG')
+    formatter = logging.Formatter(
+        '[%(asctime)s] (%(name)s) [%(levelname)s] %(message)s')
+
+    # debug log to stderr
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(formatter)
+    log.addHandler(handler)
+
+    deploy_stdout = cStringIO.StringIO()
+    handler = logging.StreamHandler(deploy_stdout)
+    handler.setFormatter(formatter)
+    handler.setLevel('DEBUG')
+    log.addHandler(handler)
+
+    deploy_stderr = cStringIO.StringIO()
+    handler = logging.StreamHandler(deploy_stderr)
+    handler.setFormatter(formatter)
+    handler.setLevel('DEBUG')
+    log.addHandler(handler)
+
+    return log, deploy_stdout, deploy_stderr
+
+
+def main(argv=sys.argv):
+    (log, deploy_stdout, deploy_stderr) = configure_logging()
+    client = get_client(log)
 
     c = json.load(sys.stdin)
 
-    client = get_client()
     pod_name = c.get('name')
     input_values = dict((i['name'], i['value']) for i in c['inputs'])
 
     config = c.get('config')
-    log.debug('Received Config %s' % config)
 
     if isinstance(config, dict):
         yaml_config = config
@@ -158,21 +185,21 @@ def main(argv=sys.argv):
     containers = yaml_config.get('containers')
     volumes = yaml_config.get('volumes')
 
-    remove_all_containers_for_pod(client, pod_name)
+    remove_all_containers_for_pod(client, log, pod_name)
 
     pod_state = 0
     stdout, stderr = {}, {}
 
     if input_values.get('deploy_action') == 'DELETE':
         response = {
-            'deploy_stdout': stdout,
-            'deploy_stderr': stderr,
+            'deploy_stdout': deploy_stdout.getvalue(),
+            'deploy_stderr': deploy_stderr.getvalue(),
             'deploy_status_code': 0,
         }
         json.dump(response, sys.stdout)
         return
 
-    mount_external_volumes(volumes)
+    mount_external_volumes(log, volumes)
 
     for container in containers:
         image = container.get('image')
@@ -184,16 +211,16 @@ def main(argv=sys.argv):
         env_vars = make_env_vars(container.get('env'))
 
         container_id = None
-        log.debug('Pulling docker image %s.' % image)
 
         try:
             log.debug('Pulling docker image %s.' % image)
-            pull_image(client, image)
+            pull_image(client, log, image)
 
-            log.debug('Making volume bindings.')
+            log.debug('Making volume bindings')
 
             mountpoints, binds = make_binds(volume_mounts, volumes)
 
+            log.debug('Creating container with image %s' % image)
             container_info = client.create_container(
                 image=image,
                 command=command,
@@ -209,7 +236,7 @@ def main(argv=sys.argv):
 
             container_id = container_info['Id']
 
-            log.debug('Building volume mounts.')
+            log.debug('Building volume mounts')
             bindings = make_port_bindings(client, container_id, ports)
 
             if not is_running(client, container_id):
@@ -217,24 +244,20 @@ def main(argv=sys.argv):
                              binds=binds,
                              port_bindings=bindings)
 
-                log.debug('Started Container %s.' % container_id)
+                log.debug('Started container %s.' % container_id)
 
-            stdout[container_id] = get_container_info(client, container_id)
+            container_info = get_container_info(client, container_id)
             pod_state = update_pod_state(pod_state, True)
 
         except Exception as ex:
             log.error('An error occurred deploying container %s with error %s.'
                       % (image, ex))
-            if container_id:
-                stderr[container_id] = ex
-            else:
-                stderr[image] = ex
             pod_state = update_pod_state(pod_state, False)
-            remove_all_containers_for_pod(client, pod_name)
+            remove_all_containers_for_pod(client, log, pod_name)
 
     response = {
-        'deploy_stdout': stdout,
-        'deploy_stderr': stderr,
+        'deploy_stdout': deploy_stdout.getvalue(),
+        'deploy_stderr': deploy_stderr.getvalue(),
         'deploy_status_code': pod_state,
     }
     json.dump(response, sys.stdout)
