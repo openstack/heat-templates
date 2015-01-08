@@ -73,7 +73,7 @@ def invoke_hook(c, log):
     # according to deploy_action
     group = c.get('group')
     if group == 'component':
-        found = false
+        found = False
         action = iv.get('deploy_action')
         config = c.get('config')
         configs = config.get('configs')
@@ -82,7 +82,7 @@ def invoke_hook(c, log):
                 if action in cfg['actions']:
                     c['config'] = cfg['config']
                     c['group'] = cfg['tool']
-                    found = true
+                    found = True
                     break
         if not found:
             log.warn('Skipping group %s, no valid script is defined'
