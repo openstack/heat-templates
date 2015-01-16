@@ -1,0 +1,64 @@
+heat_template_version: 2013-05-23
+description: >
+  This template demonstrates how to use OS::Heat::StructuredDeployment
+  to apply config via os-apply-config. Note this requires your image to
+  be built with the ntp element added (not included in the instructions
+  in this repo by default, you'll have to add it and rebuild).
+  This example includes additional configuration of cloud-init via
+  the user-data in addition to the StructuredDeployment
+parameters:
+  key_name:
+    type: string
+    default: default
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+    default: heat-functional-tests-image
+  ntp_server:
+    type: string
+    default: 0.uk.pool.ntp.org
+
+resources:
+  config:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: os-apply-config
+      config:
+        ntp:
+          servers:
+            - {server: {get_param: ntp_server}}
+
+  deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+
+
+  cloud_init_userdata:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+      - config: {get_resource: cloud_config}
+
+  cloud_config:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        write_files:
+        - path: /tmp/one
+          content: "The one is bar"
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      user_data_format: SOFTWARE_CONFIG
+      user_data:
+        get_resource: cloud_init_userdata
