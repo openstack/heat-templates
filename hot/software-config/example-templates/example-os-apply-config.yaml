@@ -26,7 +26,7 @@ resources:
       config:
         ntp:
           servers:
-            - {server: {get_param: ntp_server}, fudge: "stratum 0"}
+            - {server: {get_param: ntp_server}}
 
   deployment:
     type: OS::Heat::StructuredDeployment
