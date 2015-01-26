@@ -40,7 +40,7 @@ resources:
             #!/bin/bash -v
 
             yum -y install https://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-            yum -y install https://yum.puppetlabs.com/el/6/products/x86_64/puppetlabs-release-6-10.noarch.rpm
+            yum -y install http://yum.puppetlabs.com/puppetlabs-release-el-6.noarch.rpm
             yum -y install augeas
 
             augtool setm /files/etc/yum.repos.d/puppetlabs.repo/* exclude '*mcollective*\ activemq'
