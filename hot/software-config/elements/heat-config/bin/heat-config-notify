@@ -69,10 +69,15 @@ def main(argv=sys.argv, stdin=sys.stdin):
 
     if 'deploy_signal_id' in iv:
         sigurl = iv.get('deploy_signal_id')
+        sigverb = iv.get('deploy_signal_verb', 'POST')
         signal_data = json.dumps(signal_data)
-        log.debug('Signalling to %s' % sigurl)
-        r = requests.post(sigurl, data=signal_data,
-                          headers={'content-type': None})
+        log.debug('Signaling to %s via %s' % (sigurl, sigverb))
+        if sigverb == 'PUT':
+            r = requests.put(sigurl, data=signal_data,
+                             headers={'content-type': None})
+        else:
+            r = requests.post(sigurl, data=signal_data,
+                              headers={'content-type': None})
         log.debug('Response %s ' % r)
 
     if 'deploy_auth_url' in iv:

@@ -34,6 +34,19 @@ class HeatConfigNotifyTest(common.RunScriptTest):
         'config': 'five'
     }
 
+    data_signal_id_put = {
+        'id': '5555',
+        'group': 'script',
+        'inputs': [{
+            'name': 'deploy_signal_id',
+            'value': 'mock://192.0.2.3/foo'
+        }, {
+            'name': 'deploy_signal_verb',
+            'value': 'PUT'
+        }],
+        'config': 'five'
+    }
+
     data_heat_signal = {
         'id': '5555',
         'group': 'script',
@@ -103,6 +116,24 @@ class HeatConfigNotifyTest(common.RunScriptTest):
                 0, hcn.main(['heat-config-notify', config_file.name], stdin))
 
         requests.post.assert_called_once_with(
+            'mock://192.0.2.3/foo',
+            data=signal_data,
+            headers={'content-type': None})
+
+    def test_notify_signal_id_put(self):
+        requests = mock.MagicMock()
+        hcn.requests = requests
+
+        requests.post.return_value = '[200]'
+
+        signal_data = json.dumps({'foo': 'bar'})
+        stdin = cStringIO.StringIO(signal_data)
+
+        with self.write_config_file(self.data_signal_id_put) as config_file:
+            self.assertEqual(
+                0, hcn.main(['heat-config-notify', config_file.name], stdin))
+
+        requests.put.assert_called_once_with(
             'mock://192.0.2.3/foo',
             data=signal_data,
             headers={'content-type': None})
