@@ -1,0 +1,67 @@
+heat_template_version: 2014-10-16
+
+resources:
+
+  install_config_agent_pip:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config: |
+        #!/bin/bash
+        set -eux
+        pip install --no-deps os-collect-config os-apply-config os-refresh-config dib-utils heat-cfntools
+        cfn-create-aws-symlinks
+
+  configure_config_agent:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          params:
+            $heat_config_script: {get_file: ../../elements/heat-config/os-refresh-config/configure.d/55-heat-config}
+            $hook_script: {get_file: ../../elements/heat-config-script/install.d/hook-script.py}
+            $heat_config_notify: {get_file: ../../elements/heat-config/bin/heat-config-notify}
+          template: {get_file: fragments/configure_config_agent.sh}
+
+  install_puppet_hook:
+    type: "OS::Heat::CloudConfig"
+    properties:
+      cloud_config:
+        merge_how: dict(recurse_array)+list(append)
+        write_files:
+          - path: /var/lib/heat-config/hooks/puppet
+            owner: "root:root"
+            permissions: "0755"
+            content: {get_file: ../../elements/heat-config-puppet/install.d/hook-puppet.py}
+
+  install_cfn_init_hook:
+    type: "OS::Heat::CloudConfig"
+    properties:
+      cloud_config:
+        merge_how: dict(recurse_array)+list(append)
+        write_files:
+          - path: /var/lib/heat-config/hooks/cfn-init
+            owner: "root:root"
+            permissions: "0755"
+            content: {get_file: ../../elements/heat-config-cfn-init/install.d/hook-cfn-init.py}
+
+  start_config_agent:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config: {get_file: fragments/start_config_agent.sh}
+
+  install_config_agent:
+    type: "OS::Heat::MultipartMime"
+    properties:
+      parts:
+      - config: {get_resource: install_config_agent_pip}
+      - config: {get_resource: configure_config_agent}
+      - config: {get_resource: install_puppet_hook}
+      - config: {get_resource: install_cfn_init_hook}
+      - config: {get_resource: start_config_agent}
+
+outputs:
+  config:
+    value: {get_resource: install_config_agent}

@@ -1,0 +1,10 @@
+# Installs software-config agent on boot with pip install.
+# It is assumed that the image has the required python build
+# environment so that no distro packages or pip dependencies
+# need to be installed.
+#
+# See hot/software-config/test-image for instructions on building a
+# test image to work with this environment
+
+resource_registry:
+  "Heat::InstallConfigAgent": templates/install_config_agent_test_image.yaml
