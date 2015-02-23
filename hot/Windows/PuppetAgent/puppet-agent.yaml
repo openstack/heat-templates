@@ -1,0 +1,140 @@
+﻿heat_template_version: 2013-05-23
+
+description: >
+  Installs a Puppet Agent.
+
+parameters:
+  key_name:
+    description: Name of an existing keypair to encrypt the Admin password
+    type: string
+
+  flavor:
+    description: Id or name of an existing flavor
+    type: string
+    default: m1.small
+
+  image:
+    description: Id or name of an existing Windows image
+    type: string
+
+  public_network_id:
+    type: string
+    description: >
+      ID of an existing public network where a floating IP will be
+      allocated.
+
+  private_network_id:
+    type: string
+    description: Id of an existing private network
+
+  puppet_master_server:
+    type: string
+    constraints:
+      - length: { min: 3, max: 256 }
+    description: The Puppet Master server host name or fqdn (no IP address)
+
+  puppet_master_server_ip_address:
+    type: string
+    constraints:
+      - length: { min: 7, max: 45 }
+    description: >
+      The Puppet Master server IP address. If provided, a host file record
+      will be created to map puppet_master_server to this IP address.
+
+  puppet_agent_max_timeout:
+    type: number
+    default: 3600
+    description: >
+      The maximum allowed time for the Puppet Agent instalation to finish.
+
+resources:
+  server_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: private_network_id }
+
+  server_floating_ip:
+    type: OS::Neutron::FloatingIP
+    depends_on: server_port
+    properties:
+      floating_network_id: { get_param: public_network_id }
+      port_id: { get_resource: server_port }
+
+  utils_module:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: heat-powershell-utils.psm1 }
+
+  puppet_agent_module:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: PuppetAgent.psm1 }
+
+  puppet_agent_main:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          template: { get_file: PuppetAgent.ps1 }
+          params:
+            puppet_master_server_hostname:
+              { get_param: puppet_master_server }
+            puppet_master_server_ip_address:
+              { get_param: puppet_master_server_ip_address }
+            puppet_agent_wait_condition_endpoint:
+             { get_attr: [ puppet_agent_wait_condition_handle, endpoint ] }
+            puppet_agent_wait_condition_token:
+             { get_attr: [ puppet_agent_wait_condition_handle, token ] }
+
+  puppet_agent_init:
+    type: OS::Heat::MultipartMime
+    depends_on: puppet_agent_wait_condition_handle
+    properties:
+      parts:
+        [ {
+            filename: "heat-powershell-utils.psm1",
+            subtype: "x-cfninitdata",
+            config: { get_resource: utils_module }
+          },
+          {
+            filename: "PuppetAgent.psm1",
+            subtype: "x-cfninitdata",
+            config: { get_resource: puppet_agent_module }
+          },
+          {
+            filename: "cfn-userdata",
+            subtype: "x-cfninitdata",
+            config: { get_resource: puppet_agent_main }
+          }
+        ]
+
+  puppet_agent:
+    type: OS::Nova::Server
+    depends_on: [ server_port, puppet_agent_init ]
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: server_port }
+      user_data_format: RAW
+      user_data: { get_resource: puppet_agent_init }
+
+  puppet_agent_wait_condition:
+    type: OS::Heat::WaitCondition
+    depends_on: puppet_agent_wait_condition_handle
+    properties:
+      count: 1
+      handle: { get_resource: puppet_agent_wait_condition_handle }
+      timeout: { get_param: puppet_agent_max_timeout }
+
+  puppet_agent_wait_condition_handle:
+    type: OS::Heat::WaitConditionHandle
+
+outputs:
+  puppet_agent_server_public_ip:
+    description: The Puppet Agent public IP address
+    value: { get_attr: [ server_floating_ip, floating_ip_address ] }
