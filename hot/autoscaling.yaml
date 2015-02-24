@@ -159,7 +159,7 @@ resources:
   # assign a floating ip address to the load balancer
   # pool.
   lb_floating:
-    type: "OS::Neutron::FloatingIP"
+    type: OS::Neutron::FloatingIP
     properties:
       floating_network_id: {get_param: external_network_id}
       port_id: {get_attr: [pool, vip, port_id]}
