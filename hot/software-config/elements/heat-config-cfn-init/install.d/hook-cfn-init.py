@@ -26,7 +26,7 @@ LAST_METADATA_DIR = os.environ.get('HEAT_CFN_INIT_LAST_METADATA_DIR',
 
 
 CFN_INIT_CMD = os.environ.get('HEAT_CFN_INIT_CMD',
-                              '/opt/aws/bin/cfn-init')
+                              'cfn-init')
 
 
 def main(argv=sys.argv, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
