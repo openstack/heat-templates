@@ -26,3 +26,8 @@ example-templates
 -----------------
 This contains example heat templates which demonstrate how the software config
 resources and the hooks work together to perform software configuration.
+
+test-image
+----------
+This contains `diskimage-builder <https://github.com/openstack/diskimage-builder>`_
+elements which will install the distro packages required for a base test image.

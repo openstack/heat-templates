@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 
-EXCLUDED_DIRS = ('contrib',)
+EXCLUDED_DIRS = ('contrib', 'elements')
 
 
 def main(args):

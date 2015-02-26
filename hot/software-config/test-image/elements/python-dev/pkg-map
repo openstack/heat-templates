@@ -1,0 +1,27 @@
+
+{
+  "family": {
+    "redhat": {
+      "python_pip_package": "python-pip",
+      "gcc_package": "gcc",
+      "git_package": "git-core",
+      "python_devel_package": "python-devel",
+      "libyaml_devel_package": "libyaml-devel",
+      "openssl_devel_package": "openssl-devel",
+      "libffi_devel_package": "libffi-devel",
+      "libxml2_devel_package": "libxml2-devel",
+      "libxslt_devel_package": "libxslt-devel"
+    },
+    "debian": {
+      "python_pip_package": "python-pip",
+      "git_package": "git",
+      "gcc_package": "gcc",
+      "python_devel_package": "python-dev",
+      "libyaml_devel_package": "libyaml-dev",
+      "openssl_devel_package": "libssl-dev",
+      "libffi_devel_package": "libffi-dev",
+      "libxml2_devel_package": "libxml2-dev",
+      "libxslt_devel_package": "libxslt1-dev"
+    }
+  }
+}

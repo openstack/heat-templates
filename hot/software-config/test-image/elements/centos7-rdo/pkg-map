@@ -1,0 +1,5 @@
+{
+  "default": {
+    "rdo_release_juno_package": "https://repos.fedorapeople.org/repos/openstack/openstack-juno/rdo-release-juno-1.noarch.rpm"
+  }
+}

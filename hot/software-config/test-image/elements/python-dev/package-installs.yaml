@@ -1,0 +1,9 @@
+python_pip_package:
+git_package:
+gcc_package:
+python_devel_package:
+libyaml_devel_package:
+openssl_devel_package:
+libffi_devel_package:
+libxml2_devel_package:
+libxslt_devel_package:
