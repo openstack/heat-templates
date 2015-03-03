@@ -1,0 +1,1 @@
+A hook which uses 'docker-compose' to deploy containers.

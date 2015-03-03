@@ -35,7 +35,7 @@ with the following:
     os-apply-config \
     heat-config-ansible \
     heat-config-cfn-init \
-    heat-config-docker \
+    heat-config-docker-compose \
     heat-config-puppet \
     heat-config-salt \
     heat-config-script \
