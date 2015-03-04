@@ -1,0 +1,7 @@
+# Installs software-config agent on boot for ubuntu with pip install
+
+parameters:
+  image: trusty-server-cloudimg-amd64-disk1
+
+resource_registry:
+  "Heat::InstallConfigAgent": templates/install_config_agent_ubuntu_pip.yaml

@@ -1,0 +1,8 @@
+# Defines a Heat::InstallConfigAgent config resource which performs no config.
+# This environment can be used when the image already has the required agents
+# installed and configured.
+#
+# See heat-templates/hot/software-config/boot-config for environments
+# for different distros and install methods
+resource_registry:
+  "Heat::InstallConfigAgent": "OS::Heat::SoftwareConfig"

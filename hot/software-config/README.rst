@@ -7,6 +7,15 @@ and hooks to configure software on servers using a variety of techniques.
 
 Contained here are the following directories:
 
+boot-config
+-----------
+This directory has environment files which each declare a resource type
+Heat::InstallConfigAgent.
+
+This can be used by server user_data when booting a pristine image
+to install the agent required to use software deployment resources in
+templates.
+
 elements
 --------
 This contains `diskimage-builder <https://github.com/openstack/diskimage-builder>`_
