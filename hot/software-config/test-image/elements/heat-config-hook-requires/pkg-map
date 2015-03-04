@@ -1,0 +1,7 @@
+{
+  "default": {
+    "puppet_package": "puppet",
+    "ansible_package": "ansible",
+    "salt_minion_package": "salt-minion"
+  }
+}

@@ -1,0 +1,39 @@
+
+{
+  "family": {
+    "redhat": {
+      "python_setuptools_package": "python-setuptools",
+      "python_argparse_package": "python-argparse",
+      "python_anyjson_package": "python-anyjson",
+      "python_dogpile_cache_package": "python-dogpile-cache",
+      "python_eventlet_package": "python-eventlet",
+      "python_heatclient_package": "python-heatclient",
+      "python_keystoneclient_package": "python-keystoneclient",
+      "python_requests_package": "python-requests",
+      "python_iso8601_package": "python-iso8601",
+      "python_lxml_package": "python-lxml",
+      "python_six_package": "python-six",
+      "python_oslo_config_package": "python-oslo-config",
+      "pystache_package": "pystache",
+      "python_pbr_package": "python-pbr",
+      "python_boto_package": "python-boto"
+    },
+    "debian": {
+      "python_setuptools_package": "python-setuptools",
+      "python_argparse_package": "python-argparse",
+      "python_anyjson_package": "python-anyjson",
+      "python_dogpile_cache_package": "python-dogpile.cache",
+      "python_eventlet_package": "python-eventlet",
+      "python_heatclient_package": "python-heatclient",
+      "python_keystoneclient_package": "python-keystoneclient",
+      "python_requests_package": "python-requests",
+      "python_iso8601_package": "python-iso8601",
+      "python_lxml_package": "python-lxml",
+      "python_six_package": "python-six",
+      "python_oslo_config_package": "python-oslo-config",
+      "pystache_package": "python-pystache",
+      "python_pbr_package": "python-pbr",
+      "python_boto_package": "python-boto"
+    }
+  }
+}

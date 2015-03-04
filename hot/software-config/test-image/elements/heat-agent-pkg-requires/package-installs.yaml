@@ -1,0 +1,15 @@
+python_setuptools_package:
+python_argparse_package:
+python_anyjson_package:
+python_dogpile_cache_package:
+python_eventlet_package:
+python_heatclient_package:
+python_keystoneclient_package:
+python_requests_package:
+python_iso8601_package:
+python_lxml_package:
+python_six_package:
+python_oslo_config_package:
+pystache_package:
+python_pbr_package:
+python_boto_package:
