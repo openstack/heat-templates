@@ -1,0 +1,19 @@
+heat_template_version: 2013-05-23
+
+description: Sample Keystone Role template
+
+parameters:
+  role_name:
+    type: string
+    description: Keystone role name
+
+resources:
+  sample_role:
+    type: OS::Keystone::Role
+    properties:
+      name: {get_param: role_name}
+
+outputs:
+  sample_role_id:
+    value: {get_resource: sample_role}
+    description: Sample keystone role identifier

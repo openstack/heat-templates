@@ -1,0 +1,83 @@
+heat_template_version: 2013-05-23
+
+description: Sample Keystone template updated all resources except domain field
+
+resources:
+  test_role_a:
+    type: OS::Keystone::Role
+    properties:
+      name: test_role_a_updated
+
+  test_role_b:
+    type: OS::Keystone::Role
+    properties:
+      name: test_role_b
+
+  test_project_a:
+    type: OS::Keystone::Project
+    properties:
+      name: test_project_a_updated
+      domain: default
+      description: Test project updated
+      enabled: false
+
+  test_project_b:
+    type: OS::Keystone::Project
+    properties:
+      name: test_project_b
+      domain: default
+      description: Test project updated
+      enabled: false
+
+  test_group_a:
+    type: OS::Keystone::Group
+    properties:
+      name: test_group_a_updated
+      domain: default
+      description: Test group updated
+      roles:
+        - role: {get_resource: test_role_b}
+          domain: default
+        - role: {get_resource: test_role_b}
+          project: {get_resource: test_project_a}
+
+  test_group_b:
+    type: OS::Keystone::Group
+    properties:
+      name: test_group_b
+      domain: default
+      description: Test group
+
+  test_user_a:
+    type: OS::Keystone::User
+    properties:
+      name: test_user_a_updated
+      domain: default
+      description: Test user updated
+      enabled: false
+      email: xyz@abc.com
+      password: passWORD
+      default_project: {get_resource: test_project_b}
+      groups:
+        - {get_resource: test_group_b}
+      roles:
+        - role: {get_resource: test_role_b}
+          domain: default
+        - role: {get_resource: test_role_b}
+          project: {get_resource: test_project_a}
+
+outputs:
+  test_user_a_id:
+    value: {get_resource: test_user_a}
+  test_group_a_id:
+    value: {get_resource: test_group_a}
+  test_group_b_id:
+    value: {get_resource: test_group_b}
+  test_project_a_id:
+    value: {get_resource: test_project_a}
+  test_project_b_id:
+    value: {get_resource: test_project_b}
+  test_role_a_id:
+    value: {get_resource: test_role_a}
+  test_role_b_id:
+    value: {get_resource: test_role_b}
