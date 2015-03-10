@@ -13,6 +13,9 @@ parameters:
   database_flavor:
     type: string
     description: flavor used by the db server
+  network:
+    type: string
+    description: Network used by the server
   subnet_id:
     type: string
     description: subnet on which the load balancer will be located
@@ -38,6 +41,7 @@ resources:
       flavor: {get_param: database_flavor}
       image: {get_param: image}
       key_name: {get_param: key}
+      networks: [{network: {get_param: network} }]
       user_data_format: RAW
       user_data:
         str_replace:
@@ -70,6 +74,7 @@ resources:
           flavor: {get_param: flavor}
           image: {get_param: image}
           key_name: {get_param: key}
+          network: {get_param: network}
           pool_id: {get_resource: pool}
           metadata: {"metering.stack": {get_param: "OS::stack_id"}}
           user_data:
