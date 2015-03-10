@@ -19,7 +19,7 @@ set -e
 export DISTRO=${DISTRO:-fedora}
 
 export ELEMENTS_PATH=${ELEMENTS_PATH:-`dirname "$0"`/elements}
-export IMAGE_NAME=${IMAGE_NAME:-$DISTRO-heat-test-image}
+export IMAGE_NAME=${IMAGE_NAME:-$DISTRO-heat-test-image-`date +%Y%m%d_%H%M%S`}
 
 disk-image-create -x --no-tmpfs -o $IMAGE_NAME $DISTRO \
     vm python-dev heat-agent-pkg-requires heat-config-hook-requires
