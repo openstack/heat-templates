@@ -1,0 +1,33 @@
+heat_template_version: 2014-10-16
+
+parameters:
+  agent_image:
+    type: string
+    default: ramishra/heat-container-agent
+
+resources:
+  write_image_pull_script:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config: {get_file: ./fragments/get_container_agent_image.frag}
+
+  install_container_agent:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config:
+        str_replace:
+          params:
+            $agent_image: {get_param: agent_image}
+          template: {get_file: ./fragments/start_container_agent.sh}
+
+  node_init:
+    type: "OS::Heat::MultipartMime"
+    properties:
+      parts:
+        - config: {get_resource: write_image_pull_script}
+        - config: {get_resource: install_container_agent}
+outputs:
+  config:
+    value: {get_resource: node_init}
