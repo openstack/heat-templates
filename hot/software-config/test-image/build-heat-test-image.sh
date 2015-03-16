@@ -15,11 +15,12 @@
 
 set -e
 
-# known good values of DISTRO are fedora, ubuntu, centos7-rdo
-export DISTRO=${DISTRO:-fedora}
+# known good values of DISTRO are
+# fedora-heat-test, ubuntu-heat-test, centos7-heat-test
+export DISTRO=${DISTRO:-fedora-heat-test}
 
 export ELEMENTS_PATH=${ELEMENTS_PATH:-`dirname "$0"`/elements}
-export IMAGE_NAME=${IMAGE_NAME:-$DISTRO-heat-test-image-`date +%Y%m%d_%H%M%S`}
+export IMAGE_NAME=${IMAGE_NAME:-$DISTRO-image}
 
 disk-image-create -x --no-tmpfs -o $IMAGE_NAME $DISTRO \
     vm python-dev heat-agent-pkg-requires heat-config-hook-requires
