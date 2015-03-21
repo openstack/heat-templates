@@ -1,0 +1,68 @@
+heat_template_version: 2014-10-16
+description: >
+  A template which demonstrates doing boot-time deployment of docker
+  container with atomic tool.
+  This template expects to be created with an environment which defines
+  the resource type Heat::InstallConfigAgent such as
+  ../boot-config/container_agent_env.yaml
+parameters:
+  key_name:
+    type: string
+    default: heat_key
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+    default: rhel-atomic
+  private_net:
+    type: string
+    default: private
+  public_net:
+    type: string
+    default: public
+resources:
+  atomic_install_config:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: atomic
+      config:
+        command: install
+        image: imain/atomic-install-rabbitmq
+
+  atomic_install_deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      name: atomic_deployment
+      config:
+        get_resource: atomic_install_config
+      server:
+        get_resource: server
+
+  boot_config:
+    type: Heat::InstallConfigAgent
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      networks:
+      - network: {get_param: private_net}
+      user_data_format: SOFTWARE_CONFIG
+      user_data: {get_attr: [boot_config, config]}
+
+outputs:
+  result:
+    value:
+      get_attr: [atomic_install_deployment, result]
+  stdout:
+    value:
+      get_attr: [atomic_install_deployment, deploy_stdout]
+  stderr:
+    value:
+      get_attr: [atomic_install_deployment, deploy_stderr]
+  status_code:
+    value:
+      get_attr: [atomic_install_deployment, deploy_status_code]
