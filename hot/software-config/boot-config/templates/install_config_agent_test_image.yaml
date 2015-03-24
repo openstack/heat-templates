@@ -1,16 +1,29 @@
 heat_template_version: 2014-10-16
 
+parameters:
+  pip_mirror:
+    type: string
+    default: https://pypi.python.org/simple
+
 resources:
 
   install_config_agent_pip:
     type: "OS::Heat::SoftwareConfig"
     properties:
       group: ungrouped
-      config: |
-        #!/bin/bash
-        set -eux
-        pip install --no-deps os-collect-config os-apply-config os-refresh-config dib-utils heat-cfntools
-        cfn-create-aws-symlinks
+      config:
+        str_replace:
+          params:
+            $pip_mirror: {get_param: pip_mirror}
+          template: |
+            #!/bin/bash
+            set -eux
+
+            pip freeze
+
+            pip install --index-url "$pip_mirror" --pre --no-deps os-collect-config os-apply-config os-refresh-config dib-utils heat-cfntools
+            pip freeze
+            cfn-create-aws-symlinks --force
 
   configure_config_agent:
     type: "OS::Heat::SoftwareConfig"
