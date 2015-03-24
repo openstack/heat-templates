@@ -48,18 +48,21 @@ resources:
             msg="UPDATE invoked at `date +"%d/%m/%Y %H:%M:%S:%N"`"
             echo $msg >> /tmp/sw-component-actions
             echo "UPDATE" > $heat_outputs_path.last_action
+          tool: script
         - actions: [SUSPEND]
           config: |
             #!/bin/bash
             msg="SUSPEND invoked at `date +"%d/%m/%Y %H:%M:%S:%N"`"
             echo $msg >> /tmp/sw-component-actions
             echo "SUSPEND" > $heat_outputs_path.last_action
+          tool: script
         - actions: [RESUME]
           config: |
             #!/bin/bash
             msg="RESUME invoked at `date +"%d/%m/%Y %H:%M:%S:%N"`"
             echo $msg >> /tmp/sw-component-actions
             echo "RESUME" > $heat_outputs_path.last_action
+          tool: script
       outputs:
         - name: last_action
 
