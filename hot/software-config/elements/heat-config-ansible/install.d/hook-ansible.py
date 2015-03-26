@@ -75,7 +75,7 @@ def main(argv=sys.argv):
     ]
     log.debug('Running %s' % (' '.join(cmd),))
     try:
-        subproc = subprocess.Popen([cmd], stdout=subprocess.PIPE,
+        subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
     except OSError:
         log.warn("ansible not installed yet")
