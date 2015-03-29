@@ -66,7 +66,8 @@ def main(argv=sys.argv):
         prepare_dir(HIERA_DATADIR)
         hiera_data = os.path.join(HIERA_DATADIR,
                                   'heat_config_%s.json' % c['name'])
-        with os.fdopen(os.open(hiera_data, os.O_CREAT | os.O_WRONLY, 0o600),
+        with os.fdopen(os.open(hiera_data,
+                               os.O_CREAT | os.O_TRUNC | os.O_WRONLY, 0o600),
                        'w') as hiera_file:
             hiera_file.write(json.dumps(hiera).encode('utf8'))
         facts['FACTER_deploy_config_name'] = c['name']
@@ -80,7 +81,8 @@ def main(argv=sys.argv):
     env = os.environ.copy()
     env.update(facts)
 
-    with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o700), 'w') as f:
+    with os.fdopen(os.open(fn, os.O_CREAT | os.O_TRUNC | os.O_WRONLY, 0o700),
+                   'w') as f:
         f.write(c.get('config', '').encode('utf-8'))
 
     cmd = [PUPPET_CMD, 'apply', '--detailed-exitcodes', fn]
