@@ -23,19 +23,47 @@ class HookDockerComposeTest(common.RunScriptTest):
     data = {
         "id": "abcdef001",
         "group": "docker-compose",
-        "inputs": {},
+        "inputs": [
+            {
+                "name": "env_files",
+                "value": u'[ { "file_name": "./common.env", '
+                         u'"content": "xxxxx" }, '
+                         u'{ "file_name": "./test.env", '
+                         u'"content": "yyyy" }, '
+                         u'{ "file_name": "./test1.env", '
+                         u'"content": "zzz" } ]'
+            }
+        ],
         "config": {
             "web": {
-                "image": "nginx",
-                "links": [
-                    "db"
-                ],
-                "ports": [
-                    "8000:8000"
+                "name": "x",
+                "env_file": [
+                    "./common.env",
+                    "./test.env"
                 ]
             },
             "db": {
-                "image": "redis"
+                "name": "y",
+                "env_file": "./test1.env"
+            }
+        }
+    }
+
+    data_without_input = {
+        "id": "abcdef001",
+        "group": "docker-compose",
+        "inputs": [],
+        "config": {
+            "web": {
+                "name": "x",
+                "env_file": [
+                    "./common.env",
+                    "./test.env"
+                ]
+            },
+            "db": {
+                "name": "y",
+                "env_file": "./test1.env"
             }
         }
     }
@@ -92,6 +120,34 @@ class HookDockerComposeTest(common.RunScriptTest):
             ],
             state['args'])
 
+    def test_hook_without_inputs(self):
+
+        self.env.update({
+            'TEST_RESPONSE': json.dumps({
+                'stdout': '',
+                'stderr': 'env_file_not found...',
+                'returncode': 1
+            })
+        })
+        returncode, stdout, stderr = self.run_cmd(
+            [self.hook_path], self.env, json.dumps(self.data_without_input))
+
+        self.assertEqual({
+            'deploy_stdout': '',
+            'deploy_stderr': 'env_file_not found...',
+            'deploy_status_code': 1
+        }, json.loads(stdout))
+
+        state = self.json_from_file(self.test_state_path)
+        self.assertEqual(
+            [
+                self.fake_tool_path,
+                'up',
+                '-d',
+                '--no-build',
+            ],
+            state['args'])
+
     def test_hook_failed(self):
 
         self.env.update({
@@ -103,8 +159,6 @@ class HookDockerComposeTest(common.RunScriptTest):
         })
         returncode, stdout, stderr = self.run_cmd(
             [self.hook_path], self.env, json.dumps(self.data))
-
-        self.assertEqual(0, returncode, stderr)
 
         self.assertEqual({
             'deploy_stdout': '',

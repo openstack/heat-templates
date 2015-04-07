@@ -15,6 +15,15 @@ parameters:
   public_net:
     type: string
     default: public
+  env_file_0:
+     type: string
+  env_file_1:
+     type: string
+  env_file_2:
+     type: string
+  env_file_3:
+     type: string
+
 
 resources:
   the_sg:
@@ -35,15 +44,30 @@ resources:
     type: OS::Heat::StructuredConfig
     properties:
       group: docker-compose
+      inputs:
+      - name: env_files
       config:
         db:
           image: redis
+          env_file:
+          - ./common.env
+          - ./apps/web.env
         web:
           image: nginx
+          env_file: ./test.env
           links:
           - db
           ports:
           - 80:8000
+
+  other_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: docker-compose
+      inputs:
+      - name: env_files
+      config:
+        get_file: config-scripts/example-docker-compose.yml
 
   deployment:
     type: OS::Heat::StructuredDeployment
@@ -53,6 +77,27 @@ resources:
         get_resource: config
       server:
         get_resource: server
+      input_values:
+        env_files:
+        - file_name: ./common.env
+          content: {get_param: env_file_0}
+        - file_name: ./apps/web.env
+          content: {get_param: env_file_1}
+        - file_name: ./test.env
+          content: {get_param: env_file_2}
+
+  other_deployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      name: other_deployment
+      config:
+        get_resource: other_config
+      server:
+        get_resource: server
+      input_values:
+        env_files:
+        - file_name: ./busybox.env
+          content: {get_param: env_file_3}
 
   server:
     type: OS::Nova::Server

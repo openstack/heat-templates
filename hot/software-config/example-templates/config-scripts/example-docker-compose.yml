@@ -1,0 +1,6 @@
+busybox:
+  env_file: ./busybox.env
+  image: busybox
+  command: ['nc', '-p', '8080', '-l', '-l', '-e', 'echo', 'hello world!']
+  ports:
+  - 8080:8080

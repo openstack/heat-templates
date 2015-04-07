@@ -12,11 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ast
+import dpath
 import json
 import logging
 import os
 import subprocess
 import sys
+import yaml
 
 
 WORKING_DIR = os.environ.get('HEAT_DOCKER_COMPOSE_WORKING',
@@ -29,6 +32,21 @@ DOCKER_COMPOSE_CMD = os.environ.get('HEAT_DOCKER_COMPOSE_CMD',
 def prepare_dir(path):
     if not os.path.isdir(path):
         os.makedirs(path, 0o700)
+
+
+def write_input_file(file_path, content):
+    prepare_dir(os.path.dirname(file_path))
+    with os.fdopen(os.open(
+            file_path, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as f:
+        f.write(content.encode('utf-8'))
+
+
+def build_response(deploy_stdout, deploy_stderr, deploy_status_code):
+    return {
+        'deploy_stdout': deploy_stdout,
+        'deploy_stderr': deploy_stderr,
+        'deploy_status_code': deploy_status_code,
+    }
 
 
 def main(argv=sys.argv):
@@ -50,24 +68,37 @@ def main(argv=sys.argv):
     stdout, stderr = {}, {}
 
     if input_values.get('deploy_action') == 'DELETE':
-        response = {
-            'deploy_stdout': stdout,
-            'deploy_stderr': stderr,
-            'deploy_status_code': 0,
-        }
-        json.dump(response, sys.stdout)
+        json.dump(build_response(stdout, stderr, 0), sys.stdout)
         return
 
     config = c.get('config', '')
     if not config:
         log.debug("No 'config' input found, nothing to do.")
-        response = {
-            'deploy_stdout': stdout,
-            'deploy_stderr': stderr,
-            'deploy_status_code': 0,
-        }
-        json.dump(response, sys.stdout)
+        json.dump(build_response(stdout, stderr, 0), sys.stdout)
         return
+
+    #convert config to dict
+    if not isinstance(config, dict):
+        config = ast.literal_eval(json.dumps(yaml.load(config)))
+
+    os.chdir(proj)
+
+    compose_env_files = []
+    for value in dpath.util.values(config, '*/env_file'):
+        if isinstance(value, list):
+            compose_env_files.extend(value)
+        elif isinstance(value, basestring):
+            compose_env_files.extend([value])
+
+    input_env_files = {}
+    if input_values.get('env_files'):
+        input_env_files = dict(
+            (i['file_name'], i['content'])
+            for i in ast.literal_eval(input_values.get('env_files')))
+
+    for file in compose_env_files:
+        if file in input_env_files.keys():
+            write_input_file(file, input_env_files.get(file))
 
     cmd = [
         DOCKER_COMPOSE_CMD,
@@ -77,8 +108,6 @@ def main(argv=sys.argv):
     ]
 
     log.debug('Running %s' % cmd)
-
-    os.chdir(proj)
 
     subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
@@ -92,15 +121,7 @@ def main(argv=sys.argv):
     else:
         log.debug('Completed %s' % cmd)
 
-    response = {}
-
-    response.update({
-        'deploy_stdout': stdout,
-        'deploy_stderr': stderr,
-        'deploy_status_code': subproc.returncode,
-    })
-
-    json.dump(response, sys.stdout)
+    json.dump(build_response(stdout, stderr, subproc.returncode), sys.stdout)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
