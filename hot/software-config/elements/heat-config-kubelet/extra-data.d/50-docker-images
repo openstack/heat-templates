@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -eu
+set -o pipefail
+
+if [ -z "${HEAT_DOCKER_IMAGE_ARCHIVE:-}" ]; then
+    echo "HEAT_DOCKER_IMAGE_ARCHIVE not set for heat-config-kubelet element" >&2
+    exit 0
+fi
+
+sudo mkdir -p $TMP_MOUNT_PATH/opt/heat-docker
+sudo cp $HEAT_DOCKER_IMAGE_ARCHIVE $TMP_MOUNT_PATH/opt/heat-docker/images.tar
