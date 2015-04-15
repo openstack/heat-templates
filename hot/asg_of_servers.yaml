@@ -1,4 +1,4 @@
-heat_template_version: 2013-05-23
+heat_template_version: 2014-10-16
 
 description: >
   This is a very simple template that illustrates the basic features
@@ -87,3 +87,20 @@ outputs:
       the scale-down operation by doing an HTTP POST to this URL; no
       body nor extra headers are needed.
     value: {get_attr: [scale_down_policy, alarm_url]}
+  asg_size:
+    description: >
+      This is the current size of the auto scaling group.
+    value: {get_attr: [asg, current_size]}
+  server_list:
+    description: >
+      This is a list of server names that are part of the group.
+    value: {get_attr: [asg, outputs_list, name]}
+  networks:
+    description: >
+      This is a map of server resources and their networks.
+    value: {get_attr: [asg, outputs, networks]}
+  server_ips:
+    description: >
+      This is a list of first ip addresses of the servers in the group
+      for a specified network.
+    value: {get_attr: [asg, outputs_list, networks, {get_param: network}, 0]}
