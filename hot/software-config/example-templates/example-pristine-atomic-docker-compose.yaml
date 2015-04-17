@@ -1,0 +1,98 @@
+heat_template_version: 2014-10-16
+description: >
+  A template which demonstrates doing boot-time deployment of docker
+  container with docker-compose agent.
+  This template expects to be created with an environment which defines
+  the resource type Heat::InstallConfigAgent such as
+  ../boot-config-docker/heat_docker_agents_env.yaml
+parameters:
+  key_name:
+    type: string
+    default: heat_key
+  flavor:
+    type: string
+    default: m1.small
+  image:
+    type: string
+    default: fedora-atomic
+  private_net:
+    type: string
+    default: private
+  public_net:
+    type: string
+    default: public
+
+resources:
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+      - protocol: tcp
+        port_range_min: 5000
+        port_range_max: 5000
+
+  config:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: docker-compose
+      config:
+         web:
+          image: training/webapp
+          ports:
+          - 5000:5000
+
+  deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      name: test_deployment
+      config:
+        get_resource: config
+      server:
+        get_resource: server
+
+  boot_config:
+    type: Heat::InstallConfigAgent
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      networks:
+      - network: {get_param: private_net}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: SOFTWARE_CONFIG
+      user_data: {get_attr: [boot_config, config]}
+
+  server_floating_ip_assoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: {get_resource: floating_ip}
+      port_id: {get_attr: [server, addresses, {get_param: private_net}, 0, port]}
+
+  floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: {get_param: public_net}
+
+outputs:
+  result:
+    value:
+      get_attr: [deployment, result]
+  stdout:
+    value:
+      get_attr: [deployment, deploy_stdout]
+  stderr:
+    value:
+      get_attr: [deployment, deploy_stderr]
+  status_code:
+    value:
+      get_attr: [deployment, deploy_status_code]

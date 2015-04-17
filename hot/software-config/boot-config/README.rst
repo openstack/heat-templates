@@ -30,3 +30,26 @@ When creating the stack, reference the desired environment, eg:
   heat stack-create -e fedora_yum_env.yaml \
        -f ../example-templates/example-config-pristine-image.yaml \
        deploy-to-pristine
+
+=====================================
+Boot config with heat-container-agent
+=====================================
+
+When creating the stack to deploy containers with docker-compose,
+include the following in the template:
+
+  boot_config:
+    type: Heat::InstallConfigAgent
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      user_data_format: SOFTWARE_CONFIG
+      user_data: {get_attr: [boot_config, config]}
+      # ...
+
+and refrence the desired environment, eg:
+
+  heat stack-create -e container_agent_env.yaml \
+       -f ../example-templates/example-pristine-atomic-docker-compose.yaml \
+       deploy-to-pristine
