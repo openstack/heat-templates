@@ -1,0 +1,39 @@
+heat_template_version: 2013-05-23
+description: >
+    Template to create multiple instances.
+
+parameters:
+  image_id:
+    type: string
+    description: Image used for servers
+  key_name:
+    type: string
+    description: Name of SSH key to connect to the servers
+  instance_type:
+    type: string
+    description: flavor used by the servers
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+  num_instances:
+    type: number
+    description: Number of instances to create
+    default: 1
+
+resources:
+  server_group:
+    type: OS::Heat::InstanceGroup
+    properties:
+      LaunchConfigurationName: { get_resource: server_config }
+      AvailabilityZones: []
+      Size: { get_param: num_instances }
+  server_config:
+    type: AWS::AutoScaling::LaunchConfiguration
+    properties:
+      ImageId: { get_param: image_id }
+      InstanceType: { get_param: instance_type}
+      KeyName: { get_param: key_name }
+
+outputs:
+  server_group_addresses:
+    value: { get_attr: [server_group, InstanceList] }
