@@ -4,7 +4,8 @@ set -eux
 yum -y update
 
 yum -y install os-collect-config os-apply-config \
-  os-refresh-config dib-utils python-pip python-docker-py
+  os-refresh-config dib-utils python-pip \
+  python-docker-py python-yaml
 
 yum clean all
 
@@ -15,6 +16,7 @@ pip install dpath
 # os-collect-config requires 2.5.3 where as for docker-compose it's <2.5.0
 curl -L https://github.com/docker/compose/releases/download/1.1.0/docker-compose-`uname -s`-`uname -m` \
     > /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
 
 # os-apply-config templates directory
 oac_templates=/usr/libexec/os-apply-config/templates
@@ -96,10 +98,6 @@ set -ue
 exec os-apply-config
 EOF
 chmod 700 $orc_scripts/configure.d/20-os-apply-config
-
-# create hooks directory
-#hooks_dir=/var/lib/heat-config/hooks
-#mkdir -p $hooks_dir
 
 chmod 700 /opt/stack/os-config-refresh/configure.d/55-heat-config
 chmod 700 /opt/stack/os-config-refresh/configure.d/50-heat-config-docker-compose

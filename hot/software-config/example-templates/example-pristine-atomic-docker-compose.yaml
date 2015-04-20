@@ -4,7 +4,7 @@ description: >
   container with docker-compose agent.
   This template expects to be created with an environment which defines
   the resource type Heat::InstallConfigAgent such as
-  ../boot-config-docker/heat_docker_agents_env.yaml
+  ../boot-config/heat_container_agent_env.yaml
 parameters:
   key_name:
     type: string

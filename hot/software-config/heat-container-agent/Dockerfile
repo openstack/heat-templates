@@ -8,7 +8,7 @@ ADD ./scripts/55-heat-config \
 ADD ./scripts/50-heat-config-docker-compose \
   /opt/stack/os-config-refresh/configure.d/
 
-ADD ./scripts/* \
+ADD ./scripts/hooks/* \
   /var/lib/heat-config/hooks/
 
 ADD ./scripts/heat-config-notify \

@@ -1,4 +1,4 @@
-# Installs docker software-config agents on boot in a container
+# Installs heat-container-agent on boot in a container
 
 resource_registry:
   "Heat::InstallConfigAgent": templates/install_container_agent.yaml
