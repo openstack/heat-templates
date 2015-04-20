@@ -29,6 +29,11 @@ try:
 except ImportError:
     ksclient = None
 
+try:
+    from zaqarclient.queues.v1 import client as zaqarclient
+except ImportError:
+    zaqarclient = None
+
 
 def init_logging():
     log = logging.getLogger('heat-config-notify')
@@ -80,7 +85,33 @@ def main(argv=sys.argv, stdin=sys.stdin):
                               headers={'content-type': None})
         log.debug('Response %s ' % r)
 
-    if 'deploy_auth_url' in iv:
+    if 'deploy_queue_id' in iv:
+        queue_id = iv.get('deploy_queue_id')
+        log.debug('Signaling to queue %s' % (queue_id,))
+
+        ks = ksclient.Client(
+            auth_url=iv['deploy_auth_url'],
+            user_id=iv['deploy_user_id'],
+            password=iv['deploy_password'],
+            project_id=iv['deploy_project_id'])
+        endpoint = ks.service_catalog.url_for(
+            service_type='messaging', endpoint_type='publicURL')
+
+        conf = {
+            'auth_opts': {
+                'backend': 'keystone',
+                'options': {
+                    'os_auth_token': ks.auth_token,
+                    'os_project_id': iv['deploy_project_id'],
+                }
+            }
+        }
+        cli = zaqarclient.Client(endpoint, conf=conf, version=1.1)
+        queue = cli.queue(queue_id)
+        r = queue.post({'body': signal_data, 'ttl': 600})
+        log.debug('Response %s ' % r)
+
+    elif 'deploy_auth_url' in iv:
         ks = ksclient.Client(
             auth_url=iv['deploy_auth_url'],
             user_id=iv['deploy_user_id'],
