@@ -73,6 +73,7 @@ EOF
     systemctl enable heat-config-kubelet-nat-rule.service
     systemctl disable firewalld
 
+SCRIPTDIR=$(dirname $0)
 install -D -g root -o root -m 0755 ${SCRIPTDIR}/hook-kubelet.py /var/lib/heat-config/hooks/kubelet
 
 else
