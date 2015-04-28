@@ -32,6 +32,16 @@ def prepare_dir(path):
         os.makedirs(path, 0o700)
 
 
+def get_hostname_f(log):
+    subproc = subprocess.Popen(['hostname', '-f'], stdout=subprocess.PIPE)
+    out = subproc.communicate()[0]
+    if subproc.returncode == 0:
+        return out.strip()
+    else:
+        log.warn("Failed to retrieve 'hostname -f' output")
+        return None
+
+
 def main(argv=sys.argv):
     log = logging.getLogger('heat-config')
     handler = logging.StreamHandler(sys.stderr)
@@ -52,6 +62,10 @@ def main(argv=sys.argv):
 
     facts = {}
     hiera = {}
+
+    fqdn = get_hostname_f(log)
+    if fqdn:
+        facts['FACTER_fqdn'] = fqdn
 
     for input in c['inputs']:
         input_name = input['name']
