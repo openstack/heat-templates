@@ -16,6 +16,10 @@ parameters:
   image:
     type: string
     default: fedora-amd64
+  private_net:
+    type: string
+    default: private
+
 resources:
   key_add:
     type: OS::Heat::SoftwareConfig
@@ -87,6 +91,16 @@ resources:
         get_resource: key_test
       server:
         get_resource: server_b
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
   server_a:
     type: OS::Nova::Server
     properties:
@@ -96,6 +110,10 @@ resources:
         get_param: flavor
       key_name:
         get_param: key_name
+      security_groups:
+        - {get_resource: the_sg}
+      networks:
+        - network: {get_param: private_net}
       user_data_format: SOFTWARE_CONFIG
   server_b:
     type: OS::Nova::Server
@@ -106,6 +124,10 @@ resources:
         get_param: flavor
       key_name:
         get_param: key_name
+      security_groups:
+        - {get_resource: the_sg}
+      networks:
+      - network: {get_param: private_net}
       user_data_format: SOFTWARE_CONFIG
 outputs:
   do_key_test_stdout:
