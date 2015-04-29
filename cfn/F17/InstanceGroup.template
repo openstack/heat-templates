@@ -52,5 +52,12 @@
         ]]}}
       }
     }
+  },
+
+  "Outputs": {
+    "ServerGroupAddresses": {
+      "Value": { "Fn::GetAtt": ["JobServerGroup", "InstanceList"] },
+      "Description": "IP Address of instances."
+    }
   }
 }
