@@ -73,3 +73,10 @@ resources:
         admin_pass: { get_param: admin_pass }
         db_port: { get_param: db_port }
 
+outputs:
+  stack_one_outputs:
+    description: Output of stack_one.
+    value: { get_attr: [stack_one, outputs] }
+  stack_two_outputs:
+    description: Output of stack_two.
+    value: { get_attr: [stack_two, outputs] }

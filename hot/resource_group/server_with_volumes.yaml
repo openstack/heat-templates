@@ -50,3 +50,8 @@ resources:
         properties:
           instance_id: {get_resource: instance}
           volume_size: {get_param: volume_size}
+
+outputs:
+  server_ip:
+    description: IP Address of server having volumes attached.
+    value: { get_attr: [instance, first_address] }
