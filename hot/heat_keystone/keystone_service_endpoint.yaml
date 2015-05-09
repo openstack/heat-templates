@@ -1,0 +1,59 @@
+heat_template_version: 2013-05-23
+
+description: Sample Keystone Service Endpoint template
+
+parameters:
+  name:
+    type: string
+    description: Keystone service name
+  description:
+    type: string
+    description: Keystone service description
+  type:
+    type: string
+    description: Keystone service type
+  region:
+    type: string
+    description: Keystone region name
+  public_url:
+    type: string
+    description: Public endpoint url
+  internal_url:
+    type: string
+    description: Internal endpoint url
+  admin_url:
+    type: string
+    description: Admin endpoint url
+
+resources:
+  sample_service:
+    type: OS::Keystone::Service
+    properties:
+      name: {get_param: name}
+      type: {get_param: type}
+      description: {get_param: description}
+
+  public_endpoint:
+    type: OS::Keystone::Endpoint
+    properties:
+      service: {get_resource: sample_service}
+      url: {get_param: public_url}
+      region: {get_param: region}
+      interface: public
+
+  internal_endpoint:
+    type: OS::Keystone::Endpoint
+    properties:
+      service: {get_resource: sample_service}
+      url: {get_param: internal_url}
+      region: {get_param: region}
+      interface: internal
+
+  admin_endpoint:
+    type: OS::Keystone::Endpoint
+    properties:
+      service: {get_resource: sample_service}
+      url: {get_param: admin_url}
+      region: {get_param: region}
+      interface: admin
+
