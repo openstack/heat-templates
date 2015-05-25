@@ -142,6 +142,6 @@ class HeatConfigKubeletORCTest(common.RunScriptTest):
             manifest_path = self.manifests_dir.join(manifest_name)
             self.assertThat(manifest_path, matchers.FileExists())
 
-            #manifest file should match manifest config
+            # manifest file should match manifest config
             self.assertEqual(config['config'],
                              self.json_from_file(manifest_path))

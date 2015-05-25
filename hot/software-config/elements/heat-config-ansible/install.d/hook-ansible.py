@@ -57,11 +57,11 @@ def main(argv=sys.argv):
     if not config_text:
         log.warn("No 'config' input found, nothing to do.")
         return
-    #Write 'variables' to file
+    # Write 'variables' to file
     with os.fdopen(os.open(
             vars_filename, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as var_file:
         json.dump(variables, var_file)
-    #Write the executable, 'config', to file
+    # Write the executable, 'config', to file
     with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as f:
         f.write(c.get('config', '').encode('utf-8'))
 

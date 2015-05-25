@@ -77,7 +77,7 @@ def main(argv=sys.argv):
         json.dump(build_response(stdout, stderr, 0), sys.stdout)
         return
 
-    #convert config to dict
+    # convert config to dict
     if not isinstance(config, dict):
         config = ast.literal_eval(json.dumps(yaml.load(config)))
 
