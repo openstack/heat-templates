@@ -67,3 +67,9 @@ resources:
       security_groups:
       - {get_resource: the_sg}
       user_data_format: SOFTWARE_CONFIG
+
+
+outputs:
+  server_ip:
+    description: IP Address of server.
+    value: { get_attr: [server, first_address] }

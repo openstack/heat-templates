@@ -43,3 +43,17 @@ resources:
       flavor: {get_param: flavor}
       key_name: {get_param: key_name}
       user_data_format: SOFTWARE_CONFIG
+
+outputs:
+  server_ip:
+    description: IP Address of server.
+    value: { get_attr: [server, first_address] }
+  deployment_status:
+    description: Status code of configuration execution.
+    value: { get_attr: [deployment, deploy_status_code] }
+  deployment_stdout:
+    description: Standard output captured from the configuration execution.
+    value: { get_attr: [deployment, deploy_stdout] }
+  deployment_stderr:
+    description: Standard error captured from the configuration execution.
+    value: { get_attr: [deployment, deploy_stderr] }
