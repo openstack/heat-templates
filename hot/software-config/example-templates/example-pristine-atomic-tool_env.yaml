@@ -1,0 +1,2 @@
+resource_registry:
+  "Heat::InstallConfigAgent": ../boot-config/templates/install_container_agent.yaml
