@@ -1,4 +1,6 @@
-FROM fedora
+#Using Fedora 21, latest/22 has number of changes that
+#breaks th build
+FROM fedora:21
 MAINTAINER “Rabi Mishra” <ramishra@redhat.com>
 ENV container docker
 
