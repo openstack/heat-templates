@@ -15,14 +15,19 @@
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
+
 
 WORKING_DIR = os.environ.get('HEAT_PUPPET_WORKING',
                              '/var/lib/heat-config/heat-config-puppet')
 OUTPUTS_DIR = os.environ.get('HEAT_PUPPET_OUTPUTS',
                              '/var/run/heat-config/heat-config-puppet')
 PUPPET_CMD = os.environ.get('HEAT_PUPPET_CMD', 'puppet')
+PUPPET_LOGDIR = os.environ.get(
+    'HEAT_PUPPET_LOGDIR', '/var/run/heat-config/deployed'
+)
 HIERA_DATADIR = os.environ.get('HEAT_PUPPET_HIERA_DATADIR',
                                '/etc/puppet/hieradata')
 
@@ -61,6 +66,7 @@ def main(argv=sys.argv):
     use_facter = c['options'].get('enable_facter', True)
     modulepath = c['options'].get('modulepath')
     tags = c['options'].get('tags')
+    debug = c['options'].get('enable_debug', False)
 
     facts = {}
     hiera = {}
@@ -100,6 +106,7 @@ def main(argv=sys.argv):
     with os.fdopen(os.open(fn, os.O_CREAT | os.O_TRUNC | os.O_WRONLY, 0o700),
                    'w') as f:
         f.write(c.get('config', '').encode('utf-8'))
+
     cmd = [PUPPET_CMD, 'apply', '--detailed-exitcodes', fn]
     if modulepath:
         cmd.insert(-1, '--modulepath')
@@ -107,20 +114,37 @@ def main(argv=sys.argv):
     if tags:
         cmd.insert(-1, '--tags')
         cmd.insert(-1, tags)
+    if debug:
+        cmd.insert(-1, '--debug')
+
+    prepare_dir(PUPPET_LOGDIR)
+    timestamp = re.sub('[:T]', '-', c['creation_time'])
+    base_path = os.path.join(
+        PUPPET_LOGDIR, '{timestamp}-{c[id]}'.format(**locals())
+    )
+    stdout_log = open('{0}-stdout.log'.format(base_path), 'w')
+    stderr_log = open('{0}-stderr.log'.format(base_path), 'w')
     log.debug('Running %s %s' % (env_debug, ' '.join(cmd)))
     try:
-        subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, env=env)
+        subproc = subprocess.Popen(
+            cmd, stdout=stdout_log, stderr=stderr_log, env=env
+        )
+        subproc.wait()
     except OSError:
         log.warn('puppet not installed yet')
         return
-    stdout, stderr = subproc.communicate()
+    finally:
+        stdout_log.close()
+        stderr_log.close()
 
     log.info('Return code %s' % subproc.returncode)
-    if stdout:
-        log.info(stdout)
-    if stderr:
-        log.info(stderr)
+    response = {}
+    for i in 'stdout', 'stderr':
+        with open('{0}-{1}.log'.format(base_path, i)) as logfile:
+            content = logfile.read()
+        if content.strip():
+            log.info(content)
+        response['deploy_{0}'.format(i)] = content
 
     # returncode of 2 means there were successfull changes
     if subproc.returncode in (0, 2):
@@ -129,8 +153,6 @@ def main(argv=sys.argv):
     else:
         returncode = subproc.returncode
         log.error("Error running %s. [%s]\n" % (fn, subproc.returncode))
-
-    response = {}
 
     for output in c.get('outputs') or []:
         output_name = output['name']
@@ -141,12 +163,10 @@ def main(argv=sys.argv):
             pass
 
     response.update({
-        'deploy_stdout': stdout,
-        'deploy_stderr': stderr,
         'deploy_status_code': returncode,
     })
-
     json.dump(response, sys.stdout)
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

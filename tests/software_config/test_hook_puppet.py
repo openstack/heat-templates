@@ -24,11 +24,13 @@ class HookPuppetTest(common.RunScriptTest):
 
     data = {
         'id': '1234',
+        'creation_time': '2015-07-16T11:40:20',
         'name': 'fake_resource_name',
         'group': 'puppet',
         'options': {
             'enable_hiera': True,
             'enable_facter': True,
+            'enable_debug': True,
         },
         'inputs': [
             {'name': 'foo', 'value': 'bar'},
@@ -55,6 +57,7 @@ class HookPuppetTest(common.RunScriptTest):
 
         self.working_dir = self.useFixture(fixtures.TempDir())
         self.outputs_dir = self.useFixture(fixtures.TempDir())
+        self.log_dir = self.useFixture(fixtures.TempDir())
         self.hiera_datadir = self.useFixture(fixtures.TempDir())
         self.test_state_path = self.outputs_dir.join('test_state.json')
 
@@ -62,6 +65,7 @@ class HookPuppetTest(common.RunScriptTest):
         self.env.update({
             'HEAT_PUPPET_WORKING': self.working_dir.join(),
             'HEAT_PUPPET_OUTPUTS': self.outputs_dir.join(),
+            'HEAT_PUPPET_LOGDIR': self.log_dir.join(),
             'HEAT_PUPPET_HIERA_DATADIR': self.hiera_datadir.join(),
             'HEAT_PUPPET_CMD': self.fake_tool_path,
             'TEST_STATE_PATH': self.test_state_path,
@@ -98,6 +102,7 @@ class HookPuppetTest(common.RunScriptTest):
                 self.fake_tool_path,
                 'apply',
                 '--detailed-exitcodes',
+                '--debug',
                 puppet_script
             ],
             state['args'])
@@ -108,6 +113,29 @@ class HookPuppetTest(common.RunScriptTest):
                          state['env']['FACTER_heat_outputs_path'])
         with open(puppet_script) as f:
             self.assertEqual('the puppet script', f.read())
+
+    def test_hook_no_debug(self):
+        self.data['options']['enable_debug'] = False
+        self.env.update({
+            'TEST_RESPONSE': json.dumps({
+                'stdout': 'success',
+                'stderr': '',
+            }),
+        })
+        returncode, stdout, stderr = self.run_cmd(
+            [self.hook_path], self.env, json.dumps(self.data))
+
+        state = self.json_from_file(self.test_state_path)
+        puppet_script = self.working_dir.join('1234.pp')
+        self.assertEqual(
+            [
+                self.fake_tool_path,
+                'apply',
+                '--detailed-exitcodes',
+                puppet_script
+            ],
+            state['args'])
+        self.data['options']['enable_debug'] = True
 
     def test_hook_puppet_failed(self):
 
@@ -135,6 +163,7 @@ class HookPuppetTest(common.RunScriptTest):
                 self.fake_tool_path,
                 'apply',
                 '--detailed-exitcodes',
+                '--debug',
                 puppet_script
             ],
             state['args'])
@@ -187,6 +216,7 @@ class HookPuppetTest(common.RunScriptTest):
                 modulepath,
                 '--tags',
                 'package,file',
+                '--debug',
                 puppet_script
             ],
             state['args'])

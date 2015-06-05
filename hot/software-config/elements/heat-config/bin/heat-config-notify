@@ -35,6 +35,9 @@ except ImportError:
     zaqarclient = None
 
 
+MAX_RESPONSE_SIZE = 950000
+
+
 def init_logging():
     log = logging.getLogger('heat-config-notify')
     handler = logging.StreamHandler(sys.stderr)
@@ -44,6 +47,29 @@ def init_logging():
     log.addHandler(handler)
     log.setLevel('DEBUG')
     return log
+
+
+def trim_response(response, trimmed_values=None):
+    """Trim selected values from response.
+
+    Makes given response smaller or the same size as MAX_RESPONSE_SIZE by
+    trimming given trimmed_values from response dict from the left side
+    (beginning). Returns trimmed and serialized JSON response itself.
+    """
+
+    trimmed_values = trimmed_values or ('deploy_stdout', 'deploy_stderr')
+    str_response = json.dumps(response, ensure_ascii=True, encoding='utf-8')
+    len_total = len(str_response)
+    offset = MAX_RESPONSE_SIZE - len_total
+    if offset >= 0:
+        return str_response
+    offset = abs(offset)
+    for key in trimmed_values:
+        len_value = len(response[key])
+        cut = int(round(float(len_value) / len_total * offset))
+        response[key] = response[key][cut:]
+    str_response = json.dumps(response, ensure_ascii=True, encoding='utf-8')
+    return str_response
 
 
 def main(argv=sys.argv, stdin=sys.stdin):
@@ -75,13 +101,15 @@ def main(argv=sys.argv, stdin=sys.stdin):
     if 'deploy_signal_id' in iv:
         sigurl = iv.get('deploy_signal_id')
         sigverb = iv.get('deploy_signal_verb', 'POST')
-        signal_data = json.dumps(signal_data)
         log.debug('Signaling to %s via %s' % (sigurl, sigverb))
+        # we need to trim log content because Heat response size is limited
+        # by max_json_body_size = 1048576
+        str_signal_data = trim_response(signal_data)
         if sigverb == 'PUT':
-            r = requests.put(sigurl, data=signal_data,
+            r = requests.put(sigurl, data=str_signal_data,
                              headers={'content-type': None})
         else:
-            r = requests.post(sigurl, data=signal_data,
+            r = requests.post(sigurl, data=str_signal_data,
                               headers={'content-type': None})
         log.debug('Response %s ' % r)
 
