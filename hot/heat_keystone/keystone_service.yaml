@@ -1,0 +1,22 @@
+heat_template_version: 2013-05-23
+
+description: Sample Keystone Service template
+
+parameters:
+  name:
+    type: string
+    description: Keystone service name
+  description:
+    type: string
+    description: Keystone service description
+  type:
+    type: string
+    description: Keystone service type
+
+resources:
+  sample_service:
+    type: OS::Keystone::Service
+    properties:
+      name: {get_param: name}
+      type: {get_param: type}
+      description: {get_param: description}
