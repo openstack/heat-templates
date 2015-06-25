@@ -1,4 +1,4 @@
 #!/bin/bash
 set -eux
 
-install-packages python-heatclient
+install-packages python-heatclient python-zaqarclient
