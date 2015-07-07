@@ -1,0 +1,85 @@
+heat_template_version: 2015-04-30
+
+description: >
+  A template showing how to create an encrypted cinder volume and attach
+  it to an nova instance. The template uses only Heat OpenStack native
+  resource types.
+
+parameters:
+  key_name:
+    type: string
+    description:
+      Name of an existing key pair to enable SSH access to the instance.
+  image_id:
+    type: string
+    description: ID of the image to use for the instance to be created.
+  instance_type:
+    type: string
+    description: Type of the instance to be created.
+    default: m1.small
+  availability_zone:
+    type: string
+    description: The Availability Zone to launch the instance.
+    default: nova
+  volume_type_name:
+    type: string
+    description: Name of new volume type to be created.
+    default: my_vol_type
+  encryption_cipher:
+    type: string
+    description: The encryption algorithm/mode to use.
+    default: aes-xts-plain64
+  encryption_key_size:
+    type: number
+    description: Size of the encryption key, in bits.
+    default: 512
+  volume_size:
+    type: number
+    description: Size of the volume to be created.
+    default: 1
+    constraints:
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 Gb.
+  volume_mountpoint:
+    type: string
+    description: The location where the volume is exposed on the instance.
+    default: /dev/vdc
+
+resources:
+  cinder_volume_type:
+    type: OS::Cinder::VolumeType
+    properties:
+      name: { get_param: volume_type_name }
+  cinder_encryption_vol_type:
+    type: OS::Cinder::EncryptedVolumeType
+    properties:
+      provider: nova.volume.encryptors.luks.LuksEncryptor
+      control_location: front-end
+      cipher: { get_param: encryption_cipher }
+      key_size: { get_param: encryption_key_size }
+      volume_type: { get_resource: cinder_volume_type }
+  cinder_volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size }
+      availability_zone: { get_param: availability_zone }
+      volume_type: { get_resource: cinder_encryption_vol_type }
+  nova_instance:
+    type: OS::Nova::Server
+    properties:
+      availability_zone: { get_param: availability_zone }
+      image: { get_param: image_id }
+      flavor: { get_param: instance_type }
+      key_name: { get_param: key_name }
+  cinder_volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: cinder_volume }
+      instance_uuid: { get_resource: nova_instance }
+      mountpoint: { get_param: volume_mountpoint }
+
+outputs:
+  instance_ip:
+    description: Public IP address of the newly created Nova instance.
+    value: { get_attr: [nova_instance, first_address] }
+
