@@ -11,6 +11,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import json
 import os
 
@@ -157,8 +158,11 @@ class HookPuppetTest(common.RunScriptTest):
                 }
             }),
         })
+        modulepath = self.working_dir.join()
+        data = copy.deepcopy(self.data)
+        data['options']['modulepath'] = modulepath
         returncode, stdout, stderr = self.run_cmd(
-            [self.hook_path], self.env, json.dumps(self.data))
+            [self.hook_path], self.env, json.dumps(data))
 
         self.assertEqual(0, returncode, stderr)
         self.assertEqual({
@@ -178,6 +182,8 @@ class HookPuppetTest(common.RunScriptTest):
                 self.fake_tool_path,
                 'apply',
                 '--detailed-exitcodes',
+                '--modulepath',
+                modulepath,
                 puppet_script
             ],
             state['args'])

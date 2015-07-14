@@ -59,6 +59,7 @@ def main(argv=sys.argv):
 
     use_hiera = c['options'].get('enable_hiera', False)
     use_facter = c['options'].get('enable_facter', True)
+    modulepath = c['options'].get('modulepath')
 
     facts = {}
     hiera = {}
@@ -98,8 +99,10 @@ def main(argv=sys.argv):
     with os.fdopen(os.open(fn, os.O_CREAT | os.O_TRUNC | os.O_WRONLY, 0o700),
                    'w') as f:
         f.write(c.get('config', '').encode('utf-8'))
-
     cmd = [PUPPET_CMD, 'apply', '--detailed-exitcodes', fn]
+    if modulepath:
+        cmd.insert(-1, '--modulepath')
+        cmd.insert(-1, modulepath)
     log.debug('Running %s %s' % (env_debug, ' '.join(cmd)))
     try:
         subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE,

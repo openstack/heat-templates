@@ -7,3 +7,4 @@ Hook Options:
 -------------
   use_facter: default True. Set to True to pass puppet inputs via Facter
   use_hiera: default False. Set to True to pass puppet inputs via Hiera
+  modulepath: If set, puppet will use this filesystem path to load modules
