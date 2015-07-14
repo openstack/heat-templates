@@ -1,0 +1,67 @@
+heat_template_version: 2015-04-30
+
+description: >
+  Designate sample template used to create records under the domain
+  'designate-example.com'. This same template can be used to create
+  different record types supported by designate. To note, Only for
+  MX and SRV records, priority will be considered, otherwise, it
+  will be ignored. To findout the data format for the given record
+  type, please refer RFC 1035.
+
+parameters:
+  name:
+    type: string
+    description: Record name
+    default: test.designate-example.com.
+
+  type:
+    type: string
+    description: Record type
+    default: MX
+
+  ttl:
+    type: number
+    description: Time to live in seconds
+    default: 3600
+
+  description:
+    type: string
+    description: Record description
+    default: sample dns MX record
+
+  data:
+    type: string
+    description: Record data
+    default: sample.mailserver.com.
+
+  priority:
+    type: number
+    description: Record priority
+    default: 10
+
+  domain_name:
+    type: string
+    description: Domain id or name
+    default: designate-example.com.
+
+  domain_email:
+    type: string
+    description: Domain email-id
+    default: admin@designate-example.com
+
+resources:
+  sample_domain:
+    type: OS::Designate::Domain
+    properties:
+      name: {get_param: domain_name}
+      email: {get_param: domain_email}
+  sample_record:
+    type: OS::Designate::Record
+    properties:
+      name: {get_param: name}
+      type: {get_param: type}
+      description: {get_param: description}
+      data: {get_param: data}
+      domain: {get_resource: sample_domain}
+      ttl: {get_param: ttl}
+      priority: {get_param: priority}

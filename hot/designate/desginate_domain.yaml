@@ -1,0 +1,38 @@
+heat_template_version: 2015-04-30
+
+description: Sample designate domain template
+
+parameters:
+  name:
+    type: string
+    description: Domain name
+    default: test1-domain.com.
+
+  email:
+    type: string
+    description: Domain description
+    default: abc@xyz.com
+
+  ttl:
+    type: number
+    description: Time to live in seconds
+    default: 3600
+
+  description:
+    type: string
+    description: Domain description
+    default: Sample test domain
+
+resources:
+  sample_domain:
+    type: OS::Designate::Domain
+    properties:
+      name: {get_param: name}
+      email: {get_param: email}
+      ttl: {get_param: ttl}
+      description: {get_param: description}
+
+outputs:
+  serial:
+    value: {get_attr: [sample_domain, serial]}
+    description: Domain serial number
