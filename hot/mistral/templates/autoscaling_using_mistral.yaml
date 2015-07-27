@@ -1,0 +1,156 @@
+heat_template_version: 2015-04-30
+
+description: >
+  Example of using mistral resources for autoscale testing. In this template
+  workflows are used to get ip of the server and to load/release cpu and
+  triggers allow to execute these workflows (every 10 minutes by default).
+
+parameters:
+  flavor:
+    type: string
+    default: m1.heat
+    description: Name or ID of flavor
+
+  image:
+    type: string
+    default: cirros-0.3.4-x86_64-uec
+    description: Name or ID of image
+
+  user:
+    type: string
+    default: cirros
+    description: User to access instances
+
+  password:
+    type: string
+    default: 'cubswin:)'
+    description: Password to access instances
+
+  pattern_release:
+    type: string
+    default: "0,20,40 * * * *"
+    description: Time to execute workflow wf_release_cpu
+
+  pattern_load:
+    type: string
+    default: "10,30,50 * * * *"
+    description: Time to execute workflow wf_load_cpu
+
+  remaining_executions:
+    type: number
+    default: 3
+    description: The number of occurrences after which the triggers should be deleted.
+
+resources:
+  my_asg:
+    type: OS::Heat::AutoScalingGroup
+    properties:
+      resource:
+        type: NovaNetwork::Server
+        properties:
+          image: { get_param: image }
+          flavor: { get_param: flavor }
+          security_group: {get_resource: security_group}
+          metadata: {"metering.stack": {get_param: "OS::stack_id"}}
+      min_size: 1
+      max_size: 2
+
+  scale_up_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: {get_resource: my_asg}
+      cooldown: 60
+      scaling_adjustment: 1
+
+  scale_down_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: {get_resource: my_asg}
+      cooldown: 60
+      scaling_adjustment: '-1'
+
+  cpu_alarm_high:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-up if the average CPU > 50% for 1 minute
+      meter_name: cpu_util
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 50
+      alarm_actions:
+        - {get_attr: [scale_up_policy, alarm_url]}
+      matching_metadata: {'metadata.user_metadata.stack': {get_param: "OS::stack_id"}}
+      comparison_operator: gt
+
+  cpu_alarm_low:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: Scale-down if the average CPU < 15% for 1 minutes
+      meter_name: cpu_util
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 15
+      alarm_actions:
+        - {get_attr: [scale_down_policy, alarm_url]}
+      matching_metadata: {'metadata.user_metadata.stack': {get_param: "OS::stack_id"}}
+      comparison_operator: lt
+
+  wf_load_cpu:
+    type: OS::Mistral::Workflow
+    properties:
+      type: direct
+      tasks:
+        - name: get_output
+          action: heat.stacks_get stack_id=<% $.stack_id %>
+          publish:
+            vm_ip: <% $.get_output._info.outputs[0].output_value %>
+          on_success:
+            - run_ssh
+        - name: run_ssh
+          action: std.ssh cmd='cat /dev/urandom | gzip -9 > /dev/null &' host=<% $.vm_ip %> username=<% $.user %> password=<% $.password %>
+      input: {'user': {get_param: user}, 'password': {get_param: password}, 'stack_id': {get_param: "OS::stack_id"}}
+
+  wf_release_cpu:
+    type: OS::Mistral::Workflow
+    properties:
+      type: direct
+      tasks:
+        - name: get_output
+          action: heat.stacks_get stack_id=<% $.stack_id %>
+          publish:
+            vm_ip: <% $.get_output._info.outputs[0].output_value %>
+          on_success:
+            - run_ssh
+        - name: run_ssh
+          action: std.ssh cmd="kill -9 $(ps aux | grep 'cat /dev/urandom' | awk '{print $1}')" host=<% $.vm_ip %> username=<% $.user %> password=<% $.password %>
+      input: {'user': {get_param: user}, 'password': {get_param: password}, 'stack_id': {get_param: "OS::stack_id"}}
+
+  trigger_load_cpu:
+    type: OS::Mistral::CronTrigger
+    properties:
+      count: {get_param: remaining_executions}
+      pattern: {get_param: pattern_load}
+      workflow: {get_attr: [wf_load_cpu, data]}
+
+  trigger_release_cpu:
+    type: OS::Mistral::CronTrigger
+    properties:
+      count: {get_param: remaining_executions}
+      pattern: {get_param: pattern_release}
+      workflow: {get_attr: [wf_release_cpu, data]}
+
+outputs:
+  servers_ips:
+    value: {get_attr: [my_asg, outputs, ip]}
+
+  next_load:
+    value: {get_attr: [trigger_load_cpu, next_execution_time]}
+    description: Time of the next execution of trigger_load_cpu
+
+  next_release:
+    value: {get_attr: [trigger_release_cpu, next_execution_time]}
+    description: Time of the next execution of trigger_release_cpu
