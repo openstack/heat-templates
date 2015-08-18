@@ -12,6 +12,6 @@ elif [ -f /etc/redhat-release ]; then
     systemctl enable docker.service
 fi
 
-pip install -U dpath docker-compose
+pip install -U dpath docker-compose==1.4.0
 
 install -D -g root -o root -m 0755 ${SCRIPTDIR}/hook-docker-compose.py /var/lib/heat-config/hooks/docker-compose

@@ -27,7 +27,7 @@ class HeatConfigDockerComposeORCTest(common.RunScriptTest):
 
     data = [
         {
-            "id": "abcdef001",
+            "name": "abcdef001",
             "group": "docker-compose",
             "inputs": {},
             "config": {
@@ -46,7 +46,7 @@ class HeatConfigDockerComposeORCTest(common.RunScriptTest):
             }
         },
         {
-            "id": "abcdef002",
+            "name": "abcdef002",
             "group": "docker-compose",
             "inputs": {},
             "config": {

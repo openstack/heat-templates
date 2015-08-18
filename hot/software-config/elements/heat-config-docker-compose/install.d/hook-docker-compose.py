@@ -62,7 +62,7 @@ def main(argv=sys.argv):
 
     input_values = dict((i['name'], i['value']) for i in c['inputs'])
 
-    proj = os.path.join(WORKING_DIR, c.get('id'))
+    proj = os.path.join(WORKING_DIR, c.get('name'))
     prepare_dir(proj)
 
     stdout, stderr = {}, {}

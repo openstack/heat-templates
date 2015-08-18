@@ -21,7 +21,7 @@ from tests.software_config import common
 
 class HookDockerComposeTest(common.RunScriptTest):
     data = {
-        "id": "abcdef001",
+        "name": "abcdef001",
         "group": "docker-compose",
         "inputs": [
             {
@@ -50,7 +50,7 @@ class HookDockerComposeTest(common.RunScriptTest):
     }
 
     data_without_input = {
-        "id": "abcdef001",
+        "name": "abcdef001",
         "group": "docker-compose",
         "inputs": [],
         "config": {

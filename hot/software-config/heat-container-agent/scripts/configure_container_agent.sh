@@ -13,8 +13,8 @@ yum clean all
 pip install dpath
 
 # using binary as 'docker-compose' and 'os-collect-config' has conflict on 'requests' version
-# 1.3.0rc1 required by tripleo
-curl -L https://github.com/docker/compose/releases/download/1.3.0rc1/docker-compose-`uname -s`-`uname -m` \
+# docker-compose pins requests version to 2.6.1
+curl -L https://github.com/docker/compose/releases/download/1.4.0/docker-compose-`uname -s`-`uname -m` \
     > /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 
