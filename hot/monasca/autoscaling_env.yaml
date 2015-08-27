@@ -1,0 +1,3 @@
+resource_registry:
+  "OS::Monasca::Notification": "OS::Heat::None"
+  "OS::Monasca::AlarmDefinition": "OS::Heat::None"

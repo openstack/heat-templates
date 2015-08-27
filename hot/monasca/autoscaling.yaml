@@ -1,0 +1,78 @@
+heat_template_version: 2015-10-15
+
+description: >
+  A sample template used to experiment the auto-scaling using monasca service.
+  Pre-requisites:
+  1. Install python-monascaclient>=1.0.22
+  2. Restart heat-engine(s).
+
+parameters:
+  flavor:
+    type: string
+    description: Flavor for the instances to be created
+    default: m1.nano
+  image:
+    type: string
+    description: Name or ID of the image to use for the instances.
+
+resources:
+  group:
+    type: OS::Heat::AutoScalingGroup
+    properties:
+      cooldown: 60
+      desired_capacity: 2
+      max_size: 5
+      min_size: 1
+      resource:
+        type: OS::Nova::Server
+        properties:
+          flavor: { get_param: flavor }
+          image: { get_param: image }
+
+  scale_up_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: { get_resource: group }
+      cooldown: 60
+      scaling_adjustment: 1
+
+  scale_down_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: { get_resource: group }
+      cooldown: 60
+      scaling_adjustment: -1
+
+  up_notification:
+    type: OS::Monasca::Notification
+    properties:
+      type: webhook
+      address: {get_attr: [scale_up_policy, alarm_url]}
+
+  down_notification:
+    type: OS::Monasca::Notification
+    properties:
+      type: webhook
+      address: {get_attr: [scale_down_policy, alarm_url]}
+
+  cpu_alarm_high:
+    type: OS::Monasca::AlarmDefinition
+    properties:
+      name: CPU utilization beyond 50 percent
+      description: CPU utilization reached beyond 50 percent
+      expression: avg(cpu.utilization_perc) > 50 times 3
+      severity: high
+      alarm_actions:
+        - {get_resource: up_notification }
+
+  cpu_alarm_low:
+    type: OS::Monasca::AlarmDefinition
+    properties:
+      name: CPU utilization less than 15 percent
+      description: CPU utilization less than 15 percent
+      expression: avg(cpu.utilization_perc) < 15 times 1
+      severity: low
+      alarm_actions:
+        - {get_resource: down_notification}
