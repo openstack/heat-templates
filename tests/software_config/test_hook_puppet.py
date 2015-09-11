@@ -161,6 +161,7 @@ class HookPuppetTest(common.RunScriptTest):
         modulepath = self.working_dir.join()
         data = copy.deepcopy(self.data)
         data['options']['modulepath'] = modulepath
+        data['options']['tags'] = 'package,file'
         returncode, stdout, stderr = self.run_cmd(
             [self.hook_path], self.env, json.dumps(data))
 
@@ -184,6 +185,8 @@ class HookPuppetTest(common.RunScriptTest):
                 '--detailed-exitcodes',
                 '--modulepath',
                 modulepath,
+                '--tags',
+                'package,file',
                 puppet_script
             ],
             state['args'])
