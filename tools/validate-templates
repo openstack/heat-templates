@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import re
 import subprocess
 import sys
 
@@ -34,10 +35,14 @@ def validate(base, name):
     if os.path.exists(env):
         args.extend(["-e", env])
     try:
-        output = subprocess.check_output(args)
+        subprocess.check_output(args, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        print "Got error validating %s" % name
-        return True
+        print "Got error validating %s , %s" % (name, e.output)
+        if re.search('ERROR: Service (\S+) does not have required endpoint in'
+                     ' service catalog for the resource type (\S+)', e.output):
+            return False
+        else:
+            return True
     else:
         return False
 
