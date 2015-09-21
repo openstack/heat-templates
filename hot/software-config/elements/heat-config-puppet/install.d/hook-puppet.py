@@ -60,6 +60,7 @@ def main(argv=sys.argv):
     use_hiera = c['options'].get('enable_hiera', False)
     use_facter = c['options'].get('enable_facter', True)
     modulepath = c['options'].get('modulepath')
+    tags = c['options'].get('tags')
 
     facts = {}
     hiera = {}
@@ -103,6 +104,9 @@ def main(argv=sys.argv):
     if modulepath:
         cmd.insert(-1, '--modulepath')
         cmd.insert(-1, modulepath)
+    if tags:
+        cmd.insert(-1, '--tags')
+        cmd.insert(-1, tags)
     log.debug('Running %s %s' % (env_debug, ' '.join(cmd)))
     try:
         subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
