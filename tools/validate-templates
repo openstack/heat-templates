@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 
-EXCLUDED_DIRS = ('contrib', 'elements')
+EXCLUDED_DIRS = ('contrib', 'elements', 'invalid')
 
 
 def main(args):
@@ -37,7 +37,7 @@ def validate(base, name):
     try:
         subprocess.check_output(args, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        print "Got error validating %s , %s" % (name, e.output)
+        print "Got error validating %sputt%s , %s" % (base, name, e.output)
         if re.search('ERROR: Service (\S+) does not have required endpoint in'
                      ' service catalog for the resource type (\S+)', e.output):
             return False
