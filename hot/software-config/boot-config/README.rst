@@ -48,7 +48,7 @@ include the following in the template:
       user_data: {get_attr: [boot_config, config]}
       # ...
 
-and refrence the desired environment, eg:
+and reference the desired environment, eg:
 
   heat stack-create -e container_agent_env.yaml \
        -f ../example-templates/example-pristine-atomic-docker-compose.yaml \

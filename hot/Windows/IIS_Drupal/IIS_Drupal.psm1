@@ -192,7 +192,7 @@ function Configure-PHP54 ($PHPLocation, $ExtLocation) {
     Execute-Command -Command {
         & $appcmd set config /section:system.webServer/fastCGI `
             /+"[fullPath='$PHPLocation\php-cgi.exe']"
-    } -ErrorMessage "Error occured while creating FastCGI IIS process pool"
+    } -ErrorMessage "Error occurred while creating FastCGI IIS process pool"
 
     Execute-Command -Command {
         & $appcmd set config /section:system.webServer/handlers `
