@@ -1,0 +1,4 @@
+# Specifies server resource which uses nova networking
+
+resource_registry:
+  "NovaNetwork::Server": templates/server_with_ip.yaml
