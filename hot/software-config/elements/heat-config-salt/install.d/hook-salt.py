@@ -17,7 +17,7 @@ import logging
 import os
 import sys
 
-import salt.cli
+import salt.cli.caller
 import salt.config
 from salt.exceptions import SaltInvocationError
 import yaml
@@ -72,11 +72,12 @@ def main(argv=sys.argv):
     with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o700), 'w') as f:
         f.write(yaml_config.encode('utf-8'))
 
-    caller = salt.cli.caller.Caller(opts)
+    caller = salt.cli.caller.Caller.factory(opts)
 
     log.debug('Applying Salt state %s' % state_file)
 
     stdout, stderr = None, None
+    ret = {}
 
     try:
         ret = caller.call()
@@ -84,22 +85,37 @@ def main(argv=sys.argv):
         log.error(
             'Salt invocation error while applying Salt sate %s' % state_file)
         stderr = err
-    log.info('Return code %s' % ret['retcode'])
 
-    # returncode of 0 means there were successfull changes
-    if ret['retcode'] == 0:
-        log.info('Completed applying salt state %s' % state_file)
-        stdout = ret
-    else:
-        log.error('Error applying Salt state %s. [%s]\n'
-                  % (state_file, ret['retcode']))
-        stderr = ret
+    if ret:
+
+        log.info('Results: %s' % ret)
+        output = yaml.safe_dump(ret['return'])
+
+        # returncode of 0 means there were successfull changes
+        if ret['retcode'] == 0:
+            log.info('Completed applying salt state %s' % state_file)
+            stdout = output
+        else:
+            # Salt doesn't always return sane return codes so we have to check
+            # individual results
+            runfailed = False
+            for state, data in ret['return'].items():
+                if not data['result']:
+                    runfailed = True
+                    break
+            if runfailed:
+                log.error('Error applying Salt state %s. [%s]\n'
+                          % (state_file, ret['retcode']))
+                stderr = output
+            else:
+                ret['retcode'] = 0
+                stdout = output
 
     response = {}
 
-    for output in c.get('outputs') or []:
+    for output in c.get('outputs', []):
         output_name = output['name']
-        response[output_name] = ret[output_name]
+        response[output_name] = ret.get(output_name)
 
     response.update({
         'deploy_stdout': stdout,
