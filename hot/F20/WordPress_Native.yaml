@@ -16,9 +16,6 @@ parameters:
     type: string
     description: Instance type for WordPress server
     default: m1.small
-    constraints:
-      - allowed_values: [m1.small, m1.medium, m1.large]
-        description: instance_type must be one of m1.small, m1.medium or m1.large
   image_id:
     type: string
     description: >
