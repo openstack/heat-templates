@@ -1,0 +1,71 @@
+heat_template_version: 2015-04-30
+
+description: >
+  This template creates a stack that will observe the status of some VM
+  in the given stack. If VM has ERROR status or doesn't exist, the stack with
+  VM will be recreated. VM id status of which is needed to check obtained from
+  observed stack outputs.
+  Run "heat resource-signal <stack name> <workflow name>" for staring execution,
+  where resource name is tne name of workflow in the created stack.
+
+
+parameters:
+  stack_name:
+    type: string
+    description: Name of the stack with VM status of which is needed to check.
+
+  output_name:
+    type: string
+    description: Name of output that contains id of VM status of which is needed to check.
+    default: vm_id
+
+  pause:
+    type: number
+    description: Number of seconds to wait before status checks.
+    default: 30
+
+resources:
+  workflow:
+    type: OS::Mistral::Workflow
+    properties:
+      type: direct
+      tasks:
+        - name: get_template
+          action: heat.stacks_template stack_id=<% $.stack_name %>
+          publish:
+            template: <% $.get_template %>
+          on_success:
+            - get_vm_id
+        - name: get_vm_id
+          action: heat.stacks_get stack_id=<% $.stack_name %>
+          publish:
+              vm_id: {list_join: ["", ['<% $.get_vm_id.outputs.where($.output_key="', {get_param: output_name}, '").first().output_value %>']]}
+          on_success:
+            - get_vm_status
+        - name: get_vm_status
+          action: nova.servers_get server=<% $.vm_id %>
+          on_error:
+            - delete_stack
+          on_success:
+            - delete_stack: <% $.get_vm_status.status = ERROR %>
+            - get_vm_status: <% $.get_vm_status.status != ERROR %>
+          wait_before: { get_param: pause }
+        - name: delete_stack
+          action: heat.stacks_delete stack_id=<% $.stack_name %>
+          on_success:
+            - recreate_stack
+        - name: recreate_stack
+          action: heat.stacks_create stack_name=<% $.stack_name %> template=<% $.template %>
+          retry:
+             delay: 5
+             count: 10
+          on_success:
+            - wait_stack_complete
+        - name: wait_stack_complete
+          action: heat.stacks_get stack_id=<% $.stack_name %>
+          wait_before: 5
+          on_success:
+           - wait_stack_complete: <% $.wait_stack_complete.stack_status=CREATE_IN_PROGRESS %>
+           - get_vm_id: <% $.wait_stack_complete.stack_status=CREATE_COMPLETE %>
+      input:
+        stack_name: {get_param: stack_name}
