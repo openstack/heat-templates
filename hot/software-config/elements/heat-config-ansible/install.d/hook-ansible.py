@@ -22,6 +22,7 @@ WORKING_DIR = os.environ.get('HEAT_ANSIBLE_WORKING',
                              '/var/lib/heat-config/heat-config-ansible')
 OUTPUTS_DIR = os.environ.get('HEAT_ANSIBLE_OUTPUTS',
                              '/var/run/heat-config/heat-config-ansible')
+ANSIBLE_CMD = os.environ.get('HEAT_ANSIBLE_CMD', 'ansible-playbook')
 
 
 def prepare_dir(path):
@@ -66,7 +67,7 @@ def main(argv=sys.argv):
         f.write(c.get('config', '').encode('utf-8'))
 
     cmd = [
-        'ansible-playbook',
+        ANSIBLE_CMD,
         '-i',
         'localhost,',
         fn,
