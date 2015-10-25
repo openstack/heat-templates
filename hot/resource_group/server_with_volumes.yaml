@@ -19,14 +19,14 @@ parameters:
     description: Size of volume to attach to instance
     default: 1
     constraints:
-      - range: {min: 1, max: 10}
+      - range: { min: 1, max: 10 }
 
   num_volumes:
     type: number
     description: Number of volumes to attach to instance
     default: 2
     constraints:
-      - range: {min: 1, max: 10}
+      - range: { min: 1, max: 10 }
 
   instance_type:
     type: string
@@ -44,12 +44,12 @@ resources:
   group_of_volumes:
     type: OS::Heat::ResourceGroup
     properties:
-      count: {get_param: num_volumes}
+      count: { get_param: num_volumes }
       resource_def:
         type: volume_with_attachment.yaml
         properties:
-          instance_id: {get_resource: instance}
-          volume_size: {get_param: volume_size}
+          instance_id: { get_resource: instance }
+          volume_size: { get_param: volume_size }
 
 outputs:
   server_ip:
