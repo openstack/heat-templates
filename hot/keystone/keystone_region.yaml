@@ -1,0 +1,41 @@
+heat_template_version: 2015-10-15
+
+description: Sample Keystone Region template
+
+parameters:
+  region_id:
+    type: string
+    description: Keystone region id
+  region_description:
+    type: string
+    description: Keystone region description
+    default: sample region
+  region_enabled:
+    type: boolean
+    description: Keystone region is enabled or disabled
+    default: True
+  parent_region_id:
+    type: string
+    description: Keystone region parent
+
+resources:
+  parent_region:
+    type: OS::Keystone::Region
+    properties:
+      id: {get_param: parent_region_id}
+      description: {get_param: region_description}
+      enabled: {get_param: region_enabled}
+  child_region:
+    type: OS::Keystone::Region
+    properties:
+      id: {get_param: region_id}
+      parent_region: {get_resource: parent_region}
+      description: {get_param: region_description}
+      enabled: {get_param: region_enabled}
+
+outputs:
+  parent_region_id:
+    value: {get_resource: parent_region}
+  child_region_id:
+    value: {get_resource: child_region}
+
