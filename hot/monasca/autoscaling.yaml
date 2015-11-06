@@ -28,6 +28,7 @@ resources:
         properties:
           flavor: { get_param: flavor }
           image: { get_param: image }
+          metadata: {"scale_group": {get_param: "OS::stack_id"}}
 
   scale_up_policy:
     type: OS::Heat::ScalingPolicy
@@ -62,7 +63,11 @@ resources:
     properties:
       name: CPU utilization beyond 50 percent
       description: CPU utilization reached beyond 50 percent
-      expression: avg(cpu.utilization_perc) > 50 times 3
+      expression:
+        str_replace:
+          template: avg(vm.cpu.utilization_perc{scale_group=scale_group_id}) > 50 times 3
+          params:
+            scale_group_id: {get_param: "OS::stack_id"}
       severity: high
       alarm_actions:
         - {get_resource: up_notification }
@@ -72,7 +77,11 @@ resources:
     properties:
       name: CPU utilization less than 15 percent
       description: CPU utilization less than 15 percent
-      expression: avg(cpu.utilization_perc) < 15 times 1
+      expression:
+        str_replace:
+          template: avg(vm.cpu.utilization_perc{scale_group=scale_group_id}) < 15 times 3
+          params:
+            scale_group_id: {get_param: "OS::stack_id"}
       severity: low
       alarm_actions:
         - {get_resource: down_notification}
