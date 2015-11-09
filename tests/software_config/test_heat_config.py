@@ -14,6 +14,7 @@
 import copy
 import json
 import os
+import shutil
 import tempfile
 
 import fixtures
@@ -123,6 +124,7 @@ class HeatConfigTest(common.RunScriptTest):
                 f.write(fake_hook)
                 f.flush()
             os.chmod(hook_name, 0o755)
+        self.env = os.environ.copy()
 
     def write_config_file(self, data):
         config_file = tempfile.NamedTemporaryFile()
@@ -133,14 +135,13 @@ class HeatConfigTest(common.RunScriptTest):
     def run_heat_config(self, data):
         with self.write_config_file(data) as config_file:
 
-            env = os.environ.copy()
-            env.update({
+            self.env.update({
                 'HEAT_CONFIG_HOOKS': self.hooks_dir.join(),
                 'HEAT_CONFIG_DEPLOYED': self.deployed_dir.join(),
                 'HEAT_SHELL_CONFIG': config_file.name
             })
             returncode, stdout, stderr = self.run_cmd(
-                [self.heat_config_path], env)
+                [self.heat_config_path], self.env)
 
             self.assertEqual(0, returncode, stderr)
 
@@ -219,3 +220,22 @@ class HeatConfigTest(common.RunScriptTest):
                     stdin_path, matchers.Not(matchers.FileExists()))
                 self.assertThat(
                     stdout_path, matchers.Not(matchers.FileExists()))
+
+        # run again with a different deployed_dir
+        old_deployed_dir = self.deployed_dir
+        self.env['HEAT_CONFIG_DEPLOYED_OLD'] = old_deployed_dir.join()
+        self.deployed_dir = self.useFixture(fixtures.TempDir())
+        # make sure the new deployed_dir doesn't exist to trigger the migration
+        shutil.rmtree(self.deployed_dir.join())
+
+        self.run_heat_config(data)
+        for config in self.data:
+            hook = config['group']
+            if hook == 'no-such-hook':
+                continue
+            deployed_file = self.deployed_dir.join('%s.json' % config['id'])
+            old_deployed_file = old_deployed_dir.join('%s.json' % config['id'])
+            self.assertEqual(config,
+                             self.json_from_file(deployed_file))
+            self.assertThat(
+                old_deployed_file, matchers.Not(matchers.FileExists()))

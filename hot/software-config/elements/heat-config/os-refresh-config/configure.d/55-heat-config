@@ -15,6 +15,7 @@
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 
@@ -25,7 +26,9 @@ HOOKS_DIR = os.environ.get('HEAT_CONFIG_HOOKS',
 CONF_FILE = os.environ.get('HEAT_SHELL_CONFIG',
                            '/var/run/heat-config/heat-config')
 DEPLOYED_DIR = os.environ.get('HEAT_CONFIG_DEPLOYED',
-                              '/var/run/heat-config/deployed')
+                              '/var/lib/heat-config/deployed')
+OLD_DEPLOYED_DIR = os.environ.get('HEAT_CONFIG_DEPLOYED_OLD',
+                                  '/var/run/heat-config/deployed')
 HEAT_CONFIG_NOTIFY = os.environ.get('HEAT_CONFIG_NOTIFY',
                                     'heat-config-notify')
 
@@ -44,7 +47,12 @@ def main(argv=sys.argv):
         return 1
 
     if not os.path.isdir(DEPLOYED_DIR):
-        os.makedirs(DEPLOYED_DIR, 0o700)
+        if DEPLOYED_DIR != OLD_DEPLOYED_DIR and os.path.isdir(OLD_DEPLOYED_DIR):
+            log.debug('Migrating deployed state from %s to %s' %
+                      (OLD_DEPLOYED_DIR, DEPLOYED_DIR))
+            shutil.move(OLD_DEPLOYED_DIR, DEPLOYED_DIR)
+        else:
+            os.makedirs(DEPLOYED_DIR, 0o700)
 
     try:
         configs = json.load(open(CONF_FILE))
