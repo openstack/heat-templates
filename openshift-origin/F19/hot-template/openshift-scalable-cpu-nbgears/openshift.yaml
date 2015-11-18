@@ -87,11 +87,11 @@ parameters:
     type: string
     default: admin
   openstack_username:
-    description: Username of your Openstack account
+    description: Username of your OpenStack account
     type: string
     default: admin
   openstack_password:
-    description: Password of your Openstack account
+    description: Password of your OpenStack account
     type: string
     default: network
   asg_template_repo_address:
