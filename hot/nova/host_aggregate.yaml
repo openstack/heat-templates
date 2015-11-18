@@ -1,0 +1,31 @@
+heat_template_version: 2015-10-15
+
+description: Sample Nova Host Aggregate template
+
+parameters:
+  host_aggregate_name:
+    type: string
+    description: Nova host aggregate name
+  availability_zone_name:
+    type: string
+    description: Nova availability zone name
+  hosts:
+    type: comma_delimited_list
+    description: Nova host name list
+  metadata:
+    type: json
+    description: Arbitrary key/value metadata
+
+resources:
+  sample_host_aggregate:
+    type: OS::Nova::HostAggregate
+    properties:
+      name: {get_param: host_aggregate_name}
+      availability_zone: {get_param: availability_zone_name}
+      hosts: {get_param: hosts}
+      metadata: {get_param: metadata}
+
+outputs:
+  sample_host_aggregate_id:
+    value: {get_resource: sample_host_aggregate}
+    description: Sample nova host_aggregate
