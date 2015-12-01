@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# This script will create the needed files under /var/run/heat-config so that
+# any deployments that have already been queried from the Heat api via
+# os-collect-config are not executed.
+#
+# This is a workaround for:
+# https://bugs.launchpad.net/heat-templates/+bug/1513220
+# where /var/run/heat-config has already been lost due to system reboot.
+
+set -eu
+
+deployments=$(mktemp)
+
+echo "Reading deployments via os-apply-config to $deployments"
+os-apply-config --key deployments --type raw | jq . > $deployments
+
+num_deployments=$(jq length $deployments)
+echo "Found $num_deployments deployments."
+let "num_deployments -= 1"
+
+if [ -e /var/lib/heat-config/deployed ]; then
+    deployed_dir=/var/lib/heat-config/deployed
+else
+    deployed_dir=/var/run/heat-config/deployed
+fi
+mkdir -p $deployed_dir
+
+for idx in $(seq 0 $num_deployments); do
+    deployment=$(jq .[$idx] $deployments)
+    deployment_id=$(jq -r .id <<<$deployment)
+    deployment_group=$(jq -r .group <<<$deployment)
+    if [ "$deployment_group" = "os-apply-config" -o \
+         "$deployment_group" = "Heat::Ungrouped" ]; then
+        echo "Skipping creating deployed file for deployment $deployment_id as it is group:$deployment_group"
+        continue
+    else
+        echo "Creating $deployed_dir/${deployment_id}.json so that deployment will not be re-run"
+        touch $deployed_dir/${deployment_id}.json
+    fi
+done
