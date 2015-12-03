@@ -1,10 +1,9 @@
 heat_template_version: 2015-10-15
 
 description: >
-  A sample template used to experiment the auto-scaling using monasca service.
-  Pre-requisites:
-  1. Install python-monascaclient>=1.0.22
-  2. Restart heat-engine(s).
+  Example of using monasca resources for auto-scale testing. In this template,
+  sample scale-group is created with given nova instance to auto-scale
+  when cpu utilization varies between 15 to 50 percent for 3 times consequently.
 
 parameters:
   flavor:
