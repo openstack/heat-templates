@@ -1,0 +1,76 @@
+heat_template_version: 2014-10-16
+
+parameters:
+
+  key_name:
+    type: string
+
+  flavor:
+    type: string
+    default: m1.small
+
+  image:
+    type: string
+    default: fedora-software-config
+
+resources:
+
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  config:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: chef
+      inputs:
+      - name: nginx-pkg
+        type: Json
+      config:
+      - "recipe[nginx-pkg]"
+      options:
+        kitchen: "https://github.com/st-isidore-de-seville/cookbook-nginx-pkg.git"
+        kitchen_path: "/opt/heat/chef"
+
+  deployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      config:
+        get_resource: structured_config
+      server:
+        get_resource: server
+      input_values:
+        nginx-pkg:
+          package:
+            name: nginx
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: SOFTWARE_CONFIG
+
+outputs:
+
+  status_code_deployment:
+    value:
+      get_attr: [deployment, deploy_status_code]
+
+  stdout:
+    value:
+      get_attr: [deployment, deploy_stdout]
+
+  stderr:
+    value:
+      get_attr: [deployment, deploy_stderr]
