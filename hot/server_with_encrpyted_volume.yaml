@@ -2,7 +2,7 @@ heat_template_version: 2015-04-30
 
 description: >
   A template showing how to create an encrypted cinder volume and attach
-  it to an nova instance. The template uses only Heat OpenStack native
+  it to a nova instance. The template uses only Heat OpenStack native
   resource types.
 
 parameters:
