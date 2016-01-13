@@ -1,22 +1,19 @@
 #!/bin/bash
 set -eux
 
-yum -y update
+dnf -y update
 
-yum -y install os-collect-config os-apply-config \
-  os-refresh-config dib-utils python-pip \
-  python-docker-py python-yaml
+dnf -y install findutils os-collect-config os-apply-config \
+  os-refresh-config dib-utils python-pip python-docker-py \
+  python-yaml
 
-yum clean all
+dnf clean all
 
 # pip installing dpath as python-dpath is an older version of dpath
 pip install dpath
 
-# using binary as 'docker-compose' and 'os-collect-config' has conflict on 'requests' version
-# docker-compose pins requests version to 2.6.1
-curl -L https://github.com/docker/compose/releases/download/1.4.0/docker-compose-`uname -s`-`uname -m` \
-    > /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
+# install docker-compose
+pip install docker-compose
 
 # os-apply-config templates directory
 oac_templates=/usr/libexec/os-apply-config/templates
