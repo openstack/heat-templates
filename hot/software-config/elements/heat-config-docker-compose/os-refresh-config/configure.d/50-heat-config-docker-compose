@@ -107,7 +107,8 @@ def write_compose_config(c):
     proj_dir = os.path.join(DOCKER_COMPOSE_DIR, c['name'])
     prepare_dir(proj_dir)
     fn = os.path.join(proj_dir, 'docker-compose.yml')
-    with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY, 0o600), 'w') as f:
+    with os.fdopen(os.open(fn, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600),
+                   'w') as f:
         f.write(yaml_config.encode('utf-8'))
 
 
