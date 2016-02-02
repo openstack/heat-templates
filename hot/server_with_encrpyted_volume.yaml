@@ -82,4 +82,3 @@ outputs:
   instance_ip:
     description: Public IP address of the newly created Nova instance.
     value: { get_attr: [nova_instance, first_address] }
-

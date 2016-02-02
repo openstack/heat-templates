@@ -274,4 +274,3 @@ Outputs:
       - - http://
         - Fn::GetAtt: [ElasticLoadBalancer, DNSName]
         - /wordpress
-

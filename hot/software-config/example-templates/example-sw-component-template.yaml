@@ -87,4 +87,3 @@ outputs:
     value: { get_attr: [ server, networks, private, 0 ] }
   sw_component_last_action:
     value: { get_attr: [ sw_deployment, last_action ] }
-

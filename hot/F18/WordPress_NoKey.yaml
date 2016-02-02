@@ -82,8 +82,8 @@ resources:
           CidrIp: '0.0.0.0/0'
         - IpProtocol: 'tcp'
           FromPort: '22'
-          ToPort : '22'
-          CidrIp : '0.0.0.0/0'
+          ToPort: '22'
+          CidrIp: '0.0.0.0/0'
 
   wordpress_instance:
     # Use an AWS resource type and switch to native compute instance as

@@ -38,4 +38,3 @@ outputs:
     value: {get_resource: parent_region}
   child_region_id:
     value: {get_resource: child_region}
-

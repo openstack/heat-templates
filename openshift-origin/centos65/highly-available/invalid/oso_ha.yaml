@@ -331,8 +331,7 @@ resources:
 ###
   broker1_instance:
     type: OS::Nova::Server
-    depends_on: broker2_wait_condition
-    depends_on: broker3_wait_condition
+    depends_on: [broker2_wait_condition, broker3_wait_condition]
     properties:
       name: oso_broker1
       image: { get_param: broker_image }

@@ -5,7 +5,7 @@ description: Heat template to deploy Open Source CHEF server on a VM
 parameters:
   ssh_key_name:
     type: string
-    description : Name of a Key Pair to enable SSH access to the instance
+    description: Name of a Key Pair to enable SSH access to the instance
 
   chef_image_name:
     type: string
@@ -34,7 +34,7 @@ parameters:
     - length: { min: 1, max: 25 }
       description: Password MUST be between 1 - 25 characters.
     - allowed_pattern: "[a-zA-Z0-9]*"
-      description : Only Alpha-Numeric characters are allowed.
+      description: Only Alpha-Numeric characters are allowed.
 
 resources:
   ChefServer:

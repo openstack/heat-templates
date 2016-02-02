@@ -77,4 +77,3 @@ outputs:
   deployment_stderr:
     description: Standard error captured from the configuration execution.
     value: { get_attr: [deployment, deploy_stderr] }
-

@@ -27,4 +27,3 @@ resources:
 outputs:
   admin_project_id:
     value: {get_resource: admin_project}
-
