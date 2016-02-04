@@ -156,7 +156,6 @@ resources:
 outputs:
 
   lburl:
-    description: URL of the loadbalancer
     value:
       str_replace:
         template: http://IP_ADDRESS:PORT

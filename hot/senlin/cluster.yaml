@@ -25,7 +25,7 @@ resources:
   profile:
     type: OS::Senlin::Profile
     properties:
-      type:  os.nova.server-1.0
+      type: os.nova.server-1.0
       properties:
         flavor: {get_param: flavor}
         image: {get_param: image}
@@ -93,4 +93,3 @@ outputs:
         template: curl -X POST LINK
         params:
           LINK: {get_attr: [receiver_scale_in, channel, alarm_url]}
-
