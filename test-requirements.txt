@@ -12,5 +12,5 @@ testrepository>=0.0.18
 testscenarios>=0.4
 testtools>=0.9.34
 
-python-heatclient>=0.2.9
+python-heatclient>=1.0.0
 python-keystoneclient>=0.10.0

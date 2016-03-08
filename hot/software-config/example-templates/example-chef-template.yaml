@@ -26,7 +26,7 @@ resources:
         port_range_min: 22
         port_range_max: 22
 
-  config:
+  structured_config:
     type: OS::Heat::StructuredConfig
     properties:
       group: chef

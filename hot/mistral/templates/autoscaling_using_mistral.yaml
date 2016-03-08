@@ -16,6 +16,9 @@ parameters:
     default: cirros-0.3.4-x86_64-uec
     description: Name or ID of image
 
+  security_group_name:
+    type: string
+
   user:
     type: string
     default: cirros
@@ -50,7 +53,7 @@ resources:
         properties:
           image: { get_param: image }
           flavor: { get_param: flavor }
-          security_group: {get_resource: security_group}
+          security_group: {get_param: security_group_name}
           metadata: {"metering.stack": {get_param: "OS::stack_id"}}
       min_size: 1
       max_size: 2

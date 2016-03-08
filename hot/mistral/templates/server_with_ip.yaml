@@ -5,7 +5,7 @@ parameters:
     type: string
   flavor:
     type: string
-  security_group:
+  security_group_name:
     type: string
   metadata:
     type: json
@@ -18,7 +18,7 @@ resources:
       image: {get_param: image}
       metadata: {get_param: metadata}
       security_groups:
-        - get_param: security_group
+        - get_param: security_group_name
 
   floating_ip:
     type: OS::Nova::FloatingIP
