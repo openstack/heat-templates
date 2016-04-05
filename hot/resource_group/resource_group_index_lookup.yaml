@@ -1,0 +1,26 @@
+heat_template_version: 2015-04-30
+
+description: Shows how to look up list/map values by group index
+
+parameters:
+  random_lengths:
+    type: comma_delimited_list
+    default: [4, 5, 6]
+
+resources:
+  random_group:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: 3
+      resource_def:
+        type: random.yaml
+        properties:
+          # Note you have to pass the index and the entire list into the
+          # nested template, resolving via %index% doesn't work directly
+          # in the get_param here
+          index: "%index%"
+          lengths: {get_param: random_lengths}
+
+outputs:
+  all_values:
+    value: {get_attr: [random_group, value]}

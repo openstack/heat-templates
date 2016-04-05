@@ -1,0 +1,17 @@
+heat_template_version: 2015-10-15
+
+parameters:
+  lengths:
+    type: comma_delimited_list
+  index:
+    type: number
+
+resources:
+  random:
+    type: OS::Heat::RandomString
+    properties:
+      length: {get_param: [lengths, {get_param: index}]}
+
+outputs:
+  value:
+    value: {get_attr: [random, value]}
