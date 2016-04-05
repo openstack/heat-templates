@@ -10,7 +10,7 @@ Images built with these elements contain the necessary
 distro packages so that only pip packages need to be installed on
 server boot.
 
-The script build-heat-test-image.sh will trigger a image build
+The script build-heat-test-image.sh will trigger an image build
 defaulting to fedora. Ubuntu and CentOS7 are also fully supported by
 these elements. Run the following to build all supported images:
 
