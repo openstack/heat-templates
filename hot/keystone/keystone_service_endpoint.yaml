@@ -56,4 +56,3 @@ resources:
       url: {get_param: admin_url}
       region: {get_param: region}
       interface: admin
-

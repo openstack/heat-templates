@@ -383,17 +383,17 @@ resources:
     node_port:
       type: OS::Neutron::Port
       properties:
-        network_id:  {get_resource: private_network}
+        network_id: {get_resource: private_network}
         fixed_ips: [
-          subnet_id:  {get_resource: private_sub_network}
+          subnet_id: {get_resource: private_sub_network}
         ]
         security_groups: [{get_resource: openshift_origin_security_group}]
 
     node_floating_ip:
       type: OS::Neutron::FloatingIP
       properties:
-        floating_network_id:  {get_param: public_net_id}
-        port_id:  {get_resource: node_port}
+        floating_network_id: {get_param: public_net_id}
+        port_id: {get_resource: node_port}
 
     node_wait_handle:
       type: AWS::CloudFormation::WaitConditionHandle
@@ -484,10 +484,10 @@ resources:
       type: OS::Nova::Server
       properties:
         image: {get_param: image_node_name}
-        flavor:  {get_param: node_flavor}
+        flavor: {get_param: node_flavor}
         key_name: {get_resource: ssh_key}
         networks: [
-          port:  {get_resource: node_port}
+          port: {get_resource: node_port}
         ]
         user_data: {get_resource: node_user_data}
         user_data_format: RAW

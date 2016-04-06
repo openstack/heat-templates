@@ -325,4 +325,3 @@ Outputs:
         - Fn::GetAtt: [WikiDatabase, PublicIp]
         - /wordpress
     Description: URL for Wordpress wiki
-

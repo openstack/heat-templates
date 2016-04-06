@@ -81,4 +81,3 @@ resources:
             $dns_server$: { get_param: dns_server }
             $user_name$: { get_param: user_name }
             $password$: { get_param: password }
-

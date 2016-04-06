@@ -133,7 +133,7 @@ Resources:
                 Fn::Join:
                 - ''
                 - - AWSAccessKeyId=
-                  - {Ref : CfnUserKey}
+                  - {Ref: CfnUserKey}
                   - '
 
                     '

@@ -11,7 +11,7 @@ parameters:
 
   key_name:
     type: string
-    description : Name of a KeyPair to enable SSH access to the instance
+    description: Name of a KeyPair to enable SSH access to the instance
   instance_type:
     type: string
     description: Instance type for WordPress server

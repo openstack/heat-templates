@@ -29,7 +29,7 @@ parameters:
     constraints:
       - length: { min: 3, max: 256 }
       - allowed_pattern: "[A-Za-z0-9]+(?=[\\.\\-][a-zA-Z0-9])*\\.[a-zA-z09]+"
-        description : must be a valid DNS name.
+        description: must be a valid DNS name.
 
   domain_netbios_name:
     default: cloudbase

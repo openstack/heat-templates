@@ -18,7 +18,7 @@ description: >
 parameters:
   key_name:
     type: string
-    description : Name of a key pair to enable SSH access to instances.
+    description: Name of a key pair to enable SSH access to instances.
     default: default
   flavor:
     type: string

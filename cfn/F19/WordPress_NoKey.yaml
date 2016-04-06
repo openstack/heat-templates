@@ -53,8 +53,8 @@ Resources:
         CidrIp: 0.0.0.0/0
       - IpProtocol: tcp
         FromPort: '22'
-        ToPort : '22'
-        CidrIp : 0.0.0.0/0
+        ToPort: '22'
+        CidrIp: 0.0.0.0/0
   WikiDatabase:
     Type: AWS::EC2::Instance
     Metadata:
@@ -77,7 +77,7 @@ Resources:
         - {Ref: InstanceType}
         - Image
       InstanceType: {Ref: InstanceType}
-      SecurityGroups: [{"Ref" : "WebServerSecurityGroup"}]
+      SecurityGroups: [{"Ref": "WebServerSecurityGroup"}]
       UserData:
         Fn::Base64:
           Fn::Join:
@@ -157,4 +157,3 @@ Outputs:
         - Fn::GetAtt: [WikiDatabase, PublicIp]
         - /wordpress
     Description: URL for Wordpress wiki
-
