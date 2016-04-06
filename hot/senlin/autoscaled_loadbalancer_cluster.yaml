@@ -1,0 +1,163 @@
+heat_template_version: 2016-04-08
+
+description: >
+  This template demostrate how to create a cluster and attach a
+  loadbalance policy, a scale-out policy and scale-in policy to it.
+
+parameters:
+  flavor:
+    description: Flavor for the instances to be created.
+    type: string
+    default: m1.nano
+  image:
+    description: Name or ID of the image to use for the instances.
+    type: string
+    default: cirros-0.3.4-x86_64-uec
+  key_name:
+    description: Name of an existing key pair to use for the instances.
+    type: string
+  network:
+    description: The network for the instances.
+    type: string
+    default: private
+  pool_subnet:
+    description: Subnet for the port on which members can be connected.
+    type: string
+    default: private-subnet
+  vip_subnet:
+    description: Subnet on which VIP address will be allocated.
+    type: string
+    default: private-subnet
+
+resources:
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+        rules:
+        - protocol: icmp
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          port_range_min: 80
+          port_range_max: 80
+
+  profile:
+    type: OS::Senlin::Profile
+    properties:
+      type: os.nova.server-1.0
+      properties:
+        flavor: {get_param: flavor}
+        image: {get_param: image}
+        key_name: {get_param: key_name}
+        networks:
+          - network: {get_param: network}
+        security_groups:
+          - {get_resource: security_group}
+
+  cluster:
+    type: OS::Senlin::Cluster
+    properties:
+      desired_capacity: 2
+      min_size: 2
+      profile: {get_resource: profile}
+
+  scale_in_policy:
+    type: OS::Senlin::Policy
+    properties:
+      type: senlin.policy.scaling-1.0
+      bindings:
+        - cluster: {get_resource: cluster}
+      properties:
+        event: CLUSTER_SCALE_IN
+        adjustment:
+          type: CHANGE_IN_CAPACITY
+          number: 1
+
+  scale_out_policy:
+    type: OS::Senlin::Policy
+    properties:
+      type: senlin.policy.scaling-1.0
+      bindings:
+        - cluster: {get_resource: cluster}
+      properties:
+        event: CLUSTER_SCALE_OUT
+        adjustment:
+          type: CHANGE_IN_CAPACITY
+          number: 1
+
+  lb_policy:
+    type: OS::Senlin::Policy
+    properties:
+      type: senlin.policy.loadbalance-1.0
+      bindings:
+        - cluster: {get_resource: cluster}
+      properties:
+        pool:
+          protocol: HTTP
+          protocol_port: 80
+          subnet: {get_param: pool_subnet}
+          lb_method: ROUND_ROBIN
+        vip:
+          subnet: {get_param: vip_subnet}
+          protocol: HTTP
+          protocol_port: 80
+        health_monitor:
+          type: HTTP
+          delay: 10
+          timeout: 5
+          max_retries: 4
+
+  receiver_scale_out:
+    type: OS::Senlin::Receiver
+    properties:
+      cluster: {get_resource: cluster}
+      action: CLUSTER_SCALE_OUT
+      type: webhook
+
+  receiver_scale_in:
+    type: OS::Senlin::Receiver
+    properties:
+      cluster: {get_resource: cluster}
+      action: CLUSTER_SCALE_IN
+      type: webhook
+
+  deletion_policy:
+    type: OS::Senlin::Policy
+    properties:
+      type: senlin.policy.deletion-1.0
+      bindings:
+        - cluster: {get_resource: cluster}
+      properties:
+        criteria: YOUNGEST_FIRST
+        destroy_after_deletion: True
+        grace_period: 20
+        reduce_desired_capacity: False
+
+  scale_in_alarm:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: trigger when bandwidth overflow
+      meter_name: network.services.lb.incoming.bytes.rate
+      statistic: avg
+      period: 180
+      evaluation_periods: 1
+      threshold: 12000
+      repeat_actions: True
+      alarm_actions:
+        - {get_attr: [receiver_scale_in, channel, alarm_url]}
+      comparison_operator: le
+
+  scale_out_alarm:
+    type: OS::Ceilometer::Alarm
+    properties:
+      description: trigger when bandwidth insufficient
+      meter_name: network.services.lb.incoming.bytes.rate
+      statistic: avg
+      period: 60
+      evaluation_periods: 1
+      threshold: 28000
+      repeat_actions: True
+      alarm_actions:
+        - {get_attr: [receiver_scale_out, channel, alarm_url]}
+      comparison_operator: ge
