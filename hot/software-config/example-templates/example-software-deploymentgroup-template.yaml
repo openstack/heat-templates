@@ -1,0 +1,77 @@
+heat_template_version: 2013-05-23
+description: >
+  This template demonstrates a minimal SoftwareDeployment example
+parameters:
+  key_name:
+    type: string
+    constraints:
+      - custom_constraint: nova.keypair
+  flavor:
+    type: string
+    constraints:
+      - custom_constraint: nova.flavor
+  ubuntu_image:
+    type: string
+    constraints:
+      - custom_constraint: glance.image
+  fedora_image:
+    type: string
+    constraints:
+      - custom_constraint: glance.image
+  network:
+    type: string
+    constraints:
+      - custom_constraint: neutron.network
+
+resources:
+  my_deps:
+    type: OS::Heat::SoftwareDeploymentGroup
+    properties:
+      config: {get_resource: config}
+      servers: {'0': {get_resource: server_ubuntu},
+                '1': {get_resource: server_fedora}
+               }
+      signal_transport: NO_SIGNAL
+
+  config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ansible
+      inputs:
+      - name: foo
+      - name: bar
+      outputs:
+      - name: result
+      config:
+        get_file: config-scripts/example-ansible-template.ansible
+
+  server_fedora:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: fedora_image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      networks: [{network: {get_param: network}}]
+      user_data_format: SOFTWARE_CONFIG
+  server_ubuntu:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: ubuntu_image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      networks: [{network: {get_param: network}}]
+      user_data_format: SOFTWARE_CONFIG
+
+outputs:
+  result:
+    value:
+      get_attr: [my_deps, result]
+  stdout:
+    value:
+      get_attr: [my_deps, deploy_stdout]
+  stderr:
+    value:
+      get_attr: [my_deps, deploy_stderr]
+  status_code:
+    value:
+      get_attr: [my_deps, deploy_status_code]
