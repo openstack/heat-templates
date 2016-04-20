@@ -1,0 +1,168 @@
+heat_template_version: 2015-10-15
+
+description: A Group of Load Balanced Servers
+
+parameters:
+
+  app_port:
+    type: number
+    default: 8080
+    description: Port used by the servers
+  flavor:
+    type: string
+    description: Flavor used for servers
+    constraints:
+    - custom_constraint: nova.flavor
+  image:
+    type: string
+    description: Image used for servers
+    constraints:
+    - custom_constraint: glance.image
+  lb_port:
+    type: number
+    default: 80
+    description: Port used by the load balancer
+  private_network:
+    type: string
+    description: Network used by the servers
+    constraints:
+    - custom_constraint: neutron.network
+  public_network:
+    type: string
+    description: Network used by the load balancer
+    constraints:
+    - custom_constraint: neutron.network
+  subnet:
+    type: string
+    description: Subnet on which the load balancer will be located
+    constraints:
+    - custom_constraint: neutron.subnet
+
+resources:
+
+  sec_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules:
+      - remote_ip_prefix: 0.0.0.0/0
+        protocol: tcp
+        port_range_min: { get_param: app_port }
+        port_range_max: { get_param: app_port }
+
+# A ResourceGroup with a nested server template
+# is a cleaner way of doing multiple servers.
+# These are placed inline for the sake of the
+# keeping the example in the App Catalog in a
+# single template.
+#
+# A Resource Group would be as follows:
+#
+#  group:
+#    type: OS::Heat::ResourceGroup
+#    properties:
+#      count: 2
+#      resource_def:
+#        type: lb_server.yaml
+#
+# The lb_server template would create the
+# server and member resources.
+
+  server1:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      networks: [{ network: { get_param: private_network }}]
+      security_groups: [{ get_resource: sec_group }]
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            #! /bin/sh -v
+            Body=$(hostname)
+            Response="HTTP/1.1 200 OK\r\nContent-Length: ${#Body}\r\n\r\n$Body"
+            while true ; do echo -e $Response | nc -llp PORT; done
+          params:
+            PORT: { get_param: app_port }
+
+  pool_member1:
+    type: OS::Neutron::LBaaS::PoolMember
+    properties:
+      pool: { get_resource: pool }
+      address: { get_attr: [ server1, first_address ]}
+      protocol_port: { get_param: app_port }
+      subnet: { get_param: subnet }
+
+  server2:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      networks: [{ network: { get_param: private_network }}]
+      security_groups: [{ get_resource: sec_group }]
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            #! /bin/sh -v
+            Body=$(hostname)
+            Response="HTTP/1.1 200 OK\r\nContent-Length: ${#Body}\r\n\r\n$Body"
+            while true ; do echo -e $Response | nc -llp PORT; done
+          params:
+            PORT: { get_param: app_port }
+
+  pool_member2:
+    type: OS::Neutron::LBaaS::PoolMember
+    properties:
+      pool: { get_resource: pool }
+      address: { get_attr: [ server2, first_address ]}
+      protocol_port: { get_param: app_port }
+      subnet: { get_param: subnet }
+
+  monitor:
+    type: OS::Neutron::LBaaS::HealthMonitor
+    properties:
+      delay: 3
+      type: HTTP
+      timeout: 3
+      max_retries: 3
+      pool: { get_resource: pool }
+
+  pool:
+    type: OS::Neutron::LBaaS::Pool
+    properties:
+      lb_algorithm: ROUND_ROBIN
+      protocol: HTTP
+      listener: { get_resource: listener }
+
+  listener:
+    type: OS::Neutron::LBaaS::Listener
+    properties:
+      loadbalancer: { get_resource: loadbalancer }
+      protocol: HTTP
+      protocol_port: { get_param: lb_port }
+
+  loadbalancer:
+    type: OS::Neutron::LBaaS::LoadBalancer
+    properties:
+      vip_subnet: { get_param: subnet }
+
+  floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: public_network }
+      port_id: { get_attr: [loadbalancer, vip_port_id ]}
+
+outputs:
+
+  lburl:
+    description: URL of the loadbalancer
+    value:
+      str_replace:
+        template: http://IP_ADDRESS:PORT
+        params:
+          IP_ADDRESS: { get_attr: [ floating_ip, floating_ip_address ] }
+          PORT: { get_param: lb_port }
+    description: >
+      This URL is the "external" URL that can be used to access the
+      load balancer.
