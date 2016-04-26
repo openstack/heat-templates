@@ -1,0 +1,37 @@
+heat_template_version: 2013-05-23
+
+description: >
+  This template demostrates how to create Barbican generic container.
+
+parameters:
+  name:
+    description: (optional) Human readable name for the container.
+    type: string
+    default: test_container
+
+
+resources:
+  secret:
+    type: ./secret.yaml
+  container:
+    type: OS::Barbican::GenericContainer
+    properties:
+      name: { get_param: name }
+      secrets:
+        - name: test_secret
+          ref: { get_attr: [secret, secret_ref] }
+
+
+outputs:
+  container_status:
+    description: The status of the container.
+    value: { get_attr: [container, status] }
+  container_ref:
+    description: The URI to the container.
+    value: { get_attr: [container, container_ref] }
+  secret_refs:
+    description: The URIs to secrets stored in container.
+    value: { get_attr: [container, secret_refs] }
+  consumers:
+    description: The URIs to container consumers.
+    value: { get_attr: [container, consumers] }
