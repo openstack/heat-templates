@@ -29,12 +29,9 @@ def validate(base, name):
     basename, ext = os.path.splitext(name)
     if basename.endswith("_env"):
         return False
-    args = ["heat",
-            "template-validate",
-            "-f",
-            os.path.join(base, name),
-            "--ignore-errors",
-            '99001']
+    args = ["openstack", "orchestration", "template", "validate",
+            "-t", os.path.join(base, name),
+            "--ignore-errors", "99001"]
     base_env = "%s_env%s" % (basename, ext)
     env = os.path.join(base, base_env)
     if os.path.exists(env):
