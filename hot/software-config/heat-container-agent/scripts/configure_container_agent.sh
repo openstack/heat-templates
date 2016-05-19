@@ -42,7 +42,7 @@ polling_interval = {{polling_interval}}
 cachedir = {{cachedir}}
 {{/cachedir}}
 {{#collectors}}
-collectors = {{collectors}}
+collectors = {{.}}
 {{/collectors}}
 
 {{#cfn}}
@@ -65,6 +65,15 @@ project_id = {{project_id}}
 stack_id = {{stack_id}}
 resource_name = {{resource_name}}
 {{/heat}}
+
+{{#zaqar}}
+[zaqar]
+auth_url = {{auth_url}}
+user_id = {{user_id}}
+password = {{password}}
+project_id = {{project_id}}
+queue_id = {{queue_id}}
+{{/zaqar}}
 
 {{#request}}
 [request]
