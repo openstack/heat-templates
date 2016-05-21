@@ -1,0 +1,68 @@
+heat_template_version: 2013-05-23
+
+description: >
+  This template demostrates how to create Barbican Order - resource which
+  allows to generate some secret material.
+
+parameters:
+  name:
+    description: (optional) Human readable name for the generated secret.
+    type: string
+    default: test_order
+  type:
+    description: The type of the order.
+    type: string
+    default: key
+  payload_content_type:
+    description: (optional) The type/format the secret data is provided in.
+    type: string
+    default: application/octet-stream
+  expiration:
+    description: >
+      (optional) The expiration date for the secret in ISO-8601 format.
+      If set, the secret will not be available after this time.
+    type: string
+    default: 2017-12-28T19:14:44.180394
+  algorithm:
+    description: >
+      (optional) The algorithm type used to generate the secret.
+      Required for key and asymmetric types of order.
+    type: string
+    default: aes
+  bit_length:
+    description: >
+      (optional) The bit-length of the secret.
+      Required for key and asymmetric types of order.
+    type: number
+    default: 256
+  mode:
+    description: >
+      (optional) The type/mode of the algorithm associated
+      with the secret information.
+    type: string
+    default: cbc
+
+
+resources:
+  order:
+    type: OS::Barbican::Order
+    properties:
+      name: { get_param: name }
+      type: { get_param: type }
+      payload_content_type: { get_param: payload_content_type }
+      expiration: { get_param: expiration }
+      algorithm: { get_param: algorithm }
+      bit_length: { get_param: bit_length }
+      mode: { get_param: mode }
+
+
+outputs:
+  order_status:
+    description: The status of the order.
+    value: { get_attr: [order, status] }
+  order_ref:
+    description: The URI to the order.
+    value: { get_attr: [order, order_ref] }
+  secret_ref:
+    description: The URI to the created secret.
+    value: { get_attr: [order, secret_ref] }
