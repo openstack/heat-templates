@@ -49,6 +49,7 @@ class HookAnsibleTest(common.RunScriptTest):
         self.working_dir = self.useFixture(fixtures.TempDir())
         self.outputs_dir = self.useFixture(fixtures.TempDir())
         self.test_state_path = self.outputs_dir.join('test_state.json')
+        self.test_inventory = "localhost test_var=123,"
 
         self.env = os.environ.copy()
         self.env.update({
@@ -101,6 +102,40 @@ class HookAnsibleTest(common.RunScriptTest):
         # Write the executable 'config' to file
         with open(ansible_playbook) as f:
             self.assertEqual('the ansible playbook', f.read())
+
+    def test_hook_inventory(self):
+
+        self.env.update({
+            'HEAT_ANSIBLE_INVENTORY': self.test_inventory,
+            'TEST_RESPONSE': json.dumps({
+                'stdout': 'ansible success',
+                'stderr': 'thing happened',
+            }),
+        })
+        returncode, stdout, stderr = self.run_cmd(
+            [self.hook_path], self.env, json.dumps(self.data))
+
+        self.assertEqual(0, returncode, stderr)
+        self.assertEqual({
+            'deploy_stdout': 'ansible success',
+            'deploy_stderr': 'thing happened',
+            'deploy_status_code': 0,
+        }, json.loads(stdout))
+
+        state = self.json_from_file(self.test_state_path)
+        ansible_playbook = self.working_dir.join('1234_playbook.yaml')
+        vars_filename = self.working_dir.join('1234_variables.json')
+
+        self.assertEqual(
+            [
+                self.fake_tool_path,
+                '-i',
+                self.test_inventory,
+                ansible_playbook,
+                '--extra-vars',
+                '@%s' % vars_filename
+            ],
+            state['args'])
 
     def test_hook_ansible_failed(self):
 

@@ -23,6 +23,7 @@ WORKING_DIR = os.environ.get('HEAT_ANSIBLE_WORKING',
 OUTPUTS_DIR = os.environ.get('HEAT_ANSIBLE_OUTPUTS',
                              '/var/run/heat-config/heat-config-ansible')
 ANSIBLE_CMD = os.environ.get('HEAT_ANSIBLE_CMD', 'ansible-playbook')
+ANSIBLE_INVENTORY = os.environ.get('HEAT_ANSIBLE_INVENTORY', 'localhost,')
 
 
 def prepare_dir(path):
@@ -69,7 +70,7 @@ def main(argv=sys.argv):
     cmd = [
         ANSIBLE_CMD,
         '-i',
-        'localhost,',
+        ANSIBLE_INVENTORY,
         fn,
         '--extra-vars',
         '@%s' % vars_filename
