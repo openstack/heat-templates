@@ -91,7 +91,7 @@ def main(argv=sys.argv):
         log.info('Results: %s' % ret)
         output = yaml.safe_dump(ret['return'])
 
-        # returncode of 0 means there were successfull changes
+        # returncode of 0 means there were successful changes
         if ret['retcode'] == 0:
             log.info('Completed applying salt state %s' % state_file)
             stdout = output

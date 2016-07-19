@@ -146,7 +146,7 @@ def main(argv=sys.argv):
             log.info(content)
         response['deploy_{0}'.format(i)] = content
 
-    # returncode of 2 means there were successfull changes
+    # returncode of 2 means there were successful changes
     if subproc.returncode in (0, 2):
         returncode = 0
         log.info('Completed %s' % fn)

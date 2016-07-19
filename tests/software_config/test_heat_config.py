@@ -185,7 +185,7 @@ class HeatConfigTest(common.RunScriptTest):
             self.assertEqual(self.outputs[hook],
                              self.json_from_file(stdout_path))
 
-            # clean up files in preperation for second run
+            # clean up files in preparation for second run
             os.remove(stdin_path)
             os.remove(stdout_path)
 
