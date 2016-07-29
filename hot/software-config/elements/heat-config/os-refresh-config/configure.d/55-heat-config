@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -45,6 +46,10 @@ def main(argv=sys.argv):
     if not os.path.exists(CONF_FILE):
         log.error('No config file %s' % CONF_FILE)
         return 1
+
+    conf_mode = stat.S_IMODE(os.lstat(CONF_FILE).st_mode)
+    if conf_mode != 0o600:
+        os.chmod(CONF_FILE, 0o600)
 
     if not os.path.isdir(DEPLOYED_DIR):
         if DEPLOYED_DIR != OLD_DEPLOYED_DIR and os.path.isdir(OLD_DEPLOYED_DIR):
