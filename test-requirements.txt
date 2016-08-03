@@ -12,6 +12,7 @@ testrepository>=0.0.18
 testscenarios>=0.4
 testtools>=0.9.34
 yamllint>=1.2.0
+os-apply-config
 
 python-heatclient>=1.2.0
 python-keystoneclient>=0.10.0

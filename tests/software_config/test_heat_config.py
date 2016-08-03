@@ -25,7 +25,8 @@ from tests.software_config import common
 
 class HeatConfigTest(common.RunScriptTest):
 
-    fake_hooks = ['cfn-init', 'chef', 'puppet', 'salt', 'script']
+    fake_hooks = ['cfn-init', 'chef', 'puppet', 'salt', 'script',
+                  'apply-config']
 
     data = [
         {
@@ -66,9 +67,14 @@ class HeatConfigTest(common.RunScriptTest):
             'config': 'five'
         }, {
             'id': '6666',
+            'group': 'apply-config',
+            'inputs': [{'name': 'foo', 'value': 'bar'}],
+            'config': 'six'
+        }, {
+            'id': '9999',
             'group': 'no-such-hook',
             'inputs': [],
-            'config': 'six'
+            'config': 'nine'
         }]
 
     outputs = {
@@ -96,6 +102,11 @@ class HeatConfigTest(common.RunScriptTest):
         'script': {
             'deploy_status_code': '-1',
             'deploy_stderr': 'A bad thing happened',
+            'deploy_stdout': 'stdout'
+        },
+        'apply-config': {
+            'deploy_status_code': '0',
+            'deploy_stderr': 'stderr',
             'deploy_stdout': 'stdout'
         }
     }

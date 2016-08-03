@@ -1,0 +1,6 @@
+#!/bin/bash
+set -x
+
+SCRIPTDIR=$(dirname $0)
+
+install -D -g root -o root -m 0755 ${SCRIPTDIR}/hook-apply-config.py /var/lib/heat-config/hooks/apply-config
