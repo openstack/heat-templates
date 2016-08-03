@@ -2,7 +2,6 @@ heat_template_version: 2013-05-23
 
 description: >
   Deploys a new Active Directory forest domain controller.
-
 parameters:
   key_name:
     description: Name of an existing keypair to encrypt the Admin password
@@ -21,6 +20,12 @@ parameters:
   network:
     type: string
     description: Id or name of an existing network
+
+  ad_max_timeout:
+    type: number
+    default: 3600
+    description: >
+      The maximum allowed time for the ad instalation to finish.
 
   domain_name:
     default: cloudbase.local
@@ -61,6 +66,44 @@ resources:
             safe_mode_administrator_password: { get_param: safe_mode_administrator_password }
             domain_name: { get_param: domain_name }
             domain_netbios_name: { get_param: domain_netbios_name }
+            ad_wait_condition_endpoint:
+             { get_attr: [ ad_wait_condition_handle, endpoint ] }
+            ad_wait_condition_token:
+             { get_attr: [ ad_wait_condition_handle, token ] }
+
+  ad_module:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: AD.psm1 }
+
+  ad_init:
+    type: OS::Heat::MultipartMime
+    depends_on: ad_wait_condition_handle
+    properties:
+      parts:
+        [
+          {
+            filename: "AD.psm1",
+            subtype: "x-cfninitdata",
+            config: { get_resource: ad_module }
+          },
+          {
+            filename: "cfn-userdata",
+            subtype: "x-cfninitdata",
+            config: { get_resource: dc_init }
+          }
+        ]
+  ad_wait_condition:
+    type: OS::Heat::WaitCondition
+    depends_on: ad_wait_condition_handle
+    properties:
+      count: 1
+      handle: { get_resource: ad_wait_condition_handle }
+      timeout: { get_param: ad_max_timeout }
+
+  ad_wait_condition_handle:
+    type: OS::Heat::WaitConditionHandle
 
   dc:
     type: OS::Nova::Server
@@ -71,4 +114,4 @@ resources:
       networks:
         - network: { get_param: network }
       user_data_format: RAW
-      user_data: { get_resource: dc_init }
+      user_data: { get_resource: ad_init }
