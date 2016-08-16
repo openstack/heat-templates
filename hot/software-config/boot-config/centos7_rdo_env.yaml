@@ -1,0 +1,7 @@
+# Installs software-config agent on boot for fedora with yum
+
+parameters:
+  image: CentOS-7-x86_64-GenericCloud
+
+resource_registry:
+  "Heat::InstallConfigAgent": templates/install_config_agent_centos7_rdo.yaml
