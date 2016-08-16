@@ -26,14 +26,14 @@ Import-Module -Name $modulePath `
 $downloadLinks = @{
     'SQLEXPRESS08'  = 'http://download.microsoft.com/download/0/4/B/04BE03CD-EAF3-4797-9D8D-2E08E316C998/SQLEXPR_x64_ENU.exe';
     'SQLDRIVERS'    = 'http://download.microsoft.com/download/C/D/B/CDB0A3BB-600E-42ED-8D5E-E4630C905371/SQLSRV30.EXE';
-    'PHP54'         = 'http://windows.php.net/downloads/releases/php-5.4.33-nts-Win32-VC9-x86.zip';
+    'PHP54'         = 'http://windows.php.net/downloads/releases/archives/php-5.4.33-nts-Win32-VC9-x86.zip';
     'VC2008SP1'     = 'http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe';
     'UR20'          = 'http://download.microsoft.com/download/6/7/D/67D80164-7DD0-48AF-86E3-DE7A182D6815/rewrite_2.0_rtw_x64.msi';
-    'DRUSH'         = 'http://www.drush.org/sites/default/files/attachments/Drush-6.0-2013-08-28-Installer-v1.0.21.msi';
+    'DRUSH'         = 'https://github.com/drush-ops/drush/releases/download/6.0.0/Drush-6.0-2013-08-28-Installer-v1.0.21.msi';
     'DRUPALDRIVERS' = 'http://ftp.drupal.org/files/projects/sqlsrv-7.x-1.x-dev.zip';
-    'DRUPAL'        = 'http://ftp.drupal.org/files/projects/drupal-7.31.zip';
+    'DRUPAL'        = 'https://ftp.drupal.org/files/projects/drupal-7.50.zip';
     'SQLNCLI12'     = 'http://download.microsoft.com/download/4/B/1/4B1E9B0E-A4F3-4715-B417-31C82302A70A/ENU/x64/sqlncli.msi';
-    '7Z'            = 'http://softlayer-ams.dl.sourceforge.net/project/sevenzip/7-Zip/9.20/7z920.msi'
+    '7Z'            = 'http://kent.dl.sourceforge.net/project/sevenzip/7-Zip/9.20/7z920.msi'
 }
 
 $sha1Hashes = @{
@@ -43,8 +43,8 @@ $sha1Hashes = @{
     'VC2008SP1'     = '6939100E397CEF26EC22E95E53FCD9FC979B7BC9';
     'UR20'          = '84BDEAEF26BCB2CB60BB8686EAF6194607F7F003';
     'DRUSH'         = 'CA71B7AFAAF18904B23DDB9224E030C97978AC89';
-    'DRUPALDRIVERS' = '6B96C56CD3800F5B203D5DEF9AB5814629FCBCAB';
-    'DRUPAL'        = '2C41B3BF4C7819F3531E1DEBDCD14DAD74A532D9';
+    'DRUPALDRIVERS' = '8DAD020F8F4C1F1BEEE081AC21C660F5E5063796';
+    'DRUPAL'        = 'BC6D1B3B2A43FD81E1DA7CF69028C8DCFB45D594';
     'SQLNCLI12'     = '789CD5F898F80A799F0288F140F3FBCDF0473DE8';
     '7Z'            = 'C67D3F611EA3EB3336CF92F6FFCAFDB14F8B12AF'
 }
@@ -346,23 +346,24 @@ function Install-Drupal7 {
 
     $drushEnvPath = ";$env:ProgramData\Drush\" +
                     ";${env:ProgramFiles(x86)}\Drush\GnuWin32\bin" +
-                    ";${env:ProgramFiles(x86)}\Drush\Php"
+                    ";$env:SystemDrive\PHP\PHP54"
     $env:Path += $drushEnvPath
 
     LogTo-File "Start configure Drupal website with Drush"
 
     Push-Location $drupal7
     $drush = Join-Path $env:ProgramData "Drush\drush.bat"
-    $dbUrl = "sqlsrv://sa`:$SAPassword@.\SQLEXPRESS/drupal"
+    $dbUrl = "sqlsrv://sa:$SAPassword@.\SQLEXPRESS/drupal"
     Execute-Command -Command {
         & $drush site-install standard `
+          install_configure_form.update_status_module='array(FALSE,FALSE)' `
                               --db-url=$dbUrl `
                               --account-mail=$AdminEmail `
                               --account-name=$AdminUsername `
                               --account-pass=$AdminPassword `
                               --site-name="$WebsiteName" `
                               --site-mail=$AdminEmail `
-                              --y
+                              --yes
     } -ErrorMessage "Failed to configure Drupal site with drush"
 
 
