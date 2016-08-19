@@ -13,62 +13,7 @@ EOF
 
 # template for building os-collect-config.conf for polling heat
 cat <<EOF >$oac_templates/etc/os-collect-config.conf
-[DEFAULT]
-{{^os-collect-config.command}}
-command = os-refresh-config
-{{/os-collect-config.command}}
-{{#os-collect-config}}
-{{#command}}
-command = {{command}}
-{{/command}}
-{{#polling_interval}}
-polling_interval = {{polling_interval}}
-{{/polling_interval}}
-{{#cachedir}}
-cachedir = {{cachedir}}
-{{/cachedir}}
-{{#collectors}}
-collectors = {{.}}
-{{/collectors}}
-
-{{#cfn}}
-[cfn]
-{{#metadata_url}}
-metadata_url = {{metadata_url}}
-{{/metadata_url}}
-stack_name = {{stack_name}}
-secret_access_key = {{secret_access_key}}
-access_key_id = {{access_key_id}}
-path = {{path}}
-{{/cfn}}
-
-{{#heat}}
-[heat]
-auth_url = {{auth_url}}
-user_id = {{user_id}}
-password = {{password}}
-project_id = {{project_id}}
-stack_id = {{stack_id}}
-resource_name = {{resource_name}}
-{{/heat}}
-
-{{#zaqar}}
-[zaqar]
-auth_url = {{auth_url}}
-user_id = {{user_id}}
-password = {{password}}
-project_id = {{project_id}}
-queue_id = {{queue_id}}
-{{/zaqar}}
-
-{{#request}}
-[request]
-{{#metadata_url}}
-metadata_url = {{metadata_url}}
-{{/metadata_url}}
-{{/request}}
-
-{{/os-collect-config}}
+$occ_conf
 EOF
 mkdir -p $oac_templates/var/run/heat-config
 
@@ -84,10 +29,7 @@ done
 
 # os-refresh-config script for running os-apply-config
 cat <<EOF >$orc_scripts/configure.d/20-os-apply-config
-#!/bin/bash
-set -ue
-
-exec os-apply-config
+$orc_oac
 EOF
 chmod 700 $orc_scripts/configure.d/20-os-apply-config
 

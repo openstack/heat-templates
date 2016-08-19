@@ -35,6 +35,8 @@ resources:
             $heat_config_script: {get_file: ../../elements/heat-config/os-refresh-config/configure.d/55-heat-config}
             $hook_script: {get_file: ../../elements/heat-config-script/install.d/hook-script.py}
             $heat_config_notify: {get_file: ../../elements/heat-config/bin/heat-config-notify}
+            $occ_conf: {get_file: fragments/os-collect-config.conf}
+            $orc_oac: {get_file: fragments/20-os-apply-config}
           template: {get_file: fragments/configure_config_agent.sh}
 
   install_puppet_hook:
