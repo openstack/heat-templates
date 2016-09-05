@@ -1,0 +1,4 @@
+#!/bin/bash
+set -ue
+
+exec os-apply-config
