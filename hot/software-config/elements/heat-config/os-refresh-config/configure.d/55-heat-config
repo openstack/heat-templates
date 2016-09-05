@@ -22,8 +22,11 @@ import sys
 
 import requests
 
-HOOKS_DIR = os.environ.get('HEAT_CONFIG_HOOKS',
-                           '/var/lib/heat-config/hooks')
+HOOKS_DIR_PATHS = (
+    os.environ.get('HEAT_CONFIG_HOOKS'),
+    '/usr/libexec/heat-config/hooks',
+    '/var/lib/heat-config/hooks',
+)
 CONF_FILE = os.environ.get('HEAT_SHELL_CONFIG',
                            '/var/run/heat-config/heat-config')
 DEPLOYED_DIR = os.environ.get('HEAT_CONFIG_DEPLOYED',
@@ -71,6 +74,19 @@ def main(argv=sys.argv):
                 log.exception(e)
 
 
+def find_hook_path(group):
+    # sanitise the group to get an alphanumeric hook file name
+    hook = "".join(
+        x for x in group if x == '-' or x == '_' or x.isalnum())
+
+    for h in HOOKS_DIR_PATHS:
+        if not h or not os.path.exists(h):
+            continue
+        hook_path = os.path.join(h, hook)
+        if os.path.exists(hook_path):
+            return hook_path
+
+
 def invoke_hook(c, log):
     # Sanitize input values (bug 1333992). Convert all String
     # inputs to strings if they're not already
@@ -110,13 +126,10 @@ def invoke_hook(c, log):
         log.warn('To force-deploy, rm %s' % deployed_path)
         return
 
-    # sanitise the group to get an alphanumeric hook file name
-    hook = "".join(
-        x for x in c['group'] if x == '-' or x == '_' or x.isalnum())
-    hook_path = os.path.join(HOOKS_DIR, hook)
-
     signal_data = {}
-    if not os.path.exists(hook_path):
+    hook_path = find_hook_path(c['group'])
+
+    if not hook_path:
         log.warn('Skipping group %s with no hook script %s' % (
             c['group'], hook_path))
         return
