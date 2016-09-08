@@ -19,7 +19,7 @@ import sys
 
 import salt.cli.caller
 import salt.config
-from salt.exceptions import SaltInvocationError
+from salt import exceptions
 import yaml
 
 
@@ -81,7 +81,7 @@ def main(argv=sys.argv):
 
     try:
         ret = caller.call()
-    except SaltInvocationError as err:
+    except exceptions.SaltInvocationError as err:
         log.error(
             'Salt invocation error while applying Salt sate %s' % state_file)
         stderr = err
