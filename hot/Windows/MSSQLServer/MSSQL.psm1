@@ -22,8 +22,6 @@ $fullPath = Join-Path $currentLocation $modulePath
 Import-Module -Name $fullPath -DisableNameChecking -Force
 
 $heatTemplateName = "MSSQL"
-$sqlLogFile = Join-Path ${ENV:ProgramFiles} -ChildPath `
-                 "\Microsoft SQL Server\110\Setup Bootstrap\Log\Summary.txt"
 
 function Log {
     param(
@@ -129,6 +127,27 @@ function Add-NetRules {
         -Protocol TCP -LocalPort 100-65000 -Program $sqlServerBinaryPath
 }
 
+function Get-MSSQlVersion {
+    Param($MediaInfoXMLPath)
+    $xml = [xml](Get-Content -Path $MediaInfoXMLPAth)
+    try {
+        return $xml.MediaInfo.Properties.Property[1].Value.ToString().SubString(0,2)
+    } catch {
+        # Note
+        # for MSSQL Server 2008, the value does not exist
+        return 11
+      }
+}
+
+function Get-MSSQLLogFile {
+param($iso)
+    $MediaInfoXMLPath= (Get-Volume -DiskImage $iso).DriveLetter + ":\MediaInfo.xml"
+    $MSSQLVersion= Get-MSSQlVersion $MediaInfoXMLPath
+    $sqlLogFile = Join-Path ${ENV:ProgramFiles} -ChildPath `
+                 ("\Microsoft SQL Server\{0}0\Setup Bootstrap\Log\Summary.txt" -f $MSSQLVersion)
+    return $sqlLogFile   
+}
+
 function Install-MSSQLInternal {
     param(
         $MssqlServiceUsername,
@@ -152,6 +171,8 @@ function Install-MSSQLInternal {
     $iso = Mount-DiskImage -PassThru $localIsoPath
 
     $isoSetupPath = (Get-Volume -DiskImage $iso).DriveLetter + ":\setup.exe"
+    $sqlLogFile= Get-MSSQLLogFile $iso
+
     if (Test-Path $sqlLogFile) {
         Remove-Item $sqlLogFile -Force
     }
