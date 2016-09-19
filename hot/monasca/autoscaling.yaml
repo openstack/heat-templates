@@ -64,7 +64,7 @@ resources:
       description: CPU utilization reached beyond 50 percent
       expression:
         str_replace:
-          template: avg(vm.cpu.utilization_perc{scale_group=scale_group_id}) > 50 times 3
+          template: avg(cpu.utilization_perc{scale_group=scale_group_id}) > 50 times 3
           params:
             scale_group_id: {get_param: "OS::stack_id"}
       severity: high
@@ -78,7 +78,7 @@ resources:
       description: CPU utilization less than 15 percent
       expression:
         str_replace:
-          template: avg(vm.cpu.utilization_perc{scale_group=scale_group_id}) < 15 times 3
+          template: avg(cpu.utilization_perc{scale_group=scale_group_id}) < 15 times 3
           params:
             scale_group_id: {get_param: "OS::stack_id"}
       severity: low
