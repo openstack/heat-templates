@@ -50,8 +50,7 @@ parameters:
 
   mssql_features:
     type: string
-    default: >
-      SQLENGINE,ADV_SSMS
+    default: SQLENGINE,ADV_SSMS
     description: >
       The mssql features to be installed
 

@@ -54,9 +54,43 @@ InModuleScope $moduleName {
 }
 
 InModuleScope $moduleName {
+    Describe "Test Get MSSQLLogFile" {
+        Context "On Success" {
+            $MSSQLVersion = "13"
+            Mock Join-Path { return $true } -Verifiable
+
+            Get-MSSQLLogFile $MSSQLVersion
+
+            It "should verify caled all mocks" {
+                Assert-VerifiableMocks
+            }
+        }
+    }
+}
+
+InModuleScope $moduleName {
+    Describe "Test Get MSSQLVersion" {
+        Context "On Success" {
+            $MSSQLVersion = "13"
+            Mock Load-XML { return $MSSQLVersion } -Verifiable
+            Mock Log { return $true} -Verifiable
+            $version =Get-MSSQLVersion $MSSQLVersion
+
+            It "should verify caled all mocks" {
+                Assert-VerifiableMocks
+            }
+        }
+    }
+}
+
+
+InModuleScope $moduleName {
     Describe "Test Get MSSQL Error" {
+    $sqlLogFile = Join-Path ${ENV:ProgramFiles} -ChildPath `
+"\Microsoft SQL Server\110\Setup Bootstrap\Log\Summary.txt"
         Context "With errors" {
             $fakeErrors = @("err1")
+
             Mock Select-String { return $fakeErrors } -Verifiable
             Mock Log { return $true } -Verifiable
 
@@ -72,6 +106,7 @@ InModuleScope $moduleName {
         }
         Context "No errors" {
             $fakeErrors = @()
+
             Mock Select-String { return $fakeErrors } -Verifiable
 
             $result = Get-MSSQLError
@@ -137,6 +172,8 @@ InModuleScope $moduleName {
             Mock Copy-FilesLocal { return $true } -Verifiable
             Mock Mount-DiskImage { return $cimInstance } -Verifiable
             Mock Get-Volume { return $true } -Verifiable
+            Mock Get-MSSQLVersion { return $MediaInfoXMLPath } -Verifiable
+            Mock Get-MSSQLLogFile { return $MSSQLVersion } -Verifiable
             Mock Test-Path { return $true } -Verifiable
             Mock Remove-Item { return $true } -Verifiable
             Mock Get-MSSQLParameters { return $true } -Verifiable
@@ -198,6 +235,10 @@ InModuleScope $moduleName {
                         -MssqlWaitConditionToken $MssqlWaitConditionToken
 
             It "should be successful" {
+                $result | Should Be $true
+            }
+
+            It "should verify caled all mocks" {
                 Assert-VerifiableMocks
             }
         }
