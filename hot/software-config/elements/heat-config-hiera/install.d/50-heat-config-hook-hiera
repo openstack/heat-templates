@@ -1,0 +1,9 @@
+#!/bin/bash
+set -x
+
+SCRIPTDIR=$(dirname $0)
+
+install-packages hiera
+install -D -g root -o root -m 0755 ${SCRIPTDIR}/hook-hiera.py /var/lib/heat-config/hooks/hiera
+
+ln -f -s /etc/puppet/hiera.yaml /etc/hiera.yaml

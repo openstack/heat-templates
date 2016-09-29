@@ -26,7 +26,7 @@ from tests.software_config import common
 class HeatConfigTest(common.RunScriptTest):
 
     fake_hooks = ['cfn-init', 'chef', 'puppet', 'salt', 'script',
-                  'apply-config']
+                  'apply-config', 'hiera']
 
     data = [
         {
@@ -71,6 +71,11 @@ class HeatConfigTest(common.RunScriptTest):
             'inputs': [{'name': 'foo', 'value': 'bar'}],
             'config': 'six'
         }, {
+            'id': '7777',
+            'group': 'hiera',
+            'inputs': [],
+            'config': 'seven'
+        }, {
             'id': '9999',
             'group': 'no-such-hook',
             'inputs': [],
@@ -102,6 +107,11 @@ class HeatConfigTest(common.RunScriptTest):
         'script': {
             'deploy_status_code': '-1',
             'deploy_stderr': 'A bad thing happened',
+            'deploy_stdout': 'stdout'
+        },
+        'hiera': {
+            'deploy_status_code': '0',
+            'deploy_stderr': 'stderr',
             'deploy_stdout': 'stdout'
         },
         'apply-config': {
