@@ -67,6 +67,7 @@ def main(argv=sys.argv):
     modulepath = c['options'].get('modulepath')
     tags = c['options'].get('tags')
     debug = c['options'].get('enable_debug', False)
+    verbose = c['options'].get('enable_verbose', False)
 
     facts = {}
     hiera = {}
@@ -108,6 +109,10 @@ def main(argv=sys.argv):
         f.write(c.get('config', '').encode('utf-8'))
 
     cmd = [PUPPET_CMD, 'apply', '--detailed-exitcodes', fn]
+    # This is the default log destination to print out to the console and
+    # captured by heat via the subprocess method below.
+    cmd.insert(-1, '--logdest')
+    cmd.insert(-1, 'console')
     if modulepath:
         cmd.insert(-1, '--modulepath')
         cmd.insert(-1, modulepath)
@@ -116,6 +121,12 @@ def main(argv=sys.argv):
         cmd.insert(-1, tags)
     if debug:
         cmd.insert(-1, '--debug')
+        cmd.insert(-1, '--logdest')
+        cmd.insert(-1, '/var/log/puppet/heat-debug.log')
+    if verbose:
+        cmd.insert(-1, '--verbose')
+        cmd.insert(-1, '--logdest')
+        cmd.insert(-1, '/var/log/puppet/heat-verbose.log')
 
     prepare_dir(PUPPET_LOGDIR)
     timestamp = re.sub('[:T]', '-', c['creation_time'])

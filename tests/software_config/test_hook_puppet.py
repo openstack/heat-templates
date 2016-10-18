@@ -31,6 +31,7 @@ class HookPuppetTest(common.RunScriptTest):
             'enable_hiera': True,
             'enable_facter': True,
             'enable_debug': True,
+            'enable_verbose': True,
         },
         'inputs': [
             {'name': 'foo', 'value': 'bar'},
@@ -102,7 +103,14 @@ class HookPuppetTest(common.RunScriptTest):
                 self.fake_tool_path,
                 'apply',
                 '--detailed-exitcodes',
+                '--logdest',
+                'console',
                 '--debug',
+                '--logdest',
+                '/var/log/puppet/heat-debug.log',
+                '--verbose',
+                '--logdest',
+                '/var/log/puppet/heat-verbose.log',
                 puppet_script
             ],
             state['args'])
@@ -132,10 +140,43 @@ class HookPuppetTest(common.RunScriptTest):
                 self.fake_tool_path,
                 'apply',
                 '--detailed-exitcodes',
+                '--logdest',
+                'console',
+                '--verbose',
+                '--logdest',
+                '/var/log/puppet/heat-verbose.log',
                 puppet_script
             ],
             state['args'])
         self.data['options']['enable_debug'] = True
+
+    def test_hook_no_verbose(self):
+        self.data['options']['enable_verbose'] = False
+        self.env.update({
+            'TEST_RESPONSE': json.dumps({
+                'stdout': 'success',
+                'stderr': '',
+            }),
+        })
+        returncode, stdout, stderr = self.run_cmd(
+            [self.hook_path], self.env, json.dumps(self.data))
+
+        state = self.json_from_file(self.test_state_path)
+        puppet_script = self.working_dir.join('1234.pp')
+        self.assertEqual(
+            [
+                self.fake_tool_path,
+                'apply',
+                '--detailed-exitcodes',
+                '--logdest',
+                'console',
+                '--debug',
+                '--logdest',
+                '/var/log/puppet/heat-debug.log',
+                puppet_script
+            ],
+            state['args'])
+        self.data['options']['enable_verbose'] = True
 
     def test_hook_puppet_failed(self):
 
@@ -163,7 +204,14 @@ class HookPuppetTest(common.RunScriptTest):
                 self.fake_tool_path,
                 'apply',
                 '--detailed-exitcodes',
+                '--logdest',
+                'console',
                 '--debug',
+                '--logdest',
+                '/var/log/puppet/heat-debug.log',
+                '--verbose',
+                '--logdest',
+                '/var/log/puppet/heat-verbose.log',
                 puppet_script
             ],
             state['args'])
@@ -212,11 +260,18 @@ class HookPuppetTest(common.RunScriptTest):
                 self.fake_tool_path,
                 'apply',
                 '--detailed-exitcodes',
+                '--logdest',
+                'console',
                 '--modulepath',
                 modulepath,
                 '--tags',
                 'package,file',
                 '--debug',
+                '--logdest',
+                '/var/log/puppet/heat-debug.log',
+                '--verbose',
+                '--logdest',
+                '/var/log/puppet/heat-verbose.log',
                 puppet_script
             ],
             state['args'])
