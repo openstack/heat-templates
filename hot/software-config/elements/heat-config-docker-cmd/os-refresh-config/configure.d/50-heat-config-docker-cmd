@@ -1,0 +1,144 @@
+#!/usr/bin/env python
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import json
+import logging
+import os
+import subprocess
+import sys
+
+import yaml
+
+
+CONF_FILE = os.environ.get('HEAT_SHELL_CONFIG',
+                           '/var/run/heat-config/heat-config')
+
+WORKING_DIR = os.environ.get(
+    'HEAT_DOCKER_CMD_WORKING',
+    '/var/lib/heat-config/heat-config-docker-cmd')
+
+DOCKER_CMD = os.environ.get('HEAT_DOCKER_CMD', 'docker')
+
+
+log = None
+
+
+def main(argv=sys.argv):
+    global log
+    log = logging.getLogger('heat-config')
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(
+        logging.Formatter(
+            '[%(asctime)s] (%(name)s) [%(levelname)s] %(message)s'))
+    log.addHandler(handler)
+    log.setLevel('DEBUG')
+
+    if not os.path.exists(CONF_FILE):
+        log.error('No config file %s' % CONF_FILE)
+        return 1
+
+    if not os.path.isdir(WORKING_DIR):
+        os.makedirs(WORKING_DIR, 0o700)
+
+    try:
+        configs = json.load(open(CONF_FILE))
+    except ValueError:
+        pass
+
+    cmd_configs = list(build_configs(configs))
+    try:
+        delete_missing_projects(cmd_configs)
+        for c in cmd_configs:
+            delete_changed_project(c)
+            write_project(c)
+    except Exception as e:
+        log.exception(e)
+
+
+def build_configs(configs):
+    for c in configs:
+        if c['group'] != 'docker-cmd':
+            continue
+        if not isinstance(c['config'], dict):
+            # convert config to dict
+            c['config'] = yaml.safe_load(c['config'])
+        yield c
+
+
+def current_projects():
+    for proj_file in os.listdir(WORKING_DIR):
+        if proj_file.endswith('.json'):
+            proj = proj_file[:-5]
+            yield proj
+
+
+def remove_project(proj):
+    proj_file = os.path.join(WORKING_DIR, '%s.json' % proj)
+    with open(proj_file, 'r') as f:
+        proj_data = json.load(f)
+        for name in extract_container_names(proj, proj_data):
+            remove_container(name)
+    os.remove(proj_file)
+
+
+def remove_container(name):
+    cmd = [DOCKER_CMD, 'rm', '-f', name]
+    log.debug(' '.join(cmd))
+    subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    stdout, stderr = subproc.communicate()
+    log.info(stdout)
+    log.debug(stderr)
+
+
+def delete_missing_projects(configs):
+    config_names = [c['name'] for c in configs]
+    for proj in current_projects():
+        if proj not in config_names:
+            log.debug('%s no longer exists, deleting containers' % proj)
+            remove_project(proj)
+
+
+def extract_container_names(proj, proj_data):
+        # For now, assume a docker-compose v1 format where the
+        # root keys are service names
+        for name in proj_data:
+            yield '%s__%s' % (proj, name)
+
+
+def delete_changed_project(c):
+    proj = c['name']
+    proj_file = os.path.join(WORKING_DIR, '%s.json' % proj)
+    proj_data = c.get('config', {})
+    if os.path.isfile(proj_file):
+        with open(proj_file, 'r') as f:
+            prev_proj_data = json.load(f)
+            if proj_data != prev_proj_data:
+                log.debug('%s has changed, deleting containers' % proj)
+                remove_project(proj)
+
+
+def write_project(c):
+    proj = c['name']
+    proj_file = os.path.join(WORKING_DIR, '%s.json' % proj)
+    proj_data = c.get('config', {})
+
+    with os.fdopen(os.open(
+            proj_file, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600),
+            'w') as f:
+        json.dump(proj_data, f, indent=2)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
