@@ -27,6 +27,19 @@ class HookAnsibleTest(common.RunScriptTest):
         'id': '1234',
         'name': 'fake_resource_name',
         'group': 'ansible',
+        'options': {},
+        'inputs': [
+            {'name': 'foo', 'value': 'bar'},
+            {'name': 'another', 'value': 'input'}
+        ],
+        'config': 'the ansible playbook'
+    }
+
+    data_tags = {
+        'id': '1234',
+        'name': 'fake_resource_name_tags',
+        'group': 'ansible',
+        'options': {'tags': 'abc,def'},
         'inputs': [
             {'name': 'foo', 'value': 'bar'},
             {'name': 'another', 'value': 'input'}
@@ -59,6 +72,12 @@ class HookAnsibleTest(common.RunScriptTest):
         })
 
     def test_hook(self):
+        self._hook_run()
+
+    def test_hook_tags(self):
+        self._hook_run(data=self.data_tags, options=['--tags', 'abc,def'])
+
+    def _hook_run(self, data=None, options=None):
 
         self.env.update({
             'TEST_RESPONSE': json.dumps({
@@ -67,7 +86,7 @@ class HookAnsibleTest(common.RunScriptTest):
             }),
         })
         returncode, stdout, stderr = self.run_cmd(
-            [self.hook_path], self.env, json.dumps(self.data))
+            [self.hook_path], self.env, json.dumps(data or self.data))
 
         self.assertEqual(0, returncode, stderr)
         self.assertEqual({
@@ -80,16 +99,16 @@ class HookAnsibleTest(common.RunScriptTest):
         ansible_playbook = self.working_dir.join('1234_playbook.yaml')
         vars_filename = self.working_dir.join('1234_variables.json')
 
-        self.assertEqual(
-            [
-                self.fake_tool_path,
-                '-i',
-                'localhost,',
-                ansible_playbook,
-                '--extra-vars',
-                '@%s' % vars_filename
-            ],
-            state['args'])
+        expected_args = [
+            self.fake_tool_path,
+            '-i',
+            'localhost,',
+            ansible_playbook,
+            '--extra-vars']
+        if options:
+            expected_args += options
+        expected_args.append('@%s' % vars_filename)
+        self.assertEqual(expected_args, state['args'])
 
         # Write 'variables' to file
         variables = self.json_from_file(vars_filename)
