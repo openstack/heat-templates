@@ -118,7 +118,7 @@ class HeatConfigNotifyTest(common.RunScriptTest):
         requests.post.assert_called_once_with(
             'mock://192.0.2.3/foo',
             data=signal_data,
-            headers={'content-type': None})
+            headers={'content-type': 'application/json'})
 
     def test_notify_signal_id_put(self):
         requests = mock.MagicMock()
@@ -136,7 +136,7 @@ class HeatConfigNotifyTest(common.RunScriptTest):
         requests.put.assert_called_once_with(
             'mock://192.0.2.3/foo',
             data=signal_data,
-            headers={'content-type': None})
+            headers={'content-type': 'application/json'})
 
     def test_notify_signal_id_empty_data(self):
         requests = mock.MagicMock()
@@ -153,7 +153,7 @@ class HeatConfigNotifyTest(common.RunScriptTest):
         requests.post.assert_called_once_with(
             'mock://192.0.2.3/foo',
             data='{}',
-            headers={'content-type': None})
+            headers={'content-type': 'application/json'})
 
     def test_notify_signal_id_invalid_json_data(self):
         requests = mock.MagicMock()
@@ -170,7 +170,7 @@ class HeatConfigNotifyTest(common.RunScriptTest):
         requests.post.assert_called_once_with(
             'mock://192.0.2.3/foo',
             data='{}',
-            headers={'content-type': None})
+            headers={'content-type': 'application/json'})
 
     def test_notify_heat_signal(self):
         ksclient = mock.MagicMock()

@@ -107,10 +107,10 @@ def main(argv=sys.argv, stdin=sys.stdin):
         str_signal_data = trim_response(signal_data)
         if sigverb == 'PUT':
             r = requests.put(sigurl, data=str_signal_data,
-                             headers={'content-type': None})
+                             headers={'content-type': 'application/json'})
         else:
             r = requests.post(sigurl, data=str_signal_data,
-                              headers={'content-type': None})
+                              headers={'content-type': 'application/json'})
         log.debug('Response %s ' % r)
 
     if 'deploy_queue_id' in iv:
