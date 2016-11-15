@@ -102,11 +102,12 @@ class HookAnsibleTest(common.RunScriptTest):
         expected_args = [
             self.fake_tool_path,
             '-i',
-            'localhost,',
-            ansible_playbook,
-            '--extra-vars']
+            'localhost,']
         if options:
             expected_args += options
+        expected_args += [
+            ansible_playbook,
+            '--extra-vars']
         expected_args.append('@%s' % vars_filename)
         self.assertEqual(expected_args, state['args'])
 

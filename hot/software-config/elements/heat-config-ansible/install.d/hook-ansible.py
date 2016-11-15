@@ -77,8 +77,8 @@ def main(argv=sys.argv):
         '@%s' % vars_filename
     ]
     if tags:
-        cmd.insert(-1, '--tags')
-        cmd.insert(-1, tags)
+        cmd.insert(3, '--tags')
+        cmd.insert(4, tags)
     log.debug('Running %s' % (' '.join(cmd),))
     try:
         subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
