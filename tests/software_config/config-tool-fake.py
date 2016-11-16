@@ -28,7 +28,16 @@ import sys
 
 
 def main(argv=sys.argv):
-    with open(os.environ.get('TEST_STATE_PATH'), 'w') as f:
+
+    state_path = os.environ.get('TEST_STATE_PATH')
+
+    # handle multiple invocations by writing to numbered state path files
+    suffix = 0
+    while os.path.isfile(state_path):
+        suffix += 1
+        state_path = '%s_%s' % (os.environ.get('TEST_STATE_PATH'), suffix)
+
+    with open(state_path, 'w') as f:
         json.dump({'env': dict(os.environ), 'args': argv}, f)
 
     if 'TEST_RESPONSE' not in os.environ:
