@@ -1,0 +1,81 @@
+heat_template_version: newton
+description: >
+  This template demonstrates the different ways to configure
+  an instance's trusted CA certificates when the instance boots
+  for the first time.
+parameters:
+  key_name:
+    type: string
+  flavor:
+    type: string
+  image:
+    type: string
+    default: ubuntu-software-config
+
+resources:
+  the_sg:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: the_sg
+      description: Ping and SSH
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+
+  ca_1_init:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        ca-certs:
+          trusted:
+            - {get_file: certificates/ca_1.crt}
+
+  ca_2_init:
+    type: OS::Heat::CloudConfig
+    properties:
+      cloud_config:
+        ca-certs:
+          trusted:
+            - {get_file: certificates/ca_2.crt}
+
+  server_1_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+      - config: {get_resource: ca_1_init}
+
+  server_one:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: SOFTWARE_CONFIG
+      user_data:
+        get_resource: server_1_init
+
+  server_two:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: RAW
+      user_data: {get_resource: ca_2_init}
+
+  server_three:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      security_groups:
+      - {get_resource: the_sg}
+      user_data_format: RAW
+      user_data: {get_file: config-scripts/example-ca-certs-config.yml}

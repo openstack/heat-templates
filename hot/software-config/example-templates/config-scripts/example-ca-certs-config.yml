@@ -1,0 +1,44 @@
+#cloud-config
+#
+# This is an example file to configure an instance's trusted CA certificates
+# system-wide for SSL/TLS trust establishment when the instance boots for the
+# first time.
+#
+# Make sure that this file is valid yaml before starting instances.
+# It should be passed as user-data when starting the instance.
+
+ca-certs:
+  # If present and set to True, the 'remove-defaults' parameter will remove
+  # all the default trusted CA certificates that are normally shipped with
+  # Ubuntu.
+  # This is mainly for paranoid admins - most users will not need this
+  # functionality.
+  remove-defaults: true
+
+  # If present, the 'trusted' parameter should contain a certificate (or list
+  # of certificates) to add to the system as trusted CA certificates.
+  # Pay close attention to the YAML multiline list syntax.  The example shown
+  # here is for a list of multiline certificates.
+  trusted:
+    - |
+      -----BEGIN CERTIFICATE-----
+      MIIDiTCCAnGgAwIBAgIJAMj+Lfpqc9lLMA0GCSqGSIb3DQEBCwUAMFsxCzAJBgNV
+      BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMRIwEAYDVQQKDAlPcGVuU3RhY2sx
+      DzANBgNVBAsMBkdsYW5jZTESMBAGA1UEAwwJR2xhbmNlIENBMB4XDTE1MDEzMTA1
+      MzAyNloXDTI1MDEyODA1MzAyNlowWzELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNv
+      bWUtU3RhdGUxEjAQBgNVBAoMCU9wZW5TdGFjazEPMA0GA1UECwwGR2xhbmNlMRIw
+      EAYDVQQDDAlHbGFuY2UgQ0EwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB
+      AQDcW4cRtw96/ZYsx3UB1jWWT0pAlsMQ03En7dueh9o4UZYChY2NMqTJ3gVqy1vf
+      4wyRU1ROb/N5L4KdQiJARH/ARbV+qrWoRvkcWBfg9w/4uZ9ZFhCBbaa2cAtTIGzV
+      ta6HP9UPeyfXrS+jgjqU2QN3bcc0ZCMAiQbtW7Vpw8RNr0NvTJDaSCzmpGQ7TQtB
+      0jXm1nSG7FZUbojUCYB6TBGd01Cg8GzAai3ngXDq6foVJEwfmaV2Zapb0A4FLquX
+      OzebskY5EL/okQGPofSRCu/ar+HV4HN3+PgIIrfa8RhDDdlv6qE1iEuS6isSH1s+
+      7BA2ZKfzT5t8G/8lSjKa/r2pAgMBAAGjUDBOMB0GA1UdDgQWBBT3M/WuigtS7JYZ
+      QD0XJEDD8JSZrTAfBgNVHSMEGDAWgBT3M/WuigtS7JYZQD0XJEDD8JSZrTAMBgNV
+      HRMEBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQCWOhC9kBZAJalQhAeNGIiiJ2bV
+      HpvzSCEXSEAdh3A0XDK1KxoMHy1LhNGYrMmN2a+2O3SoX0FLB4p9zOifq4ACwaMD
+      CjQeB/whsfPt5s0gV3mGMCR+V2b8r5H/30KRbIzQGXmy+/r6Wfe012jcVVXsQawW
+      Omd4d+Bduf5iiL1OCKEMepqjQLu7Yg41ucRpUewBA+A9hoKp7jpwSnzSALX7FWEQ
+      TBJtJ9jEnZl36S81eZJvOXSzeptHyomSAt8eGFCVuPB0dZCXuBNLu4Gsn+dIhfyj
+      NwK4noYZXMndPwGy92KDhjxVnHzd9HwImgr6atmWhPPz5hm50BrA7sv06Nto
+      -----END CERTIFICATE-----
