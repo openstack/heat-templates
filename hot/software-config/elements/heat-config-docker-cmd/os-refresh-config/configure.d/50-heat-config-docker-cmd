@@ -45,7 +45,7 @@ def main(argv=sys.argv):
     log.setLevel('DEBUG')
 
     if not os.path.exists(CONF_FILE):
-        log.error('No config file %s' % CONF_FILE)
+        log.warning('No config file %s' % CONF_FILE)
         return 1
 
     if not os.path.isdir(WORKING_DIR):
@@ -53,8 +53,9 @@ def main(argv=sys.argv):
 
     try:
         configs = json.load(open(CONF_FILE))
-    except ValueError:
-        pass
+    except ValueError as e:
+        log.warning('Could not load config json: %s' % e)
+        return 1
 
     cmd_configs = list(build_configs(configs))
     try:

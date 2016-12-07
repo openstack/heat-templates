@@ -22,7 +22,7 @@ from testtools import matchers
 from tests.software_config import common
 
 
-class HookDockerComposeTest(common.RunScriptTest):
+class HookDockerCmdTest(common.RunScriptTest):
     data = {
         "name": "abcdef001",
         "group": "docker-cmd",
@@ -52,7 +52,7 @@ class HookDockerComposeTest(common.RunScriptTest):
     }
 
     def setUp(self):
-        super(HookDockerComposeTest, self).setUp()
+        super(HookDockerCmdTest, self).setUp()
         self.hook_path = self.relative_path(
             __file__,
             '../..',
