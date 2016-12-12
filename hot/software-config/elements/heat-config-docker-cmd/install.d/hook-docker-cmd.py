@@ -84,7 +84,7 @@ def main(argv=sys.argv):
     if not isinstance(config, dict):
         config = yaml.safe_load(config)
 
-    for container in config:
+    for container in sorted(config):
         container_name = '%s__%s' % (c['name'], container)
         cmd = [
             DOCKER_CMD,

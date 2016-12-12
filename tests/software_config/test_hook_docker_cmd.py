@@ -107,14 +107,6 @@ class HookDockerComposeTest(common.RunScriptTest):
             'run',
             '--detach=true',
             '--name',
-            'abcdef001__web',
-            'xxx'
-        ], state_0['args'])
-        self.assertEqual([
-            self.fake_tool_path,
-            'run',
-            '--detach=true',
-            '--name',
             'abcdef001__db',
             '--env=KOLLA_CONFIG_STRATEGY=COPY_ALWAYS',
             '--env=FOO=BAR',
@@ -124,6 +116,14 @@ class HookDockerComposeTest(common.RunScriptTest):
             '--user=root',
             '--volume=/run:/run',
             '--volume=db:/var/lib/db',
+            'xxx'
+        ], state_0['args'])
+        self.assertEqual([
+            self.fake_tool_path,
+            'run',
+            '--detach=true',
+            '--name',
+            'abcdef001__web',
             'xxx'
         ], state_1['args'])
 
@@ -153,14 +153,6 @@ class HookDockerComposeTest(common.RunScriptTest):
             'run',
             '--detach=true',
             '--name',
-            'abcdef001__web',
-            'xxx'
-        ], state_0['args'])
-        self.assertEqual([
-            self.fake_tool_path,
-            'run',
-            '--detach=true',
-            '--name',
             'abcdef001__db',
             '--env=KOLLA_CONFIG_STRATEGY=COPY_ALWAYS',
             '--env=FOO=BAR',
@@ -170,6 +162,14 @@ class HookDockerComposeTest(common.RunScriptTest):
             '--user=root',
             '--volume=/run:/run',
             '--volume=db:/var/lib/db',
+            'xxx'
+        ], state_0['args'])
+        self.assertEqual([
+            self.fake_tool_path,
+            'run',
+            '--detach=true',
+            '--name',
+            'abcdef001__web',
             'xxx'
         ], state_1['args'])
 
@@ -210,13 +210,13 @@ class HookDockerComposeTest(common.RunScriptTest):
             self.fake_tool_path,
             'rm',
             '-f',
-            'abcdef001__web',
+            'abcdef001__db',
         ], state_0['args'])
         self.assertEqual([
             self.fake_tool_path,
             'rm',
             '-f',
-            'abcdef001__db',
+            'abcdef001__web',
         ], state_1['args'])
 
     def test_cleanup_changed(self):
@@ -257,11 +257,11 @@ class HookDockerComposeTest(common.RunScriptTest):
             self.fake_tool_path,
             'rm',
             '-f',
-            'abcdef001__web',
+            'abcdef001__db',
         ], state_0['args'])
         self.assertEqual([
             self.fake_tool_path,
             'rm',
             '-f',
-            'abcdef001__db',
+            'abcdef001__web',
         ], state_1['args'])

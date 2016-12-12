@@ -113,7 +113,7 @@ def delete_missing_projects(configs):
 def extract_container_names(proj, proj_data):
         # For now, assume a docker-compose v1 format where the
         # root keys are service names
-        for name in proj_data:
+        for name in sorted(proj_data):
             yield '%s__%s' % (proj, name)
 
 
