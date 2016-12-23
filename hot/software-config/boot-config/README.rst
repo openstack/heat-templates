@@ -27,8 +27,8 @@ To install the agent during boot, include the following in the template:
 
 When creating the stack, reference the desired environment, eg:
 
-  heat stack-create -e fedora_yum_env.yaml \
-       -f ../example-templates/example-config-pristine-image.yaml \
+  openstack stack create -e fedora_yum_env.yaml \
+       -t ../example-templates/example-config-pristine-image.yaml \
        deploy-to-pristine
 
 =====================================
@@ -50,6 +50,6 @@ include the following in the template:
 
 and reference the desired environment, eg:
 
-  heat stack-create -e container_agent_env.yaml \
-       -f ../example-templates/example-pristine-atomic-docker-compose.yaml \
+  openstack stack create -e container_agent_env.yaml \
+       -t ../example-templates/example-pristine-atomic-docker-compose.yaml \
        deploy-to-pristine

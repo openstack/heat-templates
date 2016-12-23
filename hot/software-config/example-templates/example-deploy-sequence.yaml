@@ -20,8 +20,8 @@ heat_template_version: 2013-05-23
 # How to deploy the sample:
 #
 # 1. Create on image with element heat-config-script in
-# 2. heat stack-create -f example-deploy-sequence.yaml sequence
-# 3. heat stack-show sequence
+# 2. openstack stack create -t example-deploy-sequence.yaml sequence
+# 3. openstack stack show sequence
 ###################################################################
 parameters:
   key_name:
