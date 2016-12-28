@@ -1,0 +1,28 @@
+heat_template_version: 2017-02-24
+
+description: Sample Keystone Domain template
+
+parameters:
+  domain_name:
+    type: string
+    description: Keystone domain name
+  domain_description:
+    type: string
+    description: Keystone domain description
+    default: sample domain
+  domain_enabled:
+    type: boolean
+    description: Keystone domain is enabled or disabled
+    default: True
+
+resources:
+  domain:
+    type: OS::Keystone::Domain
+    properties:
+      name: {get_param: domain_name}
+      description: {get_param: domain_description}
+      enabled: {get_param: domain_enabled}
+
+outputs:
+  domain_id:
+    value: {get_resource: domain}
