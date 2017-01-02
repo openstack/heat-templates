@@ -51,6 +51,7 @@ def main(argv=sys.argv):
         variables[input['name']] = input.get('value', '')
 
     tags = c['options'].get('tags')
+    modulepath = c['options'].get('modulepath')
 
     fn = os.path.join(WORKING_DIR, '%s_playbook.yaml' % c['id'])
     vars_filename = os.path.join(WORKING_DIR, '%s_variables.json' % c['id'])
@@ -80,6 +81,10 @@ def main(argv=sys.argv):
     if tags:
         cmd.insert(3, '--tags')
         cmd.insert(4, tags)
+    if modulepath:
+        cmd.insert(3, '--module-path')
+        cmd.insert(4, modulepath)
+
     log.debug('Running %s' % (' '.join(cmd),))
     try:
         subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
