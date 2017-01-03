@@ -30,7 +30,7 @@ To build with diskimage-builder, do the following in the parent directory of hea
   export TMP_DIR=$HOME/tmp
   export DIB_IMAGE_SIZE=5
   diskimage-builder/bin/disk-image-create --no-tmpfs -a amd64 vm fedora openshift-origin-broker -o F19-x86_64-openshift-origin-broker
-  glance image-create --name F19-x86_64-openshift-origin-broker --is-public true --disk-format qcow2 --container-format bare < F19-x86_64-openshift-origin-broker.qcow2
+  openstack image create F19-x86_64-openshift-origin-broker --public true --disk-format qcow2 --container-format bare < F19-x86_64-openshift-origin-broker.qcow2
   export DIB_IMAGE_SIZE=20
   diskimage-builder/bin/disk-image-create --no-tmpfs -a amd64 vm fedora openshift-origin-node -o F19-x86_64-openshift-origin-node
-  glance image-create --name F19-x86_64-openshift-origin-node --is-public true --disk-format qcow2 --container-format bare < F19-x86_64-openshift-origin-node.qcow2
+  openstack image create F19-x86_64-openshift-origin-node --public true --disk-format qcow2 --container-format bare < F19-x86_64-openshift-origin-node.qcow2

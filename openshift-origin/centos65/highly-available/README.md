@@ -62,13 +62,13 @@ These templates are [Heat Orchestration Templates (HOT)](http://docs.openstack.o
 3. Edit heat environment file `oso_ha_env.yaml` according to your environment.
 4. Launch highly available OpenShift stack
 
-        heat stack-create openshift-ha-stack -f oso_ha_stack.yaml -e oso_ha_env.yaml
+        openstack stack create openshift-ha-stack -t oso_ha_stack.yaml -e oso_ha_env.yaml
 
 5. Monitor progress. Options include:
   * `tail -f /var/log/heat/heat-engine.log`
   * `tail -f /tmp/openshift.out`
-  * `heat stack-list`
-  * `heat resource-list openshift-ha-stack`
+  * `openstack stack list`
+  * `openstack stack resource list openshift-ha-stack`
 
 ## Scaling: Adding Nodes
 
@@ -77,7 +77,7 @@ OpenShift nodes may be manually added as needed using the OpenShift node heat te
 1. From directory `heat-templates/openshift-origin/centos65/highly-available/` edit the heat environment file `oso_node_env.yaml`
 2. Launch node stack. This will deploy a single node server with attached cinder volume and floating IP address. Be sure to pass in the node hostname parameter to override the default.
 
-        heat stack-create openshift-node -f oso_node_stack.yaml -e oso_node_env.yaml -P "node_hostname=node4"
+        openstack stack create openshift-node -t oso_node_stack.yaml -e oso_node_env.yaml --parameter "node_hostname=node4"
 
 3. On broker1 add a DNS record for the new node server in `/var/named/dynamic/<my_domain>.db`. To force a zone transfer to the upstream DNS increment the serial number by 1 and run `rndc freeze ; rndc thaw`.
 
