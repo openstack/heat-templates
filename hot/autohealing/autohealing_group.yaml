@@ -1,0 +1,60 @@
+heat_template_version: 2017-02-24
+
+description: >
+  A stack containing an Autoscaling Group whose members automatically heal
+  themselves if they are stopped, deleted, or go into an error state, using an
+  Aodh alarm delivered to a Zaqar queue that triggers a Mistral workflow to
+  replace the stopped server. Note that this requires event alarms to be
+  enabled in Aodh, following the instructions at
+  http://docs.openstack.org/developer/aodh/event-alarm.html - specifically by
+  adding the publisher "notifier://?topic=alarm.all" in
+  /etc/ceilometer/event_pipeline.yaml.
+
+parameters:
+  flavor:
+    type: string
+    description: Flavor for the instances to be created
+    default: cirros256
+    constraints:
+      - custom_constraint: nova.flavor
+        description: Must be a flavor known to Nova
+  image:
+    type: string
+    description: >
+      Name or ID of the image to use for the instances.
+    default: cirros-0.3.4-x86_64-uec
+    constraints:
+      - custom_constraint: glance.image
+        description: Must identify an image known to Glance
+  network:
+    type: string
+    description: The network for the VM
+    default: private
+  port:
+    type: number
+    description: The port to reply to requests on
+    default: 8080
+
+resources:
+  servers:
+    type: OS::Heat::AutoScalingGroup
+    properties:
+      resource:
+        type: autohealing_server.yaml
+        properties:
+          flavor: {get_param: flavor}
+          image: {get_param: image}
+          network: {get_param: network}
+          port: {get_param: port}
+          root_stack_id: {get_param: "OS::stack_id"}
+      min_size: 1
+      desired_capacity: 2
+      max_size: 4
+
+outputs:
+  server_ids:
+    description: A list of the current server UUIDs
+    value: {get_attr: [servers, refs]}
+  ip_addresses:
+    description: A list of server IP addresses
+    value: {get_attr: [servers, outputs_list, first_address]}

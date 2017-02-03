@@ -1,0 +1,170 @@
+heat_template_version: 2017-02-24
+
+description: >
+  A stack containing a server that is automatically replaced if it is stopped,
+  deleted, or goes into an error state, using an Aodh alarm delivered to a
+  Zaqar queue that triggers a Mistral workflow. This may be either be used
+  standalone, or as the scaled unit of a scaling group. When using this from
+  inside another template, the 'root_stack_id' parameter should be passed to
+  indicate at which stack the stack update should commence after marking the
+  server as failed. This should be the root-level stack, to ensure that any
+  other resources depending on outputs from this stack are also updated. Note
+  that this requires event alarms to be enabled in Aodh, following the
+  instructions at http://docs.openstack.org/developer/aodh/event-alarm.html -
+  specifically, by adding the publisher "notifier://?topic=alarm.all" in
+  /etc/ceilometer/event_pipeline.yaml.
+
+parameters:
+  flavor:
+    type: string
+    description: Flavor for the instances to be created
+    default: cirros256
+    constraints:
+      - custom_constraint: nova.flavor
+        description: Must be a flavor known to Nova
+  image:
+    type: string
+    description: >
+      Name or ID of the image to use for the instances.
+    default: cirros-0.3.4-x86_64-uec
+    constraints:
+      - custom_constraint: glance.image
+        description: Must identify an image known to Glance
+  network:
+    type: string
+    description: The network for the VM
+    default: private
+  port:
+    type: number
+    description: The port to reply to requests on
+    default: 8080
+  root_stack_id:
+    type: string
+    default: ""
+
+conditions:
+  is_standalone: {equals: [{get_param: root_stack_id}, ""]}
+
+resources:
+  server:
+    type: OS::Nova::Server
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      networks:
+       - network: {get_param: network}
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            #! /bin/sh -v
+            Body=$(hostname)
+            Response="HTTP/1.1 200 OK\r\nContent-Length: ${#Body}\r\n\r\n$Body"
+            while true ; do echo -e $Response | nc -llp %PORT%; done
+          params:
+            "%PORT%": {get_param: port}
+
+  alarm_queue:
+    type: OS::Zaqar::Queue
+
+  stop_event_alarm:
+    type: OS::Aodh::EventAlarm
+    properties:
+      event_type: compute.instance.update
+      query:
+        - field: traits.instance_id
+          value: {get_resource: server}
+          op: eq
+        - field: traits.state
+          value: stopped
+          op: eq
+      alarm_queues:
+       - {get_resource: alarm_queue}
+
+  error_event_alarm:
+    type: OS::Aodh::EventAlarm
+    properties:
+      event_type: compute.instance.update
+      query:
+        - field: traits.instance_id
+          value: {get_resource: server}
+          op: eq
+        - field: traits.state
+          value: error
+          op: eq
+      alarm_queues:
+       - {get_resource: alarm_queue}
+
+  deleted_event_alarm:
+    type: OS::Aodh::EventAlarm
+    properties:
+      event_type: compute.instance.delete.start
+      query:
+        - field: traits.instance_id
+          value: {get_resource: server}
+          op: eq
+      alarm_queues:
+       - {get_resource: alarm_queue}
+
+  # The Aodh event alarm does not take effect immediately; it may take up to
+  # 60s (by default) for the event_alarm_cache_ttl to expire and the tenant's
+  # alarm data to be loaded. This resource ensures the stack is not completed
+  # until the alarm is active. See https://bugs.launchpad.net/aodh/+bug/1651273
+  alarm_cache_wait:
+    type: OS::Heat::TestResource
+    properties:
+      action_wait_secs:
+        create: 60
+        update: 60
+      value:
+        list_join:
+          - ''
+          - - {get_attr: [stop_event_alarm, show]}
+            - {get_attr: [error_event_alarm, show]}
+            - {get_attr: [deleted_event_alarm, show]}
+
+  alarm_subscription:
+    type: OS::Zaqar::MistralTrigger
+    properties:
+      queue_name: {get_resource: alarm_queue}
+      workflow_id: {get_resource: autoheal}
+      input:
+        stack_id: {get_param: "OS::stack_id"}
+        root_stack_id:
+          if:
+            - is_standalone
+            - {get_param: "OS::stack_id"}
+            - {get_param: "root_stack_id"}
+
+  autoheal:
+    type: OS::Mistral::Workflow
+    properties:
+      description: >
+        Mark a server as unhealthy and commence a stack update to replace it.
+      input:
+        stack_id:
+        root_stack_id:
+      type: direct
+      tasks:
+        - name: resources_mark_unhealthy
+          action:
+            list_join:
+              - ' '
+              - - heat.resources_mark_unhealthy
+                - stack_id=<% $.stack_id %>
+                - resource_name=<% env().notification.body.reason_data.event.traits.where($[0] = 'instance_id').select($[2]).first() %>
+                - mark_unhealthy=true
+                - resource_status_reason='Marked by alarm'
+          on_success:
+            - stacks_update
+        - name: stacks_update
+          action: heat.stacks_update stack_id=<% $.root_stack_id %> existing=true
+
+outputs:
+  OS::stack_id:
+    description: The server UUID
+    value: {get_resource: server}
+    condition: {not: is_standalone}
+  first_address:
+    description: The server IP address
+    value: {get_attr: [server, first_address]}
