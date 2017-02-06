@@ -29,7 +29,7 @@ function Install-ActiveDirectoryDomainController {
     try {
         if (Is-DomainInstalled -fullDomainName $DomainName) {
             Send-HeatWaitSignal -Endpoint $ADWaitConditionEndpoint `
-                -Message "Active Directory has been succesfully installed" `
+                -Message "Active Directory has been successfully installed" `
                 -Success $true -Token $ADWaitConditionToken
         } else {
             Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
