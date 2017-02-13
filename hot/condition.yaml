@@ -1,0 +1,102 @@
+heat_template_version: 2017-02-24
+parameters:
+  env_type:
+    default: test
+    type: string
+    constraints:
+      - allowed_values: [prod, test]
+  zone:
+    type: string
+    default: beijing
+conditions:
+  prod: {equals: [{get_param: env_type}, "prod"]}
+  test:
+    not:
+      equals:
+      - get_param: env_type
+      - prod
+  beijing_prod:
+    and:
+    - equals:
+      - get_param: zone
+      - beijing
+    - equals:
+      - get_param: env_type
+      - prod
+  xian_zone:
+    equals:
+    - get_param: zone
+    - xian
+  xianyang_zone:
+    equals:
+    - get_param: zone
+    - xianyang
+  fujian_zone:
+    or:
+    - equals:
+      - get_param: zone
+      - fuzhou
+    - equals:
+      - get_param: zone
+      - xiamen
+  fujian_prod:
+    and:
+    - fujian_zone
+    - prod
+  shannxi_province:
+    or:
+    - xian_zone
+    - xianyang_zone
+resources:
+  test_res:
+    type: OS::Heat::TestResource
+    properties:
+      value: {if: ["prod", "env_is_prod", "env_is_test"]}
+  prod_res:
+    type: OS::Heat::TestResource
+    properties:
+      value: prod_res
+    condition: prod
+  test_res1:
+    type: OS::Heat::TestResource
+    properties:
+      value: just in test env
+    condition: test
+  beijing_prod_res:
+    type: OS::Heat::TestResource
+    properties:
+      value: beijing_prod_res
+    condition: beijing_prod
+  fujian_res:
+    type: OS::Heat::TestResource
+    condition: fujian_zone
+    properties:
+      value: fujian_res
+  fujian_prod_res:
+    type: OS::Heat::TestResource
+    condition: fujian_prod
+    properties:
+      value: fujian_prod_res
+  shannxi_res:
+    type: OS::Heat::TestResource
+    condition: shannxi_province
+    properties:
+      value: shannxi_res
+  not_shannxi_res:
+    type: OS::Heat::TestResource
+    condition: {not: shannxi_province}
+    properties:
+      value: not_shannxi_res
+outputs:
+  res_value:
+    value: {get_attr: [prod_res, output]}
+    condition: prod
+  test_res_value:
+    value: {get_attr: [test_res, output]}
+  prod_resource:
+    value: {if: [prod, {get_resource: prod_res}, 'no_prod_res']}
+  test_res1_value:
+    value: {if: [test, {get_attr: [test_res1, output]}, 'no_test_res1']}
+  beijing_prod_res:
+    value: {if: [beijing_prod, {get_resource: beijing_prod_res},
+                 'no_prod_res']}
