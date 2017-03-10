@@ -79,7 +79,7 @@ def main(argv=sys.argv):
 
     # convert config to dict
     if not isinstance(config, dict):
-        config = ast.literal_eval(json.dumps(yaml.load(config)))
+        config = ast.literal_eval(json.dumps(yaml.safe_load(config)))
 
     os.chdir(proj)
 
