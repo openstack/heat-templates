@@ -21,6 +21,7 @@ import subprocess
 import sys
 
 import requests
+import six
 
 HOOKS_DIR_PATHS = (
     os.environ.get('HEAT_CONFIG_HOOKS'),
@@ -93,7 +94,7 @@ def invoke_hook(c, log):
     hot_inputs = c.get('inputs', [])
     for hot_input in hot_inputs:
         if hot_input.get('type', None) == 'String' and \
-                not isinstance(hot_input['value'], basestring):
+                not isinstance(hot_input['value'], six.text_type):
             hot_input['value'] = str(hot_input['value'])
     iv = dict((i['name'], i['value']) for i in c['inputs'])
     # The group property indicates whether it is softwarecomponent or

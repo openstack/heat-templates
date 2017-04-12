@@ -17,6 +17,7 @@ import dpath
 import json
 import logging
 import os
+import six
 import subprocess
 import sys
 import yaml
@@ -87,7 +88,7 @@ def main(argv=sys.argv):
     for value in dpath.util.values(config, '*/env_file'):
         if isinstance(value, list):
             compose_env_files.extend(value)
-        elif isinstance(value, basestring):
+        elif isinstance(value, six.string_types):
             compose_env_files.extend([value])
 
     input_env_files = {}

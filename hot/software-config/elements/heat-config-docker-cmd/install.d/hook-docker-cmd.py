@@ -15,6 +15,7 @@
 import json
 import logging
 import os
+import six
 import subprocess
 import sys
 import yaml
@@ -99,7 +100,7 @@ def main(argv=sys.argv):
             if key in ['environment', 'volumes', 'volumes_from']:
                 for value in config[container][key]:
                     # Somehow the lists get empty values sometimes
-                    if type(value) is unicode and not value.strip():
+                    if type(value) is six.text_type and not value.strip():
                         continue
                     cmd.append(docker_arg_map(key, value))
             elif key == 'image':
