@@ -1,0 +1,283 @@
+heat_template_version: 2013-05-23
+
+description: >
+  HOT template to create a neutron private network and a router connected to
+  a public network, and for deploying two servers into the new network. The 
+  servers form a multi-tier wordpress application. The first server runs MySQL
+  from a Cinder volume. The second runs httpd and wordpress. It is accessible
+  via a floating IP address from the public network. Both servers run Fedora 18.
+
+parameters:
+  public_net_id:
+    type: string
+    description: >
+      ID of public network for which floating IP addresses will be allocated
+  private_net_name:
+    type: string
+    default: net2
+    description: Name of private network to be created
+  private_net_cidr:
+    type: string
+    default: 172.16.3.0/24
+    description: Private network address (CIDR notation)
+  private_net_gateway:
+    type: string
+    default: 172.16.3.1
+    description: Private network gateway address
+  private_net_pool_start:
+    type: string
+    default: 172.16.3.2
+    description: Start of private network IP address allocation pool
+  private_net_pool_end:
+    type: string
+    default: 172.16.3.254
+    description: End of private network IP address allocation pool
+  dns_nameservers:
+     type: string
+     default: [10.16.143.247]
+  key_name:
+    type: string
+    description: Name of keypair to assign to servers
+    default: refarchkp
+  image:
+    type: string
+    description: Name of image to use for servers
+    default: F18-x86_64-cfntools
+  flavor:
+    type: string
+    description: Flavor to use for servers
+    default: m1.small
+    constraints:
+      - allowed_values: [m1.small, m1.medium, m1.large]
+        description: InstanceType must be one of m1.small, m1.medium or m1.large
+  volume_size:
+    type: Number
+    description: Size of the volume to be created.
+    default: 5
+    constraints:
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 Gb.
+  db_name:
+    type: string
+    description: WordPress database name
+    default: wordpress
+    constraints:
+      - length: { min: 1, max: 64 }
+        description: db_name must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_name must begin with a letter and contain only alphanumeric
+          characters
+  db_username:
+    type: string
+    description: The WordPress database admin account username
+    default: admin
+    hidden: true
+    constraints:
+      - length: { min: 1, max: 16 }
+        description: db_username must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z][a-zA-Z0-9]*'
+        description: >
+          db_username must begin with a letter and contain only alphanumeric
+          characters
+  db_password:
+    type: string
+    description: The WordPress database admin account password
+    default: admin
+    hidden: true
+    constraints:
+      - length: { min: 1, max: 41 }
+        description: db_password must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z0-9]*'
+        description: db_password must contain only alphanumeric characters
+  db_root_password:
+    type: string
+    description: Root password for MySQL
+    default: admin
+    hidden: true
+    constraints:
+      - length: { min: 1, max: 41 }
+        description: db_root_password must be between 1 and 64 characters
+      - allowed_pattern: '[a-zA-Z0-9]*'
+        description: db_root_password must contain only alphanumeric characters
+
+resources:
+  private_net:
+    type: OS::Neutron::Net
+    properties:
+      name: { get_param: private_net_name }
+
+  private_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      network_id: { get_resource: private_net }
+      cidr: { get_param: private_net_cidr }
+      gateway_ip: { get_param: private_net_gateway }
+      dns_nameservers: { get_param: dns_nameservers }
+      allocation_pools:
+        - start: { get_param: private_net_pool_start }
+          end: { get_param: private_net_pool_end }
+
+  router:
+    type: OS::Neutron::Router
+
+  router_gateway:
+    type: OS::Neutron::RouterGateway
+    properties:
+      router_id: { get_resource: router }
+      network_id: { get_param: public_net_id }
+
+  router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: router }
+      subnet_id: { get_resource: private_subnet }
+
+  wp_security_group:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Standard firewall rules
+      SecurityGroupIngress:
+      - {IpProtocol: tcp, FromPort: '22', ToPort: '22', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: tcp, FromPort: '80', ToPort: '80', CidrIp: 0.0.0.0/0}
+      - {IpProtocol: icmp, FromPort: '-1', ToPort: '-1', CidrIp: 0.0.0.0/0}
+
+  server1:
+    type: OS::Nova::Server
+    properties:
+      name: db
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: server1_port }
+      security_groups: [{ get_resource: wp_security_group }]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+
+            # configure the volume
+            mkfs.ext4 -L MYSQL /dev/vdb
+            mount -L MYSQL /mnt
+            chown 27.27 /mnt
+            chcon system_u:object_r:mysqld_db_t:s0 /mnt
+            umount /mnt
+
+            sleep 1
+            mkdir /var/lib/mysql
+            sleep 2
+            mount -L MYSQL /var/lib/mysql
+
+            # add the firewall port for mysql
+            firewall-cmd --add-port=3306/tcp
+            firewall-cmd --permanent --add-port=3306/tcp
+            
+            # install and start mysql
+            yum update -y openssl
+            yum -y install mysql mysql-server 
+            systemctl enable mysqld.service
+            systemctl start mysqld.service
+
+            # Setup MySQL root password and create a user
+            mysqladmin -u root password $db_root_password
+            cat << EOF | mysql -u root --password=$db_root_password
+            CREATE DATABASE $db_name;
+            GRANT ALL PRIVILEGES ON $db_name.* TO "$db_username"@'%'
+            IDENTIFIED BY "$db_password";
+            FLUSH PRIVILEGES;
+            EOF
+          params:
+            $db_root_password: { get_param: db_root_password  }
+            $db_name: { get_param: db_name }
+            $db_username: { get_param: db_username }
+            $db_password: { get_param: db_password }
+
+  cinder_volume:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size }
+  volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: cinder_volume }
+      instance_uuid: { get_resource: server1 }
+      mountpoint: /dev/vdb
+
+  server1_port:
+    type: OS::Neutron::Port
+    properties:
+      security_groups: [{ get_resource: wp_security_group }]
+      network_id: { get_resource: private_net }
+      fixed_ips:
+        - subnet_id: { get_resource: private_subnet }
+
+  server2:
+    type: OS::Nova::Server
+    properties:
+      name: web
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: server2_port }
+      security_groups: [{ get_resource: wp_security_group }]
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+
+            # install the software
+            yum update -y openssl
+            yum -y install httpd wordpress
+            systemctl enable httpd.service
+            systemctl start httpd.service
+
+            # configure the firewall
+            firewall-cmd --add-service=http
+            firewall-cmd --permanent --add-service=http
+            firewall-cmd --add-service=ssh
+            firewall-cmd --permanent --add-service=ssh
+
+            # configure wordpress
+            sed -i.orig "/Deny from All/d" /etc/httpd/conf.d/wordpress.conf
+            sed -i '/Allow from 127.0.0.1/ a\
+            Allow from 10.0.0.0/8' /etc/httpd/conf.d/wordpress.conf
+            sed -i "s/Require local/Require all granted/" /etc/httpd/conf.d/wordpress.conf
+            sed -i.orig s/database_name_here/$db_name/ /etc/wordpress/wp-config.php
+            sed -i s/username_here/$db_username/ /etc/wordpress/wp-config.php
+            sed -i s/password_here/$db_password/ /etc/wordpress/wp-config.php
+            sed -i "/DB_HOST/ s/localhost/$db_server/" /etc/wordpress/wp-config.php
+
+            systemctl restart httpd.service
+          params:
+            $db_server: { get_attr: [server1, first_address] }
+            $db_root_password: { get_param: db_root_password  }
+            $db_name: { get_param: db_name }
+            $db_username: { get_param: db_username }
+            $db_password: { get_param: db_password }
+
+  server2_port:
+    type: OS::Neutron::Port
+    properties:
+      security_groups: [{ get_resource: wp_security_group }]
+      network_id: { get_resource: private_net }
+      fixed_ips:
+        - subnet_id: { get_resource: private_subnet }
+
+  server2_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: server2_port }
+
+outputs:
+  server1_private_ip:
+    description: IP address of server1 in private network
+    value: { get_attr: [ server1, first_address ] }
+  server2_private_ip:
+    description: IP address of server2 in private network
+    value: { get_attr: [ server2, first_address ] }
+  server2_public_ip:
+    description: Floating IP address of server2 in public network
+    value: { get_attr: [ server2_floating_ip, floating_ip_address ] }
