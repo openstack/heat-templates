@@ -19,6 +19,11 @@ parameters:
     type: string
     default: OpenSourceChefServer
     description: The Instance Name
+    
+  chef_network_name:
+    type: string
+    default: private
+    description: The Name or ID of the NEtwork the Chef Server is deployed
 
   chef_port:
     type: number
@@ -40,6 +45,8 @@ resources:
   ChefServer:
     type: OS::Nova::Server
     properties:
+      networks: 
+        - network: { get_param: chef_network_name }
       flavor: { get_param: chef_flavor_name }
       image: { get_param: chef_image_name }
       name: { get_param: chef_server_name }
