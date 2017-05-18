@@ -114,31 +114,45 @@ resources:
       cooldown: 60
       scaling_adjustment: -1
   cpu_alarm_high:
-    type: OS::Ceilometer::Alarm
+    type: OS::Aodh::GnocchiAggregationByResourcesAlarm
     properties:
-      description: Scale-up if the average CPU > 50% for 1 minute
-      meter_name: cpu_util
-      statistic: avg
-      period: 60
+      description: Scale up if CPU > 80%
+      metric: cpu_util
+      aggregation_method: mean
+      granularity: 300
       evaluation_periods: 1
-      threshold: 50
-      alarm_actions:
-        - {get_attr: [web_server_scaleup_policy, alarm_url]}
-      matching_metadata: {'metadata.user_metadata.stack': {get_param: "OS::stack_id"}}
+      threshold: 80
+      resource_type: instance
       comparison_operator: gt
+      alarm_actions:
+        - str_replace:
+            template: trust+url
+            params:
+              url: {get_attr: [scaleup_policy, signal_url]}
+      query:
+        list_join:
+          - ''
+          - - {'=': {server_group: {get_param: "OS::stack_id"}}}
   cpu_alarm_low:
-    type: OS::Ceilometer::Alarm
+    type: OS::Aodh::GnocchiAggregationByResourcesAlarm
     properties:
-      description: Scale-down if the average CPU < 15% for 10 minutes
-      meter_name: cpu_util
-      statistic: avg
-      period: 600
+      description: Scale down if CPU < 15% for 5 minutes
+      metric: cpu_util
+      aggregation_method: mean
+      granularity: 300
       evaluation_periods: 1
       threshold: 15
-      alarm_actions:
-        - {get_attr: [web_server_scaledown_policy, alarm_url]}
-      matching_metadata: {'metadata.user_metadata.stack': {get_param: "OS::stack_id"}}
+      resource_type: instance
       comparison_operator: lt
+      alarm_actions:
+        - str_replace:
+            template: trust+url
+            params:
+              url: {get_attr: [scaleup_policy, signal_url]}
+      query:
+        list_join:
+          - ''
+          - - {'=': {server_group: {get_param: "OS::stack_id"}}}
   monitor:
     type: OS::Neutron::HealthMonitor
     properties:
