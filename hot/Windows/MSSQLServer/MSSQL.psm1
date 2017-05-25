@@ -22,8 +22,6 @@ $fullPath = Join-Path $currentLocation $modulePath
 Import-Module -Name $fullPath -DisableNameChecking -Force
 
 $heatTemplateName = "MSSQL"
-$sqlLogFile = Join-Path ${ENV:ProgramFiles} -ChildPath `
-                 "\Microsoft SQL Server\110\Setup Bootstrap\Log\Summary.txt"
 
 function Log {
     param(
@@ -81,8 +79,13 @@ function Get-MSSQLParameters {
     $parameters += "/IACCEPTSQLSERVERLICENSETERMS=1 "
     $parameters += "/INSTANCENAME=$MssqlInstanceName "
     $parameters += "/FEATURES=$MssqlFeatures "
+    if (($MSSQLVersion -gt 12) -and($MssqlFeatures -split "," -contains "ADV_SSMS")) {
+        Log "MSSQL 2016 is not compatible with ADV_SSMS feature"
+    }
     $parameters += "/SQLSYSADMINACCOUNTS=Admin "
-    $parameters += "/UpdateEnabled=1 "
+    if ($MSSQLVersion -gt 10) {
+        $parameters += "/UpdateEnabled=1 "
+    }
     $parameters += "/AGTSVCSTARTUPTYPE=Automatic "
     $parameters += "/BROWSERSVCSTARTUPTYPE=Automatic "
     $parameters += "/SECURITYMODE=SQL "
@@ -129,6 +132,43 @@ function Add-NetRules {
         -Protocol TCP -LocalPort 100-65000 -Program $sqlServerBinaryPath
 }
 
+function Load-XML {
+    Param (
+        [Parameter(Mandatory =$true)]
+        [string]$XMLFile
+        )
+    $xml=New-Object System.Xml.XmlDataDocument
+    $xml.Load($XMLFile)
+    return $xml
+}
+
+function Get-MSSQlVersion {
+    Param (
+        [Parameter(Mandatory =$true)]
+        [string]$MediaInfoXMLPath
+        )
+    if( -not (Test-Path $MediaInfoXMLPath)) {
+        Log "MediaInfoXMLPath does not exist!"
+    }
+    $xml = Load-XML ($MediaInfoXMLPath)
+    try {
+        return $xml.MediaInfo.Properties.Property[1].Value.ToString().SubString(0,2)
+    } catch {
+        # Note: for MSSQL Server 2008, the value does not exist
+        return 10
+      }
+}
+
+function Get-MSSQLLogFile {
+    Param (
+        [Parameter(Mandatory =$true)]
+        [string]$MSSQLVersion
+        )
+    $sqlLogFile = Join-Path ${ENV:ProgramFiles} -ChildPath `
+                 ("\Microsoft SQL Server\{0}0\Setup Bootstrap\Log\Summary.txt" -f $MSSQLVersion)
+    return $sqlLogFile
+}
+
 function Install-MSSQLInternal {
     param(
         $MssqlServiceUsername,
@@ -150,8 +190,13 @@ function Install-MSSQLInternal {
     $localIsoPath = Copy-FilesLocal $MssqlIsoUNCPath
     Log "MSSQL ISO Mount."
     $iso = Mount-DiskImage -PassThru $localIsoPath
+    Get-PSDrive | Out-Null
+    $driveLetter = (Get-Volume -DiskImage $iso).DriveLetter
+    $MediaInfoXMLPath = $driveLetter + ":\MediaInfo.xml"
+    $MSSQLVersion = Get-MSSQLVersion $MediaInfoXMLPath
+    $isoSetupPath = $driveLetter + ":\setup.exe"
+    $sqlLogFile= Get-MSSQLLogFile $MSSQLVersion
 
-    $isoSetupPath = (Get-Volume -DiskImage $iso).DriveLetter + ":\setup.exe"
     if (Test-Path $sqlLogFile) {
         Remove-Item $sqlLogFile -Force
     }
@@ -176,7 +221,7 @@ function Install-MSSQLInternal {
     Add-NetRules
 
     $successMessage = "Finished MSSQL instalation."
-    Log $successMessage 
+    Log $successMessage
     Send-HeatWaitSignal -Endpoint $MssqlWaitConditionEndpoint `
         -Message $successMessage -Success $true `
         -Token $MssqlWaitConditionToken
