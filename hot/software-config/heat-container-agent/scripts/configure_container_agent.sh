@@ -1,20 +1,6 @@
 #!/bin/bash
 set -eux
 
-dnf -y update
-
-dnf -y install findutils os-collect-config os-apply-config \
-  os-refresh-config dib-utils python-pip python-docker-py \
-  python-yaml
-
-dnf clean all
-
-# pip installing dpath as python-dpath is an older version of dpath
-pip install dpath
-
-# install docker-compose
-pip install docker-compose
-
 # os-apply-config templates directory
 oac_templates=/usr/libexec/os-apply-config/templates
 mkdir -p $oac_templates/etc
