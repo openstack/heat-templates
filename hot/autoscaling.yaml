@@ -76,7 +76,7 @@ resources:
           key_name: {get_param: key}
           network: {get_param: network}
           pool_id: {get_resource: pool}
-          metadata: {"metering.stack": {get_param: "OS::stack_id"}}
+          metadata: {"metering.server_group": {get_param: "OS::stack_id"}}
           user_data:
             str_replace:
               template: |
@@ -208,23 +208,22 @@ outputs:
     description: >
       This URL is the "external" URL that can be used to access the
       Wordpress site.
-  ceilometer_query:
+  gnocchi_query:
     value:
       str_replace:
         template: >
-          ceilometer statistics -m cpu_util
-          -q metadata.user_metadata.stack=stackval -p 600 -a avg
+          gnocchi measures aggregation --resource-type instance
+          --query 'server_group="stackval"'
+          --granularity 300 --aggregation mean cpu_util
         params:
           stackval: { get_param: "OS::stack_id" }
     description: >
-      This is a Ceilometer query for statistics on the cpu_util meter
-      Samples about OS::Nova::Server instances in this stack.  The -q
-      parameter selects Samples according to the subject's metadata.
-      When a VM's metadata includes an item of the form metering.X=Y,
-      the corresponding Ceilometer resource has a metadata item of the
-      form user_metadata.X=Y and samples about resources so tagged can
-      be queried with a Ceilometer query term of the form
-      metadata.user_metadata.X=Y.  In this case the nested stacks give
-      their VMs metadata that is passed as a nested stack parameter,
-      and this stack passes a metadata of the form metering.stack=Y,
-      where Y is this stack's ID.
+      This is a Gnocchi query for statistics on the cpu_util measurements about
+      OS::Nova::Server instances in this stack. The --resource-type select the
+      type of Gnocchi resource. The --query parameter filters resources
+      according to its attributes. When a VM's metadata includes an item of the
+      form metering.server_group=X, the corresponding Gnocchi resource has a
+      attribute named server_group that can queried with 'server_group="X"' In
+      this case the nested stacks give their VMs metadata that is passed as a
+      nested stack parameter, and this stack passes a metadata of the form
+      metering.server_group=X, where X is this stack's ID.
