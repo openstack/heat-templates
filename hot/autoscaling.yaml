@@ -214,7 +214,7 @@ outputs:
         template: >
           gnocchi measures aggregation --resource-type instance
           --query 'server_group="stackval"'
-          --granularity 300 --aggregation mean cpu_util
+          --granularity 300 --aggregation mean -m cpu_util
         params:
           stackval: { get_param: "OS::stack_id" }
     description: >
