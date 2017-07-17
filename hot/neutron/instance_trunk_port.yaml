@@ -1,0 +1,168 @@
+heat_template_version: 2017-02-24
+
+description: How to boot an instance with networks trunked over a port
+
+# See also:
+# https://docs.openstack.org/heat/latest/template_guide/openstack.html#OS::Neutron::Trunk
+# https://docs.openstack.org/neutron/latest/admin/config-trunking.html
+# https://wiki.openstack.org/wiki/Neutron/TrunkPort
+
+parameters:
+  flavor:
+    type: string
+    default: ds512M
+  key:
+    type: string
+    default: key0
+  # Use an image with support for vlan interfaces. CirrOS will not cut it.
+  # eg: ip link add ... type vlan ...
+  image:
+    type: string
+    default: ubuntu1404
+
+resources:
+
+  net0:
+    type: OS::Neutron::Net
+  net1:
+    type: OS::Neutron::Net
+  net2:
+    type: OS::Neutron::Net
+
+  subnet0:
+    type: OS::Neutron::Subnet
+    properties:
+      network: { get_resource: net0 }
+      cidr: 10.0.4.0/24
+  subnet1:
+    type: OS::Neutron::Subnet
+    properties:
+      network: { get_resource: net1 }
+      cidr: 10.0.5.0/24
+  subnet2:
+    type: OS::Neutron::Subnet
+    properties:
+      network: { get_resource: net2 }
+      cidr: 10.0.6.0/24
+
+  parent_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: net0 }
+  subport1:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: net1 }
+      # NOTE Reuse parent port's MAC address on all subports.
+      #
+      # Analog to VLAN use on physical NICs you may set MAC addresses of
+      # subports to the MAC address of the parent port. This way bringing up
+      # the subport's VLAN subinterface inside the instance is simpler. You
+      # don't have to set a new MAC address for each VLAN subinterface.
+      # However before you do this be aware of a bug in Neutron's openvswitch
+      # firewall driver: https://launchpad.net/bugs/1626010
+      #
+      #mac_address: { get_attr: [parent_port, mac_address] }
+  subport2:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_resource: net2 }
+      #mac_address: { get_attr: [parent_port, mac_address] }
+
+  trunk0:
+    type: OS::Neutron::Trunk
+    properties:
+      port: { get_resource: parent_port }
+      sub_ports:
+        - { port: { get_resource: subport1 },
+          segmentation_type: vlan,
+          segmentation_id: 101 }
+        - { port: { get_resource: subport2 },
+          segmentation_type: vlan,
+          segmentation_id: 102 }
+
+  instance0:
+    type: OS::Nova::Server
+    # NOTE Make the instance depend on the trunk.
+    #
+    # A simple direct reference to the parent port would be straightforward
+    # but in many (though not all) cases wrong. The trunk port spec says:
+    #
+    # "If the [neutron] backend does not implement the [trunk] extension
+    # any trunk operation will fail (with 404). If a [neutron] plugin
+    # does implement the [trunk] extension, trunk operations may return
+    # a conflict error if the [parent] port status is not compatible
+    # with the [trunk create] request."
+    #
+    # http://specs.openstack.org/openstack/neutron-specs
+    #                  /specs/newton/vlan-aware-vms.html
+    #
+    # In practice this means that the Open vSwitch plugin(s) of Neutron
+    # will reject trunk creation when the parent port was already used
+    # to boot an instance.
+    #
+    # This introduces a timing dependency (ie. the trunk must be created
+    # before the instance is booted). Of which Heat cannot know based
+    # on information present in the template unless we tell it.
+    #
+    # Though other Neutron plugins may not have this constraint as an
+    # OpenStack end user you don't want to write templates that depend
+    # on the plugin configuration of Neutron, therefore it's better to
+    # always add the dependency.
+    #
+    # You can add the dependency:
+    #   * either implicitly via 'get_attr',
+    #   * or explicitly via 'depends_on'.
+    #
+    # instance0:
+    #   type: OS::Nova::Server
+    #   properties:
+    #     networks:
+    #       - { port: { get_attr: [trunk0, port_id] } }  # BEST
+    #
+    # instance0:
+    #   type: OS::Nova::Server
+    #   depends_on: trunk0  # ALSO GOOD, but easy to forget
+    #   properties:
+    #     networks:
+    #       - { port: { get_resource: parent_port } }
+    #
+    # But if you encounter this error during trunk resource creation:
+    #
+    # CREATE_FAILED  Conflict: resources.trunk0:
+    #   Port [parent port id] is currently in use and
+    #   is not eligible for use as a parent port.
+    #
+    # then remember that the likely cause was this:
+    #
+    # instance0:
+    #   type: OS::Nova::Server
+    #   # neither depends_on
+    #   properties:
+    #     networks:
+    #       - { port: { get_resource: parent_port } }  # nor get_attr, BAD
+    properties:
+      key_name: { get_param: key }
+      flavor: { get_param: flavor }
+      image: { get_param: image }
+      networks:
+        # NOTE Use the parent port only. Subports must not be directly added
+        #      to the instance.
+        - { port: { get_attr: [trunk0, port_id] } }
+
+outputs:
+  # This output is here to help bringing up the subports' vlan subinterfaces, eg:
+  # ip link add link eth0 name eth0.101 address "$subport_mac" type vlan id 101
+  # dhclient eth0.101
+  parent_port/mac_adress:
+    value: { get_attr: [parent_port, mac_address] }
+  parent_port/name:
+    value: { get_attr: [parent_port, name] }
+  subport1/fixed_ips:
+    value: { get_attr: [subport1, fixed_ips] }
+  subport1/mac_address:
+    value: { get_attr: [subport1, mac_address] }
+  subport2/fixed_ips:
+    value: { get_attr: [subport2, fixed_ips] }
+  subport2/mac_address:
+    value: { get_attr: [subport2, mac_address] }
