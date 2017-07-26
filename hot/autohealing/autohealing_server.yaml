@@ -10,9 +10,10 @@ description: >
   server as failed. This should be the root-level stack, to ensure that any
   other resources depending on outputs from this stack are also updated. Note
   that this requires event alarms to be enabled in Aodh, following the
-  instructions at http://docs.openstack.org/developer/aodh/event-alarm.html -
-  specifically, by adding the publisher "notifier://?topic=alarm.all" in
-  /etc/ceilometer/event_pipeline.yaml.
+  instructions at
+  https://docs.openstack.org/aodh/latest/contributor/event-alarm.html#configuration
+  (specifically, by adding the publisher "notifier://?topic=alarm.all" in
+  /etc/ceilometer/event_pipeline.yaml).
 
 parameters:
   flavor:

@@ -94,8 +94,7 @@ resources:
     # a conflict error if the [parent] port status is not compatible
     # with the [trunk create] request."
     #
-    # http://specs.openstack.org/openstack/neutron-specs
-    #                  /specs/newton/vlan-aware-vms.html
+    # https://specs.openstack.org/openstack/neutron-specs/specs/newton/vlan-aware-vms.html
     #
     # In practice this means that the Open vSwitch plugin(s) of Neutron
     # will reject trunk creation when the parent port was already used
