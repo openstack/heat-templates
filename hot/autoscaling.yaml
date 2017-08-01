@@ -128,7 +128,7 @@ resources:
         - str_replace:
             template: trust+url
             params:
-              url: {get_attr: [scaleup_policy, signal_url]}
+              url: {get_attr: [web_server_scaleup_policy, signal_url]}
       query:
         list_join:
           - ''
@@ -148,7 +148,7 @@ resources:
         - str_replace:
             template: trust+url
             params:
-              url: {get_attr: [scaleup_policy, signal_url]}
+              url: {get_attr: [web_server_scaledown_policy, signal_url]}
       query:
         list_join:
           - ''
