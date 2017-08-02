@@ -20,6 +20,7 @@ import re
 import six
 import sys
 import time
+import warnings
 
 try:
     import docker
@@ -165,6 +166,9 @@ def wait_required_containers(client, log,
 
 
 def main(argv=sys.argv, sys_stdin=sys.stdin, sys_stdout=sys.stdout):
+    warnings.warn('This hook is deprecated, please use hooks from heat-agents '
+                  'repository instead.', DeprecationWarning)
+
     (log, deploy_stdout, deploy_stderr) = configure_logging()
     client = get_client(log)
 

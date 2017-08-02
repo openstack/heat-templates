@@ -20,6 +20,7 @@ import os
 import six
 import subprocess
 import sys
+import warnings
 import yaml
 
 
@@ -51,6 +52,8 @@ def build_response(deploy_stdout, deploy_stderr, deploy_status_code):
 
 
 def main(argv=sys.argv):
+    warnings.warn('This hook is deprecated, please use hooks from heat-agents '
+                  'repository instead.', DeprecationWarning)
     log = logging.getLogger('heat-config')
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(

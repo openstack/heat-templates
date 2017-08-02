@@ -2,6 +2,11 @@
 Software configuration hooks
 ============================
 
+.. warning::
+  All hooks (heat agents) in heat-templates repository are deprecated,
+  please use hooks in `heat-agents https://git.openstack.org/cgit/openstack/heat-agents` instead.
+  Here is document entry for heat-agents: `https://docs.openstack.org/heat-agents/latest/`
+
 This directory contains `diskimage-builder <https://github.com/openstack/diskimage-builder>`_
 elements to build an image which contains the software configuration hook
 required to use your preferred configuration method.

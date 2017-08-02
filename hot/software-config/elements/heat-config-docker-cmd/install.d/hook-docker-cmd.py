@@ -18,6 +18,7 @@ import os
 import six
 import subprocess
 import sys
+import warnings
 import yaml
 
 
@@ -52,6 +53,9 @@ def docker_arg_map(key, value):
 
 
 def main(argv=sys.argv):
+    warnings.warn('This hook is deprecated, please use hooks from heat-agents '
+                  'repository instead.', DeprecationWarning)
+
     global log
     log = logging.getLogger('heat-config')
     handler = logging.StreamHandler(sys.stderr)

@@ -17,11 +17,14 @@ import logging
 import os
 import subprocess
 import sys
+import warnings
 
 APPLY_CONFIG_CMD = os.environ.get('HEAT_APPLY_CONFIG_CMD', 'os-apply-config')
 
 
 def main(argv=sys.argv):
+    warnings.warn('This hook is deprecated, please use hooks from heat-agents '
+                  'repository instead.', DeprecationWarning)
     log = logging.getLogger('heat-config')
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(
