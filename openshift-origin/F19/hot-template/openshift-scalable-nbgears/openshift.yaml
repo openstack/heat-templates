@@ -43,7 +43,7 @@ parameters:
     description: External network ID
     type: string
   private_network_name:
-    description: Name of the private network wich will be created
+    description: Name of the private network which will be created
     type: string
     default: OpenShift-Network
   private_network_cidr:

@@ -63,7 +63,7 @@
          "Type": "String"
       },
       "PrivateNetworkName": {
-        "Description": "Name of the private network wich will be created",
+        "Description": "Name of the private network which will be created",
         "Type": "String",
         "Default": "OpenShift-Network"
       },
