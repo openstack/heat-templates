@@ -1,4 +1,4 @@
-heat_template_version: 2013-05-23
+heat_template_version: 2016-10-14
 description: A load-balancer server
 parameters:
   image:
@@ -21,6 +21,9 @@ parameters:
   network:
     type: string
     description: Network used by the server
+  subnet:
+    type: string
+    description: Subnet used by the server
 
 resources:
   server:
@@ -34,11 +37,12 @@ resources:
       user_data_format: RAW
       networks: [{network: {get_param: network} }]
   member:
-    type: OS::Neutron::PoolMember
+    type: OS::Neutron::LBaaS::PoolMember
     properties:
-      pool_id: {get_param: pool_id}
+      pool: {get_param: pool_id}
       address: {get_attr: [server, first_address]}
       protocol_port: 80
+      subnet: {get_param: subnet}
 
 outputs:
   server_ip:

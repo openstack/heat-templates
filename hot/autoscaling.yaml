@@ -1,4 +1,4 @@
-heat_template_version: 2013-05-23
+heat_template_version: 2016-10-14
 description: AutoScaling Wordpress
 parameters:
   image:
@@ -75,6 +75,7 @@ resources:
           image: {get_param: image}
           key_name: {get_param: key}
           network: {get_param: network}
+          subnet: {get_param: subnet_id}
           pool_id: {get_resource: pool}
           metadata: {"metering.server_group": {get_param: "OS::stack_id"}}
           user_data:
@@ -153,35 +154,39 @@ resources:
         list_join:
           - ''
           - - {'=': {server_group: {get_param: "OS::stack_id"}}}
-  monitor:
-    type: OS::Neutron::HealthMonitor
+  lb:
+    type: OS::Neutron::LBaaS::LoadBalancer
     properties:
+      vip_subnet: {get_param: subnet_id}
+  listener:
+    type: OS::Neutron::LBaaS::Listener
+    properties:
+      loadbalancer: {get_resource: lb}
+      protocol: HTTP
+      protocol_port: 80
+  pool:
+    type: OS::Neutron::LBaaS::Pool
+    properties:
+      listener: {get_resource: listener}
+      lb_algorithm: ROUND_ROBIN
+      protocol: HTTP
+      session_persistence:
+        type: SOURCE_IP
+  lb_monitor:
+    type: OS::Neutron::LBaaS::HealthMonitor
+    properties:
+      pool: { get_resource: pool }
       type: TCP
       delay: 5
       max_retries: 5
       timeout: 5
-  pool:
-    type: OS::Neutron::Pool
-    properties:
-      protocol: HTTP
-      monitors: [{get_resource: monitor}]
-      subnet_id: {get_param: subnet_id}
-      lb_method: ROUND_ROBIN
-      vip:
-        protocol_port: 80
-  lb:
-    type: OS::Neutron::LoadBalancer
-    properties:
-      protocol_port: 80
-      pool_id: {get_resource: pool}
-
   # assign a floating ip address to the load balancer
   # pool.
   lb_floating:
     type: OS::Neutron::FloatingIP
     properties:
       floating_network_id: {get_param: external_network_id}
-      port_id: {get_attr: [pool, vip, port_id]}
+      port_id: {get_attr: [lb, vip_port_id]}
 
 outputs:
   scale_up_url:
@@ -197,7 +202,7 @@ outputs:
       this URL; no body nor extra headers are needed.
     value: {get_attr: [web_server_scaledown_policy, alarm_url]}
   pool_ip_address:
-    value: {get_attr: [pool, vip, address]}
+    value: {get_attr: [lb, vip_address]}
     description: The IP address of the load balancing pool
   website_url:
     value:
