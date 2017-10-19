@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
 import os
-import re
 import subprocess
 import sys
 
 
-EXCLUDED_DIRS = ('contrib', 'elements', 'invalid')
+EXCLUDED_DIRS = ('contrib', 'elements', 'invalid', 'playbooks')
 
 
 def main(args):
@@ -20,7 +19,8 @@ def main(args):
             if excluded in dirs:
                 dirs.remove(excluded)
         for name in files:
-            if name.endswith((".yaml", ".template")):
+            if name.endswith((".yaml", ".template")
+                             ) and not name == ".zuul.yaml":
                 got_error = validate(root, name) or got_error
     sys.exit(int(got_error))
 
