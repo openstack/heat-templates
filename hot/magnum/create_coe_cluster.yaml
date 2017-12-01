@@ -1,0 +1,116 @@
+heat_template_version: pike
+
+description: >
+  This template demostrates how to create Magnum COE cluster.
+
+parameters:
+  cluster_name:
+    type: string
+    description: (optional) Name for cluster.
+    default: coe_cluster
+  node_count:
+    type: number
+    default: 1
+    description: The node count for this cluster.
+  master_count:
+    type: number
+    default: 1
+    description: The number of master nodes for this cluster.
+  create_timeout:
+    type: number
+    default: 60
+    description: Timeout for creating the cluster in minutes.
+  cluster_template_name:
+    type: string
+    description: (optional) Name for cluster.
+    default: coe_cluster_template
+  keypair:
+    type: string
+    default: key
+    constraints:
+      - custom_constraint: nova.keypair
+  flavor:
+    type: string
+    description: Flavor for the COE nodes to be created
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+  master_flavor:
+    type: string
+    description: Flavor for the COE masters to be created
+    default: m1.small
+    constraints:
+      - custom_constraint: nova.flavor
+  image:
+    type: string
+    description: Image ID or image name to use for the COE nodes/masters
+    constraints:
+      - custom_constraint: glance.image
+  external_network:
+    type: string
+    description: The external neutron network to attach the Cluster
+    constraints:
+      - custom_constraint: neutron.network
+  coe:
+    type: string
+    description: The Container Orchestration Engine for cluster
+    default: kubernetes
+  server_type:
+    type: string
+    description: Specify the server type to be used
+    default: vm
+  registry_enabled:
+    type: boolean
+    description: Enable the docker registry
+    default: False
+  master_lb_enabled:
+    type: boolean
+    description: clusters should have a load balancer for master nodes or not
+    default: False
+  floating_ip_enabled:
+    type: boolean
+    description: clusters should have a floating ip for master nodes or not
+    default: False
+
+resources:
+  coe_cluster:
+    type: OS::Magnum::Cluster
+    properties:
+      name: { get_param: cluster_name }
+      cluster_template: { get_resource: coe_cluster_template }
+      keypair: { get_param: keypair }
+      node_count: { get_param: node_count }
+      master_count: { get_param: master_count }
+      create_timeout: { get_param: create_timeout }
+
+  coe_cluster_template:
+    type: OS::Magnum::ClusterTemplate
+    properties:
+      name: { get_param: cluster_template_name }
+      flavor: { get_param: flavor }
+      keypair: { get_param: keypair }
+      master_flavor: { get_param: master_flavor }
+      image: { get_param: image }
+      external_network: { get_param: external_network }
+      coe: { get_param: coe }
+      server_type: { get_param: server_type }
+      registry_enabled: { get_param: registry_enabled }
+      master_lb_enabled: { get_param: master_lb_enabled }
+      floating_ip_enabled: { get_param: floating_ip_enabled }
+
+outputs:
+  coe_api_address:
+    description: The endpoint URL of COE API exposed to end-users
+    value: { get_attr: [coe_cluster, api_address] }
+  coe_stack:
+    description: The reference UUID of orchestration stack for the COE cluster
+    value: { get_attr: [coe_cluster, stack_id] }
+  coe_discovery_url:
+    description: The custom discovery url for node discovery.
+    value: { get_attr: [coe_cluster, discovery_url] }
+  container_version:
+    description: Version info of container environment.
+    value: { get_attr: [coe_cluster, container_version] }
+  coe_version:
+    description: Version info of chosen COE.
+    value: { get_attr: [coe_cluster, coe_version] }
