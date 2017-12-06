@@ -1,0 +1,21 @@
+heat_template_version: newton
+
+description: >
+  This template shows use case for external resource.
+  external resource can be any resource (create by
+  heat or not) that heat got type for it.
+
+parameters:
+  external_server_id:
+    type: string
+    default: da5b940a-14ff-4884-8e95-5cf6a3a1028f
+    description: ID of external server
+
+resources:
+  external_server:
+    type: OS::Nova::Server
+    external_id: { get_param: external_server_id }
+
+outputs:
+  server_address:
+    value: { get_attr: [external_server, networks, private, 0 ] }
