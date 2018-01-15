@@ -1,0 +1,19 @@
+- job:
+    name: heat-templates-check
+    parent: legacy-dsvm-base
+    run: playbooks/devstack/run.yaml
+    post-run: playbooks/devstack/post.yaml
+    timeout: 7500
+    required-projects:
+      - openstack-infra/devstack-gate
+      - openstack/heat
+      - openstack/heat-templates
+
+- project:
+    name: openstack/heat-templates
+    check:
+      jobs:
+        - heat-templates-check
+    gate:
+      jobs:
+        - heat-templates-check

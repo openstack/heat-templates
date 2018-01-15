@@ -1,0 +1,54 @@
+- hosts: all
+  name: job for templates-devstack
+  tasks:
+
+    - name: Ensure legacy workspace directory
+      file:
+        path: '{{ ansible_user_dir }}/workspace'
+        state: directory
+
+    - shell:
+        cmd: |
+          set -e
+          set -x
+          cat > clonemap.yaml << EOF
+          clonemap:
+            - name: openstack-infra/devstack-gate
+              dest: devstack-gate
+          EOF
+          /usr/zuul-env/bin/zuul-cloner -m clonemap.yaml --cache-dir /opt/git \
+              git://git.openstack.org \
+              openstack-infra/devstack-gate
+        executable: /bin/bash
+        chdir: '{{ ansible_user_dir }}/workspace'
+      environment: '{{ zuul | zuul_legacy_vars }}'
+
+    - shell:
+        cmd: |
+          set -e
+          set -x
+          cat << 'EOF' >>"/tmp/dg-local.conf"
+          [[local|localrc]]
+          enable_plugin heat git://git.openstack.org/openstack/heat
+          EOF
+        executable: /bin/bash
+        chdir: '{{ ansible_user_dir }}/workspace'
+      environment: '{{ zuul | zuul_legacy_vars }}'
+
+    - shell:
+        cmd: |
+          set -e
+          set -x
+          export PYTHONUNBUFFERED=true
+          export DEVSTACK_GATE_TEMPEST=0
+          export DEVSTACK_GATE_EXERCISES=0
+          function post_test_hook {
+              cd $BASE/new/heat-templates/tools
+              ./post_test_hook.sh
+          }
+          export -f post_test_hook
+          cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
+          ./safe-devstack-vm-gate-wrap.sh
+        executable: /bin/bash
+        chdir: '{{ ansible_user_dir }}/workspace'
+      environment: '{{ zuul | zuul_legacy_vars }}'
