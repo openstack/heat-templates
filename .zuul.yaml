@@ -10,7 +10,6 @@
       - openstack/heat-templates
 
 - project:
-    name: openstack/heat-templates
     check:
       jobs:
         - heat-templates-check
