@@ -40,11 +40,12 @@ This nested heat stack deploys a highly-available OpenShift Origin environment.
 * Neutron networking: one private and one public network
 * Compute quota for six VM instances
 * Pool of seven available floating IP addresses. Addresses will be created and assigned at deployment.
-* Load Balancer as a Server (LBaaS) configured. See neutron [lbaas agent configuration section](http://openstack.redhat.com/LBaaS).
+* Load Balancer as a Server (LBaaS) configured. See neutron [lbaas agent configuration section](https://www.rdoproject.org/networking/lbaas/).
 * IP address of upstream (IT) DNS server for zone transfers
 
 ## Files
-These templates are [Heat Orchestration Templates (HOT)](http://docs.openstack.org/developer/heat/template_guide/environment.html). Environment files are used to reduce CLI parameters and provide a way to reuse resources.
+These templates are [Heat Orchestration Templates (HOT)](https://docs.openstack.org/heat/latest/template_guide/hot_guide.html).
+[Environment files](https://docs.openstack.org/heat/latest/template_guide/environment.html) are used to reduce CLI parameters and provide a way to reuse resources.
 
 * Templates
   * oso_ha_stack.yaml

@@ -6,9 +6,9 @@ description: >
   Aodh alarm delivered to a Zaqar queue that triggers a Mistral workflow to
   replace the stopped server. Note that this requires event alarms to be
   enabled in Aodh, following the instructions at
-  http://docs.openstack.org/developer/aodh/event-alarm.html - specifically by
-  adding the publisher "notifier://?topic=alarm.all" in
-  /etc/ceilometer/event_pipeline.yaml.
+  https://docs.openstack.org/aodh/latest/contributor/event-alarm.html#configuration
+  (specifically by adding the publisher "notifier://?topic=alarm.all" in
+  /etc/ceilometer/event_pipeline.yaml).
 
 parameters:
   flavor:
