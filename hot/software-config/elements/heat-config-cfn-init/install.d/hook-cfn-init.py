@@ -17,6 +17,7 @@ import logging
 import os
 import subprocess
 import sys
+import warnings
 
 
 # Ideally this path would be /var/lib/heat-cfntools/cfn-init-data
@@ -30,6 +31,9 @@ CFN_INIT_CMD = os.environ.get('HEAT_CFN_INIT_CMD',
 
 
 def main(argv=sys.argv, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
+    warnings.warn('This hook is deprecated, please use hooks from heat-agents '
+                  'repository instead.', DeprecationWarning)
+
     log = logging.getLogger('heat-config')
     handler = logging.StreamHandler(stderr)
     handler.setFormatter(

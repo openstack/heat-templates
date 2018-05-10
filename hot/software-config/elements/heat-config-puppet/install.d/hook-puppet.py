@@ -18,6 +18,7 @@ import os
 import re
 import subprocess
 import sys
+import warnings
 
 
 WORKING_DIR = os.environ.get('HEAT_PUPPET_WORKING',
@@ -48,6 +49,8 @@ def get_hostname_f(log):
 
 
 def main(argv=sys.argv):
+    warnings.warn('This hook is deprecated, please use hooks from heat-agents '
+                  'repository instead.', DeprecationWarning)
     log = logging.getLogger('heat-config')
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(

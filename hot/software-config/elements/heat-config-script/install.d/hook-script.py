@@ -17,6 +17,7 @@ import logging
 import os
 import subprocess
 import sys
+import warnings
 
 WORKING_DIR = os.environ.get('HEAT_SCRIPT_WORKING',
                              '/var/lib/heat-config/heat-config-script')
@@ -30,6 +31,8 @@ def prepare_dir(path):
 
 
 def main(argv=sys.argv):
+    warnings.warn('This hook is deprecated, please use hooks from heat-agents '
+                  'repository instead.', DeprecationWarning)
     log = logging.getLogger('heat-config')
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(

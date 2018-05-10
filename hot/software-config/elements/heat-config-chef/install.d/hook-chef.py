@@ -19,6 +19,7 @@ import shutil
 import six
 import subprocess
 import sys
+import warnings
 
 DEPLOY_KEYS = ("deploy_server_id",
                "deploy_action",
@@ -59,6 +60,9 @@ def run_subproc(fn, **kwargs):
 
 
 def main(argv=sys.argv):
+    warnings.warn('This hook is deprecated, please use hooks from heat-agents '
+                  'repository instead.', DeprecationWarning)
+
     log = logging.getLogger('heat-config')
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(
