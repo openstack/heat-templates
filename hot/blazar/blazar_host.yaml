@@ -1,0 +1,20 @@
+heat_template_version: 2018-08-31
+
+description: Sample Blazar host template
+
+parameters:
+  name:
+    type: string
+    description: The name of the host
+    default: sample_blazar_host
+
+resources:
+  sample_host:
+    type: OS::Blazar::Host
+    properties:
+      name: {get_param: name}
+
+outputs:
+  cpu_info:
+    value: {get_attr: [sample_host, cpu_info]}
+    description: Information of the CPU of the host
