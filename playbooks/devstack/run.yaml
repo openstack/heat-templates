@@ -41,7 +41,6 @@
           set -x
           export PYTHONUNBUFFERED=true
           export DEVSTACK_GATE_TEMPEST=0
-          export DEVSTACK_GATE_EXERCISES=0
           function post_test_hook {
               cd $BASE/new/heat-templates/tools
               ./post_test_hook.sh
