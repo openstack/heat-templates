@@ -1,4 +1,0 @@
-#!/bin/bash
-set -eux
-
-pip install python-heatclient python-zaqarclient

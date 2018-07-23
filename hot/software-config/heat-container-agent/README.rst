@@ -2,6 +2,10 @@
 Steps to build container image with all container hooks
 =======================================================
 
+Install the heat-agents repo alongside heat-templates. Some file in this
+directory are symlinks that assume the presence of the heat-agents directory in
+the same directory as the heat-templates directory.
+
 Docker build does not work with soft links. Therefore, convert all
 soft links to hardlinks.
 

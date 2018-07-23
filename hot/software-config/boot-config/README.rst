@@ -7,7 +7,10 @@ Heat::InstallConfigAgent.
 
 This can be used by server user_data when booting a pristine image
 to install the agent required to use software deployment resources in
-templates.
+templates. The templates assume that you have the heat-agents
+repository checked out alongside the heat-templates repository; if the
+agent code is in a different location you will need to adjust the paths
+in the templates.
 
 The environments only install the heat-config-script hook. If other hooks are
 required then define your own environment file which defines a resource
