@@ -1,0 +1,20 @@
+heat_template_version: rocky
+
+resources:
+
+  workflow:
+    type: OS::Mistral::Workflow
+    properties:
+      type: direct
+      tasks:
+        - name: hello
+          action: std.echo output='Good morning!'
+          publish:
+            result: 'Bye'
+
+  external_resource:
+    type: OS::Mistral::ExternalResource
+    properties:
+      actions:
+         CREATE:
+           workflow: {get_resource: workflow}
