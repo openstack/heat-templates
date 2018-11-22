@@ -155,17 +155,17 @@ resources:
           - ''
           - - {'=': {server_group: {get_param: "OS::stack_id"}}}
   lb:
-    type: OS::Neutron::LBaaS::LoadBalancer
+    type: OS::Octavia::LoadBalancer
     properties:
       vip_subnet: {get_param: subnet_id}
   listener:
-    type: OS::Neutron::LBaaS::Listener
+    type: OS::Octavia::Listener
     properties:
       loadbalancer: {get_resource: lb}
       protocol: HTTP
       protocol_port: 80
   pool:
-    type: OS::Neutron::LBaaS::Pool
+    type: OS::Octavia::Pool
     properties:
       listener: {get_resource: listener}
       lb_algorithm: ROUND_ROBIN
@@ -173,7 +173,7 @@ resources:
       session_persistence:
         type: SOURCE_IP
   lb_monitor:
-    type: OS::Neutron::LBaaS::HealthMonitor
+    type: OS::Octavia::HealthMonitor
     properties:
       pool: { get_resource: pool }
       type: TCP

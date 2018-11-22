@@ -37,7 +37,7 @@ resources:
       user_data_format: RAW
       networks: [{network: {get_param: network} }]
   member:
-    type: OS::Neutron::LBaaS::PoolMember
+    type: OS::Octavia::PoolMember
     properties:
       pool: {get_param: pool_id}
       address: {get_attr: [server, first_address]}
