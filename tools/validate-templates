@@ -39,7 +39,7 @@ def validate(base, name):
     try:
         subprocess.check_output(args, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        print "Got error validating %s/%s , %s" % (base, name, e.output)
+        print("Got error validating %s/%s , %s" % (base, name, e.output))
         return True
     else:
         return False

@@ -32,9 +32,9 @@ resources:
       config:
         str_replace:
           params:
-            $heat_config_script: {get_file: ../../elements/heat-config/os-refresh-config/configure.d/55-heat-config}
-            $hook_script: {get_file: ../../elements/heat-config-script/install.d/hook-script.py}
-            $heat_config_notify: {get_file: ../../elements/heat-config/bin/heat-config-notify}
+            $heat_config_script: {get_file: ../../../../../heat-agents/heat-config/os-refresh-config/configure.d/55-heat-config}
+            $hook_script: {get_file: ../../../../../heat-agents/heat-config-script/install.d/hook-script.py}
+            $heat_config_notify: {get_file: ../../../../../heat-agents/heat-config/bin/heat-config-notify}
             $occ_conf: {get_file: fragments/os-collect-config.conf}
             $orc_oac: {get_file: fragments/20-os-apply-config}
           template: {get_file: fragments/configure_config_agent.sh}
@@ -48,7 +48,7 @@ resources:
           - path: /var/lib/heat-config/hooks/puppet
             owner: "root:root"
             permissions: "0755"
-            content: {get_file: ../../elements/heat-config-puppet/install.d/hook-puppet.py}
+            content: {get_file: ../../../../../heat-agents/heat-config-puppet/install.d/hook-puppet.py}
 
   install_cfn_init_hook:
     type: "OS::Heat::CloudConfig"
@@ -59,7 +59,7 @@ resources:
           - path: /var/lib/heat-config/hooks/cfn-init
             owner: "root:root"
             permissions: "0755"
-            content: {get_file: ../../elements/heat-config-cfn-init/install.d/hook-cfn-init.py}
+            content: {get_file: ../../../../../heat-agents/heat-config-cfn-init/install.d/hook-cfn-init.py}
 
   start_config_agent:
     type: "OS::Heat::SoftwareConfig"

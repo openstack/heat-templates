@@ -19,3 +19,12 @@ This repository provides:
 * Example templates which demonstrate core Heat functionality
 * Related image-building templates
 * Template-related scripts and conversion tools
+
+============================
+Software configuration hooks
+============================
+
+
+All hooks (heat agents) in heat-templates repository are removed,
+please use hooks in `heat-agents https://git.openstack.org/cgit/openstack/heat-agents` instead.
+Here is document entry for heat-agents: `https://docs.openstack.org/heat-agents/latest/`
