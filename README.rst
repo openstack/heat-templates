@@ -26,5 +26,5 @@ Software configuration hooks
 
 
 All hooks (heat agents) in heat-templates repository are removed,
-please use hooks in `heat-agents https://git.openstack.org/cgit/openstack/heat-agents` instead.
+please use hooks in `heat-agents https://opendev.org/openstack/heat-agents` instead.
 Here is document entry for heat-agents: `https://docs.openstack.org/heat-agents/latest/`
