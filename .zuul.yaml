@@ -5,7 +5,7 @@
     post-run: playbooks/devstack/post.yaml
     timeout: 7500
     required-projects:
-      - openstack-infra/devstack-gate
+      - openstack/devstack-gate
       - openstack/heat
       - openstack/heat-agents
       - openstack/heat-templates
