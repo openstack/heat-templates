@@ -1,0 +1,61 @@
+heat_template_version: rocky
+
+parameters:
+  external_network:
+    type: string
+    default: public
+  tenant_network:
+    type: string
+    default: private
+
+resources:
+  secgroup:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: sg_wordpress
+      description: wordpress security group
+      rules:
+      - protocol: icmp
+      - protocol: tcp
+        port_range_min: 80
+        port_range_max: 80
+      - protocol: tcp
+        port_range_min: 3306
+        port_range_max: 3306
+  db:
+    type: OS::Zun::Container
+    properties:
+      image: mysql:5.7
+      environment:
+        MYSQL_ROOT_PASSWORD: rootpass
+        MYSQL_DATABASE: wordpress
+      security_groups:
+      - {get_resource: secgroup}
+      networks:
+      - network: {get_param: tenant_network}
+  wordpress:
+    type: OS::Zun::Container
+    properties:
+      image: "wordpress:latest"
+      environment:
+        WORDPRESS_DB_HOST: {get_attr: [db, addresses, {get_param: tenant_network}, 0, addr]}
+        WORDPRESS_DB_USER: root
+        WORDPRESS_DB_PASSWORD: rootpass
+      security_groups:
+      - {get_resource: secgroup}
+      networks:
+      - network: {get_param: tenant_network}
+  floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: {get_param: external_network}
+  association:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: {get_resource: floating_ip}
+      port_id: {get_attr: [wordpress, addresses, {get_param: tenant_network}, 0, port]}
+
+outputs:
+  url:
+    value: {get_attr: [floating_ip, floating_ip_address]}
+    description: The web server url
