@@ -1,0 +1,157 @@
+heat_template_version: rocky
+description: "A Group of Load Balanced Servers Using Octavia"
+parameters:
+  subnet:
+    constraints:
+      -
+        custom_constraint: "neutron.subnet"
+    type: "string"
+    description: "heat_lb_subnet_desc"
+    label: "heat_subnet"
+  server2_name:
+    constraints:
+      -
+        allowed_pattern: "^[_0-9a-zA-Z\\u4e00-\\u9fa5]+$"
+        description: "heat_constraints_name"
+      -
+        length:
+          max: 40
+          min: 1
+    type: "string"
+    description: "heat_server2_name_desc"
+    label: "heat_server2_name"
+  image:
+    constraints:
+      -
+        custom_constraint: "glance.image"
+    type: "string"
+    description: "heat_image_desc"
+    label: "heat_image"
+  server1_name:
+    constraints:
+      -
+        allowed_pattern: "^[_0-9a-zA-Z\\u4e00-\\u9fa5]+$"
+        description: "heat_constraints_name"
+      -
+        length:
+          max: 40
+          min: 1
+    type: "string"
+    description: "heat_server1_name_desc"
+    label: "heat_server1_name"
+  app_port:
+    default: 8080
+    type: "number"
+    description: "heat_port_desc"
+    label: "heat_port "
+  lb_port:
+    default: 80
+    type: "number"
+    description: "heat_lb_port_desc"
+    label: "heat_lb_port"
+  private_network:
+    constraints:
+      -
+        custom_constraint: "neutron.network"
+    type: "string"
+    description: "heat_lb_net_desc"
+    label: "heat_net"
+  flavor:
+    constraints:
+      -
+        custom_constraint: "nova.flavor"
+    type: "string"
+    description: "heat_flavor_desc"
+    label: "heat_flavor"
+resources:
+  monitor:
+    type: "OS::Octavia::HealthMonitor"
+    properties:
+      delay: 3
+      max_retries: 9
+      timeout: 3
+      max_retries_down: 3
+      type: "PING"
+      pool:
+        get_resource: "pool"
+  server1:
+    type: "OS::Nova::Server"
+    properties:
+      image:
+        get_param: "image"
+      name:
+        get_param: "server1_name"
+      flavor:
+        get_param: "flavor"
+      networks:
+        -
+          network:
+            get_param: "private_network"
+  server2:
+    type: "OS::Nova::Server"
+    properties:
+      image:
+        get_param: "image"
+      name:
+        get_param: "server2_name"
+      flavor:
+        get_param: "flavor"
+      networks:
+        -
+          network:
+            get_param: "private_network"
+  listener:
+    type: "OS::Octavia::Listener"
+    properties:
+      protocol_port:
+        get_param: "lb_port"
+      protocol: "HTTP"
+      loadbalancer:
+        get_resource: "loadbalancer"
+  loadbalancer:
+    type: "OS::Octavia::LoadBalancer"
+    properties:
+      vip_subnet:
+        get_param: "subnet"
+  pool_member1:
+    type: "OS::Octavia::PoolMember"
+    properties:
+      subnet:
+        get_param: "subnet"
+      protocol_port:
+        get_param: "app_port"
+      pool:
+        get_resource: "pool"
+      address:
+        get_attr:
+          - "server1"
+          - "first_address"
+  pool:
+    type: "OS::Octavia::Pool"
+    properties:
+      lb_algorithm: "ROUND_ROBIN"
+      listener:
+        get_resource: "listener"
+      protocol: "HTTP"
+  pool_member2:
+    type: "OS::Octavia::PoolMember"
+    properties:
+      subnet:
+        get_param: "subnet"
+      protocol_port:
+        get_param: "app_port"
+      pool:
+        get_resource: "pool"
+      address:
+        get_attr:
+          - "server2"
+          - "first_address"
+outputs:
+  lburl:
+    description: "This URL is the \"external\" URL that can be used to access the load balancer.\n"
+    value:
+      str_replace:
+        params:
+          PORT:
+            get_param: "lb_port"
+        template: "http://IP_ADDRESS:PORT"
