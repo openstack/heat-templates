@@ -1,0 +1,37 @@
+heat_template_version: 2018-08-31
+
+description: Sample Blazar lease template
+
+parameters:
+  name:
+    type: string
+    description: The name of the lease
+    default: sample_blazar_lease
+
+resources:
+  sample_lease:
+    type: OS::Blazar::Lease
+    properties:
+      name: {get_param: name}
+      start_date: "2030-01-01 10:00"
+      end_date: "2030-01-10 10:00"
+      reservations:
+        - resource_type: "physical:host"
+          min: 4
+          max: 6
+          hypervisor_properties: "[\">=\", \"$vcpus\", \"4\"]"
+          resource_properties: ""
+        - resource_type: "virtual:instance"
+          amount: 4
+          vcpus: 2
+          memory_mb: 4096
+          disk_gb: 100
+          affinity: false
+
+outputs:
+  host_reservation_id:
+    value: {get_attr: [sample_lease, reservations, 0, id]}
+    description: ID of host reservation
+  instance_reservation_id:
+    value: {get_attr: [sample_lease, reservations, 1, id]}
+    description: ID of instance reservation
