@@ -15,6 +15,9 @@ def main(args):
     path = args[0]
     got_error = False
     for root, dirs, files in os.walk(path):
+        # Skip Zuul scripts
+        if 'roles/run-heat-template-check' in root:
+            continue
         for excluded in EXCLUDED_DIRS:
             if excluded in dirs:
                 dirs.remove(excluded)
