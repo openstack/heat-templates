@@ -10,7 +10,7 @@ RUN dnf -y --setopt=tsflags=nodocs install \
 
 # pip installing dpath as python-dpath is an older version of dpath
 # install docker-compose
-RUN pip install --no-cache dpath docker-compose
+RUN pip --no-cache-dir install dpath docker-compose
 
 ADD ./scripts/55-heat-config \
   /opt/stack/os-config-refresh/configure.d/
