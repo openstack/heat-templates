@@ -51,6 +51,9 @@
     check:
       jobs:
         - heat-templates-check
+        # This is added to merge *.rst only changes
+        - noop
     gate:
       jobs:
         - heat-templates-check
+        - noop
