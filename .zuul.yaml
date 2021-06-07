@@ -23,16 +23,16 @@
             DEFAULT:
               convergence_engine: true
               logging_exception_prefix: "%(asctime)s.%(msecs)03d %(process)d TRACE %(name)s %(instance)s"
-              heat_api:
-                workers: 2
-              heat_api_cfn:
-                workers: 2
-              cache:
-                enabled: True
-              eventlet_opts:
-                client_socket_timeout: 120
-              oslo_messaging_notifications:
-                driver: messagingv2
+            heat_api:
+              workers: 2
+            heat_api_cfn:
+              workers: 2
+            cache:
+              enabled: True
+            eventlet_opts:
+              client_socket_timeout: 120
+            oslo_messaging_notifications:
+              driver: messagingv2
       test_results_stage_name: test_results
       zuul_copy_output:
         '{{ stage_dir }}/{{ test_results_stage_name }}.subunit': logs
