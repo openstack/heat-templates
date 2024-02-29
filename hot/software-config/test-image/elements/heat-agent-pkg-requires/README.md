@@ -6,5 +6,4 @@ heat agent tools
 - os-collect-config
 - os-apply-config
 - os-refresh-config
-- dib-utils
 - heat-cfntools

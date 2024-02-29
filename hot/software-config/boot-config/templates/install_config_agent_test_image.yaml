@@ -21,7 +21,7 @@ resources:
 
             pip freeze
 
-            pip install --index-url "$pip_mirror" --pre --no-deps os-collect-config os-apply-config os-refresh-config dib-utils heat-cfntools
+            pip install --index-url "$pip_mirror" --pre --no-deps os-collect-config os-apply-config os-refresh-config heat-cfntools
             pip freeze
             cfn-create-aws-symlinks --force
 

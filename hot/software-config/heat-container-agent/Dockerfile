@@ -4,7 +4,7 @@ ENV container docker
 
 RUN dnf -y --setopt=tsflags=nodocs install \
     findutils os-collect-config os-apply-config \
-    os-refresh-config dib-utils python-pip python-docker-py \
+    os-refresh-config python-pip python-docker-py \
     python-yaml python-zaqarclient && \
     dnf clean all
 
