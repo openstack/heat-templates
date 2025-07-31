@@ -29,8 +29,6 @@
               workers: 2
             cache:
               enabled: True
-            eventlet_opts:
-              client_socket_timeout: 120
             oslo_messaging_notifications:
               driver: messagingv2
       test_results_stage_name: test_results
