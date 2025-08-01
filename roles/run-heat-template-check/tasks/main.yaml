@@ -10,8 +10,6 @@
         get_or_create_endpoint $aodh_service "$REGION_NAME" "http://localhost"
         mistral_service=$(get_or_create_service "mistral" "workflowv2" "Workflow Service v2")
         get_or_create_endpoint $mistral_service "$REGION_NAME" "http://localhost"
-        senlin_service=$(get_or_create_service "senlin" "clustering" "Senlin Clustering Service")
-        get_or_create_endpoint $senlin_service "$REGION_NAME" "http://localhost"
         monasca_service=$(get_or_create_service "monasca" "monitoring" "Monasca Monitoring Service")
         get_or_create_endpoint $monasca_service "$REGION_NAME" "http://localhost"
         zaqar_service=$(get_or_create_service "zaqar" "messaging" "Zaqar Service")
