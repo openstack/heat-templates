@@ -1,15 +1,10 @@
-========================
-Team and repository tags
-========================
-
-.. image:: https://governance.openstack.org/tc/badges/heat-templates.svg
-    :target: https://governance.openstack.org/tc/reference/tags/index.html
-
-.. Change things from this point on
-
 ==============
 Heat Templates
 ==============
+
+.. image:: https://governance.openstack.org/tc/badges/heat-templates.svg
+
+.. Change things from this point on
 
 Heat is a service to orchestrate multiple composite cloud applications using
 templates
@@ -23,7 +18,6 @@ This repository provides:
 ============================
 Software configuration hooks
 ============================
-
 
 All hooks (heat agents) in heat-templates repository are removed,
 please use hooks in `heat-agents https://opendev.org/openstack/heat-agents` instead.
