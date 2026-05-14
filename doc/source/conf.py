@@ -114,9 +114,9 @@ html_theme = 'openstackdocs'
 # html_sidebars = {}
 
 # -- Options for openstackdocstheme --------------------------------------
-repository_name = 'openstack/heat-templates'
-bug_project = '995'
-bug_tag = 'docs'
+openstackdocs_repo_name = 'openstack/heat-templates'
+openstackdocs_bug_project = '995'
+openstackdocs_bug_tag = 'docs'
 
 # -- Options for HTMLHelp output ------------------------------------------
 
