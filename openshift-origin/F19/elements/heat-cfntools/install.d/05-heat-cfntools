@@ -1,6 +1,0 @@
-#!/bin/bash
-
-set -uex
-
-install-packages heat-cfntools
-cfn-create-aws-symlinks --source /usr/bin
