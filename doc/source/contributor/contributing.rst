@@ -13,7 +13,7 @@ Communication
 ~~~~~~~~~~~~~
 * IRC channel #heat at OFTC
 * Mailing list (prefix subjects with ``[heat]`` for faster responses)
-  http://lists.openstack.org/cgi-bin/mailman/listinfo/openstack-discuss
+  https://lists.openstack.org/mailman3/lists/openstack-discuss.lists.openstack.org/
 
 Contacting the Core Team
 ~~~~~~~~~~~~~~~~~~~~~~~~
